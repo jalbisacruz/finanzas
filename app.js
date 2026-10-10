@@ -1,0 +1,213 @@
+const K='finanzas-v1';
+const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const r2=n=>Math.round((+n||0)*100)/100, f=n=>(r2(n)<0?'−':'')+'$'+Math.abs(r2(n)).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const PEOPLE=['Yo','Tony','Carlos'];
+const STORES=["Sam's Club",'Walmart','Publix','Aldi','Amazon','Detwilers'];
+function seed(){
+ const bills=(a)=>a.map(([n,v])=>({id:uid(),name:n,amount:v}));
+ const P=(store,tony,carlos,note)=>({id:uid(),store,date:'',total:r2(tony+carlos),mode:'manual',shares:{Tony:tony,Carlos:carlos},note:note||'Importado de Excel'});
+ return {people:['Yo','Tony','Carlos'],stores:STORES.slice(),cur:'2026-10',months:{
+ '2026-10':{income:[{id:uid(),name:'Débito',amount:0},{id:uid(),name:'Cheque 10/08',amount:0},{id:uid(),name:'Cheque 10/15',amount:0},{id:uid(),name:'Cheque 10/22',amount:0},{id:uid(),name:'Cheque 10/29',amount:0}],
+  cards:bills([['BOA 1',0],['BOA 2',0],['Chase',0],['Amazon',0],['Capital One',0]]),
+  bills:bills([['Car Insurance',0],['Car Letter',0],['Rent House',0],['Phone',0],['Internet',0],['Purifier',0],['Gas',0],['Food',0],['Water',0],['Electricity',0]]),
+  purchases:[],carlosAdj:0}}};
+}
+let S=JSON.parse(localStorage.getItem(K)||'null')||seed();
+// ---------- migración / modelo ----------
+const CATS=['🛒 Comida/Supermercado','🍽️ Restaurantes','⛽ Gasolina','🚗 Transporte','🏠 Hogar','💡 Servicios','💊 Salud','👕 Ropa','🎬 Entretenimiento','📺 Suscripciones','💸 Envíos a familia','🤝 Tony','📦 Otros'];
+const SHARED_CAT='🛒 Comida/Supermercado';
+if(!S.catsV2){S.cats=[...CATS,...(S.cats||[]).filter(c=>!CATS.some(x=>x.endsWith(' '+c)))];S.catsV2=1}
+S.checks=S.checks||[];
+const VAR=/^(gas|food|water|electricity)$/i;
+Object.values(S.months).forEach(m=>{
+ m.bills.forEach(b=>{if(b.fixed===undefined)b.fixed=!VAR.test(b.name)});
+ m.personal=m.personal||[];m.events=m.events||[];
+ if(!m.income.some(x=>/^efectivo$/i.test(x.name)))m.income.push({id:uid(),name:'Efectivo',amount:0});
+ if(!m.income.some(x=>/d[eé]bit/i.test(x.name)))m.income.unshift({id:uid(),name:'Débito',amount:0});
+});
+const save=()=>localStorage.setItem(K,JSON.stringify(S));
+const M=()=>S.months[S.cur];
+const keys=()=>Object.keys(S.months).sort();
+const L=()=>S.months[keys().at(-1)];               // mes "vivo": saldos actuales
+const lbl=k=>{const[y,m]=k.split('-');return MES[m-1]+' '+y};
+const today=()=>new Date().toLocaleDateString('en-CA');
+const fdate=d=>{if(!d)return 'sin fecha';const[y,m,dd]=d.split('-');return +dd+' '+MES[m-1]};
+const sum=(a,fn)=>a.reduce((s,x)=>s+(+fn(x)||0),0);
+const debE=m=>m.income.find(x=>/d[eé]bit/i.test(x.name));
+const cashE=m=>m.income.find(x=>/^efectivo$/i.test(x.name));
+const monthFor=d=>S.months[(d||'').slice(0,7)]?(d||'').slice(0,7):keys().at(-1);
+// método: 'deb' | 'cash' | 'card:<nombre>' | '' (sin efecto). amt>0 = sale dinero
+function spend(method,amt){if(!method||!amt)return;const m=L();
+ if(method==='deb'){const e=debE(m);e.amount=r2(e.amount-amt)}
+ else if(method==='cash'){const e=cashE(m);e.amount=r2(e.amount-amt)}
+ else if(method.startsWith('card:')){const n=method.slice(5);let c=m.cards.find(x=>x.name===n);if(!c){c={id:uid(),name:n,amount:0};m.cards.push(c)}c.amount=r2(c.amount+amt)}}
+const methName=x=>x==='deb'?'Débito':x==='cash'?'Efectivo':x?.startsWith('card:')?'💳 '+x.slice(5):'—';
+const methOpts=sel=>[['deb','Débito'],['cash','Efectivo'],...L().cards.map(c=>['card:'+c.name,'💳 '+c.name])].map(([v,t])=>`<option value="${esc(v)}"${v===sel?' selected':''}>${esc(t)}</option>`).join('');
+function calc(m){
+ const tony=sum(m.purchases,x=>x.shares.Tony),carlos=sum(m.purchases,x=>x.shares.Carlos);
+ const inc=sum(m.income,x=>x.amount),credit=sum(m.cards,x=>x.amount),bills=sum(m.bills,x=>x.amount);
+ const carlosOwes=carlos+(+m.carlosAdj||0),toTony=bills-tony;
+ const money=inc+(m.tonyPaid?0:tony)+(m.carlosPaid?0:carlosOwes), debt=credit+(m.tonyPaid?0:bills);
+ return {tony,carlos,carlosOwes,inc,credit,bills,money,debt,toTony,bal:money-debt,pers:sum(m.personal,x=>x.amount)};
+}
+// ---------- cheques ----------
+function nextThu(from){const d=new Date(from+'T12:00');do d.setDate(d.getDate()+1);while(d.getDay()!==4);return d.toLocaleDateString('en-CA')}
+const pendingCheck=()=>S.checks.filter(c=>c.status==='pending').sort((a,b)=>a.date<b.date?-1:1)[0];
+function nextCheckDate(){const dep=S.checks.filter(c=>c.status==='deposited').sort((a,b)=>a.date<b.date?-1:1).at(-1);
+ if(dep){const d=new Date(dep.date+'T12:00');d.setDate(d.getDate()+7);const s=d.toLocaleDateString('en-CA');if(s>=today())return s}
+ const t=new Date(today()+'T12:00');return t.getDay()===4?today():nextThu(today())}
+function setCheck(){const a=r2(document.getElementById('chk').value),d=document.getElementById('chkd').value;if(!a)return alert('Pon el monto del cheque');
+ S.checks.push({id:uid(),amount:a,date:d,status:'pending'});save();render();toast('Próximo cheque guardado')}
+function confirmCheck(){const c=pendingCheck(),a=r2(document.getElementById('cfa').value||c.amount);
+ c.amount=a;c.status='deposited';c.depositedOn=today();const m=L();debE(m).amount=r2(debE(m).amount+a);
+ S.months[monthFor(c.date)].events.push({id:uid(),type:'check',date:c.date,amount:a,desc:'Cheque '+fdate(c.date),checkId:c.id});
+ save();render();toast('Depósito confirmado')}
+// ---------- vistas ----------
+let tab='ini',filt='';
+function render(){
+ const sel=document.getElementById('msel');
+ sel.innerHTML=keys().reverse().map(k=>`<option value="${k}"${k===S.cur?' selected':''}>${lbl(k)}</option>`).join('');
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
+ const v=document.getElementById('v');
+ if(!M()){v.innerHTML='<div class="card">Crea un mes con “+ Mes”.</div>';return}
+ v.innerHTML=({ini,res,cue,com,rep,cfg})[tab]();
+}
+function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,cash=+cashE(m).amount||0,disp=deb+cash;
+ const pc=pendingCheck(),due=pc&&pc.date<=today();
+ const tonyDue=m.tonyPaid?0:Math.max(0,c.toTony),cards=c.credit,next=pc?pc.amount:0,proj=disp+next-tonyDue-cards;
+ return `<div class="card hero"><div class="muted">Disponible ahora</div><div class="big xl ${disp>=0?'pos':'neg'}">${f(disp)}</div>
+ <div class="muted">Débito ${f(deb)} · Efectivo ${f(cash)}</div></div>
+ ${due?`<div class="card" style="border:2px solid #15803d"><h2>💵 Confirmar depósito</h2><div class="muted">Cheque del ${fdate(pc.date)}. Ajusta si llegó otro monto.</div>
+  <div class="grid" style="margin-top:8px"><input id="cfa" type="number" inputmode="decimal" step="0.01" value="${pc.amount}"><button id="cfbtn" onclick="confirmCheck()">Confirmar</button></div></div>`:''}
+ <div class="card"><h2>Próximo cheque</h2>${pc?`<div class="row"><span class="n">${due?'Llegó':'Jueves'} ${fdate(pc.date)}</span><b>${f(pc.amount)}</b><button class="del" onclick="S.checks=S.checks.filter(x=>x.id!=='${pc.id}');save();render()">✕</button></div>`:
+  `<div class="muted">¿Cuánto será el próximo cheque?</div><div class="grid" style="margin-top:8px"><input id="chk" type="number" inputmode="decimal" step="0.01" placeholder="Monto $"><input id="chkd" type="date" value="${nextCheckDate()}"></div><button id="chkbtn" style="width:100%;margin-top:8px" onclick="setCheck()">Guardar próximo cheque</button>`}</div>
+ <div class="card"><h2>Disponible proyectado<span class="${proj>=0?'pos':'neg'}">${f(proj)}</span></h2>
+ <div class="row"><span class="n">Disponible ahora</span>${f(disp)}</div>
+ <div class="row"><span class="n">+ Próximo cheque</span>${f(next)}</div>
+ <div class="row"><span class="n">− Transferencia a Tony ${m.tonyPaid?'✅':'(pendiente)'}</span>${f(tonyDue)}</div>
+ <div class="row"><span class="n">− Pagos de tarjetas</span>${f(cards)}</div></div>
+ ${closeCard(m,keys().at(-1))}`}
+function closeCard(m,k){const c=calc(m);return `<div class="card"><h2>Cierre ${lbl(k)}</h2>
+ <div class="row"><span class="n">➡️ Transferir a Tony<div class="muted">Cuentas ${f(c.bills)} − comida Tony ${f(c.tony)}</div></span><b>${m.tonyPaid?'✅ '+f(m.tonyPaid):f(c.toTony)}</b></div>
+ ${m.tonyPaid?'':`<button id="tonybtn" style="width:100%;margin:4px 0 8px" onclick="payDlg('tony','${k}')">Transferí a Tony</button>`}
+ <div class="row"><span class="n">💰 Carlos te debe</span><b>${m.carlosPaid?'✅ '+f(m.carlosPaid===true?c.carlosOwes:m.carlosPaid):f(c.carlosOwes)}</b></div>
+ ${m.carlosPaid?'':`<button id="carlosbtn" class="sec" style="width:100%;margin-top:4px" onclick="payDlg('carlos','${k}')">Carlos me pagó</button>`}</div>`}
+function res(){const c=calc(M());return `<div class="card"><div class="muted">Mi balance ${lbl(S.cur)} (modelo Excel)</div><div class="big ${c.bal>=0?'pos':'neg'}">${f(c.bal)}</div>
+ <div class="muted">Mi dinero ${f(c.money)} − Deuda total ${f(c.debt)}</div></div>${closeCard(M(),S.cur)}
+ <div class="card"><h2>Detalle</h2>
+ <div class="row"><span class="n">Ingresos (débito, efectivo, cheques)</span>${f(c.inc)}</div>
+ <div class="row"><span class="n">Income Tony (su comida)${M().tonyPaid?' — descontado':''}</span>${f(c.tony)}</div>
+ <div class="row"><span class="n">Income Carlos${M().carlosPaid?' — cobrado':''}</span>${f(c.carlosOwes)}</div>
+ <div class="row"><span class="n"><b>Mi dinero</b></span><b>${f(c.money)}</b></div>
+ <div class="row"><span class="n">SubT Credit</span>${f(c.credit)}</div>
+ <div class="row"><span class="n">Bills to Tony${M().tonyPaid?' — pagado':''}</span>${f(c.bills)}</div>
+ <div class="row"><span class="n"><b>Deuda total</b></span><b>${f(c.debt)}</b></div>
+ <div class="row"><span class="n">Gastos registrados del mes</span>${f(spent(M()).total)}</div></div>`}
+function list(key,title,hint){const m=M(),t=sum(m[key],x=>x.amount);return `<div class="card"><h2>${title}<button class="sec" onclick="addItem('${key}')">+ Añadir</button></h2>${hint?`<div class="muted">${hint}</div>`:''}
+ ${m[key].map(x=>`<div class="row"><input class="name n" value="${esc(x.name)}" onchange="upd('${key}','${x.id}','name',this.value)"><input type="number" inputmode="decimal" step="0.01" value="${x.amount||''}" placeholder="0" onchange="upd('${key}','${x.id}','amount',this.value)">${key==='bills'?`<button class="chip ${x.fixed?'on':''}" style="min-width:56px" onclick="tgFix('${x.id}')">${x.fixed?'Fija':'Var.'}</button>`:''}<button class="del" onclick="delItem('${key}','${x.id}')">✕</button></div>`).join('')}
+ <div class="tot"><span>Subtotal</span><span>${f(t)}</span></div></div>`}
+function cue(){const m=M();return list('income','Mi dinero','Débito y efectivo se actualizan solos con cada movimiento del último mes')+
+ `<div class="card"><h2>Ajuste manual Carlos</h2><input class="name" type="number" inputmode="decimal" step="0.01" value="${m.carlosAdj||''}" placeholder="0" onchange="M().carlosAdj=r2(this.value);save();render()"></div>`+
+ list('cards','Tarjetas de crédito')+list('bills','Bills to Tony','“Fija” pasa su monto al mes siguiente; “Var.” empieza en 0')+
+ `<div class="card"><h2>Historial de cheques</h2>${S.checks.slice().sort((a,b)=>a.date<b.date?1:-1).map(c=>`<div class="row"><span class="n">${fdate(c.date)}<div class="muted">${c.status==='deposited'?'✅ Depositado':'⏳ Pendiente'}</div></span>${f(c.amount)}</div>`).join('')||'<div class="muted">Aún no hay cheques registrados.</div>'}</div>`}
+function com(){const m=M(),c=calc(m);return `<div class="card"><button style="width:100%" onclick="editP()">+ Nueva compra compartida</button>
+ <div class="tot"><span>Tony ${f(c.tony)}</span><span>Carlos ${f(c.carlos)}</span></div></div>
+ ${m.purchases.map(p=>`<div class="card p" onclick="editP('${p.id}')"><div class="tot" style="padding:0"><span>${esc(p.store)}</span><span>${f(p.total)}</span></div>
+ <div class="muted">${fdate(p.date)} · ${methName(p.method)} · ${Object.entries(p.shares).filter(([k,v])=>+v).map(([k,v])=>esc(k)+' '+f(v)).join(' · ')}</div></div>`).join('')||'<div class="card muted">Sin compras este mes.</div>'}`}
+// movimientos unificados de un mes
+function moves(m){return [
+ ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:x.desc,method:x.method})),
+ ...m.purchases.map(p=>({id:p.id,kind:'compra',date:p.date,amount:-p.total,cat:SHARED_CAT,desc:p.store+' (compartida)',method:p.method,mine:(m=>Math.abs(m)<0.02?0:m)(r2(p.total-(+p.shares.Tony||0)-(+p.shares.Carlos||0)))})),
+ ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:e.type==='tony'?-e.amount:e.amount,cat:e.type==='tony'?'🤝 Tony':'💵 Ingreso',desc:e.desc,method:'deb'}))
+].sort((a,b)=>(b.date||'')<(a.date||'')?-1:1)}
+// gasto real de Joe por categoría (compartidas: solo su parte; transferencia a Tony no cuenta como gasto)
+function spent(m){const by={};moves(m).forEach(x=>{if(x.kind==='gasto')by[x.cat]=(by[x.cat]||0)+(-x.amount);if(x.kind==='compra'&&x.mine)by[x.cat]=(by[x.cat]||0)+x.mine});
+ return {by,total:Object.values(by).reduce((a,b)=>a+b,0)}}
+function rep(){const m=M(),sp=spent(m),mx=Math.max(1,...Object.values(sp.by)),mv=moves(m).filter(x=>!filt||x.cat===filt),cats=[...new Set(moves(m).map(x=>x.cat))];
+ const all=keys().map(k=>[k,spent(S.months[k]).total]),acc=all.reduce((a,[,t])=>a+t,0);
+ return `<div class="card"><h2>Gasto por categoría<span>${f(sp.total)}</span></h2><div class="muted">${lbl(S.cur)} · compras compartidas cuentan solo tu parte</div>
+ ${Object.entries(sp.by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar" onclick="filt='${esc(k)}';render()"><div class="bl"><span>${esc(k)}</span><b>${f(v)}</b></div><div class="bt"><div style="width:${Math.max(2,v/mx*100)}%"></div></div></div>`).join('')||'<div class="muted">Sin gastos registrados.</div>'}</div>
+ <div class="card"><h2>Movimientos</h2><select style="width:100%" onchange="filt=this.value;render()"><option value="">Todas las categorías</option>${cats.map(c=>`<option${c===filt?' selected':''}>${esc(c)}</option>`).join('')}</select>
+ ${mv.map(x=>`<div class="row"><span class="n">${esc(x.desc)||esc(x.cat)}<div class="muted">${fdate(x.date)} · ${esc(x.cat)} · ${methName(x.method)}</div></span><b class="${x.amount>=0?'pos':''}">${x.amount>=0?'+':'−'}${f(Math.abs(x.amount))}</b>${x.kind==='compra'?'':`<button class="del" onclick="delMove('${x.kind}','${x.id}')">✕</button>`}</div>`).join('')||'<div class="muted">Nada aquí.</div>'}</div>
+ <div class="card"><h2>Acumulado<span>${f(acc)}</span></h2>${all.reverse().map(([k,t])=>`<div class="row"><span class="n">${lbl(k)}</span>${f(t)}</div>`).join('')}</div>`}
+function cfg(){return `<div class="card"><h2>Categorías</h2><div class="muted">Una por línea (puedes poner emoji)</div><textarea id="cats" rows="9" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.cats=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);save()">${esc(S.cats.join('\n'))}</textarea></div>
+ <div class="card"><h2>Personas</h2><input class="name" value="${esc(S.people.join(', '))}" onchange="S.people=this.value.split(',').map(s=>s.trim()).filter(Boolean);save()"></div>
+ <div class="card"><h2>Tiendas</h2><input class="name" value="${esc(S.stores.join(', '))}" onchange="S.stores=this.value.split(',').map(s=>s.trim()).filter(Boolean);save()"></div>
+ <div class="card"><h2>Respaldo</h2><div class="grid"><button onclick="exp()">Exportar JSON</button><button class="sec" onclick="document.getElementById('imp').click()">Importar JSON</button></div>
+ <input type="file" id="imp" accept="application/json,.json" hidden onchange="imp(this.files[0])"></div>
+ <div class="card"><h2>Mes</h2><button class="del" style="width:100%" onclick="if(confirm('¿Borrar ${lbl(S.cur)}?')){delete S.months[S.cur];S.cur=keys().at(-1)||'';save();render()}">Borrar este mes</button></div>`}
+// ---------- acciones ----------
+function toast(t){const d=document.createElement('div');d.textContent=t;d.className='toast';document.body.appendChild(d);setTimeout(()=>d.remove(),1800)}
+function tgFix(id){const b=M().bills.find(x=>x.id===id);b.fixed=!b.fixed;save();render()}
+function addItem(k){M()[k].push({id:uid(),name:'',amount:0,...(k==='bills'?{fixed:false}:{})});save();render()}
+function upd(k,id,fld,val){const x=M()[k].find(x=>x.id===id);x[fld]=fld==='amount'?r2(val):val;save();render()}
+function delItem(k,id){M()[k]=M()[k].filter(x=>x.id!==id);save();render()}
+const dlg=()=>document.getElementById('dlg');
+function quick(){dlg().innerHTML=`<h2>Nuevo gasto</h2>
+ <input id="qa" class="name" type="number" inputmode="decimal" step="0.01" placeholder="Monto $" style="font-size:24px">
+ <div class="chips" id="qcats">${S.cats.map((c,i)=>`<button class="chip ${i===0?'on':''}" data-c="${esc(c)}" onclick="document.querySelectorAll('#qcats .chip').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${esc(c)}</button>`).join('')}</div>
+ <p><input id="qd" class="name" placeholder="Descripción (opcional)"></p>
+ <div class="grid"><input id="qf" type="date" value="${today()}"><select id="qm">${methOpts('deb')}</select></div>
+ <div class="grid" style="margin-top:12px"><button class="sec" onclick="dlg().close()">Cancelar</button><button id="qsave" onclick="saveQuick()">Guardar</button></div>
+ <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close();editP()">🛒 Es compra compartida (Tony/Carlos)</button>`;dlg().showModal()}
+function saveQuick(){const a=r2(document.getElementById('qa').value);if(!a)return alert('Pon un monto');
+ const date=document.getElementById('qf').value,method=document.getElementById('qm').value;
+ S.months[monthFor(date)].personal.unshift({id:uid(),date,amount:a,cat:document.querySelector('#qcats .chip.on').dataset.c,desc:document.getElementById('qd').value,method});
+ spend(method,a);save();dlg().close();render();toast('Gasto guardado')}
+function payDlg(who,k){const m=S.months[k],c=calc(m),amt=who==='tony'?c.toTony:c.carlosOwes;
+ dlg().innerHTML=`<h2>${who==='tony'?'Transferí a Tony':'Carlos me pagó'}</h2><div class="muted">${lbl(k)} · ${who==='tony'?'se descuenta del débito':'se suma al débito'}</div>
+ <p><input id="pa" class="name" type="number" inputmode="decimal" step="0.01" value="${r2(amt)}" style="font-size:24px"></p><input id="pf" class="name" type="date" value="${today()}">
+ <div class="grid" style="margin-top:12px"><button class="sec" onclick="dlg().close()">Cancelar</button><button id="payok" onclick="doPay('${who}','${k}')">Confirmar</button></div>`;dlg().showModal()}
+function doPay(who,k){const a=r2(document.getElementById('pa').value),d=document.getElementById('pf').value,m=S.months[k];if(!a)return;
+ m.events.push({id:uid(),type:who,date:d,amount:a,desc:who==='tony'?'Transferencia a Tony':'Pago de Carlos'});
+ if(who==='tony'){m.tonyPaid=a;spend('deb',a)}else{m.carlosPaid=a;spend('deb',-a)}
+ save();dlg().close();render();toast(who==='tony'?'Transferencia registrada':'Pago registrado')}
+function findMonth(arr,id){return keys().map(k=>S.months[k]).find(m=>m[arr].some(x=>x.id===id))}
+function delMove(kind,id){if(!confirm('¿Borrar este movimiento? Se revierte el saldo.'))return;
+ if(kind==='gasto'){const m=findMonth('personal',id),x=m.personal.find(x=>x.id===id);spend(x.method,-x.amount);m.personal=m.personal.filter(y=>y.id!==id)}
+ else{const m=findMonth('events',id),e=m.events.find(x=>x.id===id);
+  if(e.type==='tony'){spend('deb',-e.amount);m.tonyPaid=0}
+  if(e.type==='carlos'){spend('deb',e.amount);m.carlosPaid=0}
+  if(e.type==='check'){spend('deb',e.amount);const c=S.checks.find(c=>c.id===e.checkId);if(c)c.status='pending'}
+  m.events=m.events.filter(y=>y.id!==id)}
+ save();render()}
+let D;
+function editP(id){const p=id?M().purchases.find(x=>x.id===id):null;
+ D=p?JSON.parse(JSON.stringify(p)):{id:uid(),store:S.stores[0],date:today(),total:0,mode:'eq',who:['Yo','Tony','Carlos'],shares:{},method:'deb'};
+ if(!D.who)D.who=Object.keys(D.shares).filter(k=>+D.shares[k]);D.orig=p?{method:p.method||'',total:p.total}:null;D.isNew=!p;drawP();dlg().showModal()}
+function recomputeEq(){if(D.mode!=='eq')return;const n=D.who.length||1,each=r2(D.total/n);D.shares={};D.who.forEach(w=>D.shares[w]=each)}
+function drawP(){recomputeEq();const ppl=[...new Set([...S.people,...Object.keys(D.shares)])],tot=r2(Object.values(D.shares).reduce((s,v)=>s+(+v||0),0));
+ dlg().innerHTML=`<h2>${D.isNew?'Compra compartida':'Editar compra'}</h2>
+ <div class="grid"><select onchange="D.store=this.value">${[...new Set([...S.stores,D.store])].map(s=>`<option${s===D.store?' selected':''}>${esc(s)}</option>`).join('')}</select>
+ <input type="date" value="${D.date||''}" onchange="D.date=this.value"></div>
+ <div class="grid" style="margin-top:8px"><input id="tot" type="number" inputmode="decimal" step="0.01" placeholder="Total $" value="${D.total||''}" onchange="D.total=r2(this.value);drawP()">
+ <select onchange="D.method=this.value"><option value="">Sin afectar saldo</option>${methOpts(D.method)}</select></div>
+ <div class="chips"><button class="chip ${D.mode==='eq'?'on':''}" onclick="D.mode='eq';drawP()">Dividir igual</button><button class="chip ${D.mode==='manual'?'on':''}" onclick="D.mode='manual';drawP()">Manual</button></div>
+ ${D.mode==='eq'?`<div class="muted">Entre quiénes (${D.who.length}):</div><div class="chips">${ppl.map(w=>`<button class="chip ${D.who.includes(w)?'on':''}" onclick="tg('${esc(w)}')">${esc(w)}</button>`).join('')}</div>`:''}
+ ${ppl.map(w=>`<div class="row"><span class="n">${esc(w)}</span><input type="number" inputmode="decimal" step="0.01" value="${D.shares[w]||''}" placeholder="0" ${D.mode==='eq'?'disabled':''} onchange="D.shares['${esc(w)}']=r2(this.value);drawP()"></div>`).join('')}
+ <div class="muted">Repartido ${f(tot)} de ${f(D.total)}${Math.abs(tot-D.total)>0.02?' ⚠️ no cuadra':''}</div>
+ <div class="grid" style="margin-top:12px">${D.isNew?'<span></span>':`<button class="del" onclick="delP()">Borrar</button>`}<button id="psave" onclick="saveP()">Guardar</button></div>
+ <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close()">Cancelar</button>`}
+function tg(w){D.who=D.who.includes(w)?D.who.filter(x=>x!==w):[...D.who,w];drawP()}
+function saveP(){const{isNew,orig,...p}=D;if(orig)spend(orig.method,-orig.total);spend(p.method,p.total);
+ const m=isNew?S.months[monthFor(p.date)]:M(),i=m.purchases.findIndex(x=>x.id===p.id);i>=0?m.purchases[i]=p:m.purchases.unshift(p);save();dlg().close();render();toast('Compra guardada')}
+function delP(){if(D.orig)spend(D.orig.method,-D.orig.total);M().purchases=M().purchases.filter(x=>x.id!==D.id);save();dlg().close();render()}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='finanzas-'+today()+'.json';a.click()}
+function imp(file){if(!file)return;file.text().then(t=>{const d=JSON.parse(t);if(!d.months)throw 0;localStorage.setItem(K,t);location.reload()}).catch(()=>alert('Archivo inválido'))}
+document.getElementById('msel').onchange=e=>{S.cur=e.target.value;save();render()};
+document.getElementById('newm').onclick=()=>{
+ const ks=keys(),last=ks.at(-1);let k;
+ if(last){let[y,m]=last.split('-').map(Number);m++;if(m>12){m=1;y++}k=y+'-'+String(m).padStart(2,'0')}else k=today().slice(0,7);
+ k=prompt('Mes nuevo (AAAA-MM):',k);if(!k||!/^\d{4}-\d{2}$/.test(k))return;if(S.months[k]){S.cur=k;save();render();return}
+ const prev=S.months[last],cl=a=>a.map(x=>({id:uid(),name:x.name,amount:0}));
+ const inc=prev?prev.income.map(x=>({id:uid(),name:x.name,amount:(debE(prev)===x||cashE(prev)===x)?x.amount:0})):[{id:uid(),name:'Débito',amount:0}];
+ if(!inc.some(x=>/^efectivo$/i.test(x.name)))inc.push({id:uid(),name:'Efectivo',amount:0});
+ S.months[k]={income:inc,cards:prev?cl(prev.cards):[{id:uid(),name:'BOA',amount:0},{id:uid(),name:'Amazon',amount:0},{id:uid(),name:'Capital One',amount:0}],
+  bills:prev?prev.bills.map(x=>({id:uid(),name:x.name,fixed:!!x.fixed,amount:x.fixed?x.amount:0})):[],purchases:[],personal:[],events:[],carlosAdj:0,carlosPaid:0,tonyPaid:0};
+ S.cur=k;save();tab='ini';render()};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;filt='';render();scrollTo(0,0)});
+document.getElementById('fab').onclick=quick;
+render();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');

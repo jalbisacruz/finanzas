@@ -1,0 +1,43 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Finanzas"><meta name="theme-color" content="#0f172a">
+<link rel="apple-touch-icon" href="icon-180.png"><link rel="manifest" href="manifest.json"><title>Finanzas</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font:16px -apple-system,system-ui,sans-serif;background:#f1f5f9;color:#0f172a;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;background:#0f172a;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;gap:8px;align-items:center}
+header select{flex:1;font-size:17px;padding:10px;border-radius:10px;border:0}
+header button{background:#334155;color:#fff}
+main{padding:12px}
+.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0001}
+h2{font-size:18px;margin:0 0 10px;display:flex;justify-content:space-between}
+.row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #eef2f6}
+.row:last-child{border:0}.row .n{flex:1;min-width:0}.row input{width:110px}
+input,select,button{font-size:16px;min-height:44px;border-radius:10px;border:1px solid #cbd5e1;padding:8px 10px;background:#fff}
+input.name{width:100%}
+button{background:#2563eb;color:#fff;border:0;font-weight:600}
+button.sec{background:#e2e8f0;color:#0f172a}button.del{background:#fee2e2;color:#b91c1c;min-width:44px}
+.tot{display:flex;justify-content:space-between;font-weight:700;padding-top:8px}
+.big{font-size:26px;font-weight:800}.pos{color:#15803d}.neg{color:#b91c1c}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:1px solid #e2e8f0;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;background:none;color:#64748b;border-radius:0;min-height:60px;font-size:11px}
+nav button.on{color:#2563eb}nav b{display:block;font-size:22px}
+.muted{color:#64748b;font-size:11px}.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chip{min-height:40px;padding:6px 12px;border-radius:20px;background:#e2e8f0;color:#0f172a}.chip.on{background:#2563eb;color:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid input,.grid select{width:100%}
+.p{border-left:4px solid #2563eb;padding:8px 10px;margin:8px 0;background:#f8fafc;border-radius:8px}
+dialog{max-height:calc(100dvh - 40px);overflow-y:auto;border:0;border-radius:16px;width:94%;max-width:500px;padding:16px}
+#fab{position:fixed;right:18px;bottom:calc(76px + env(safe-area-inset-bottom));width:62px;height:62px;border-radius:31px;font-size:34px;line-height:1;padding:0;box-shadow:0 6px 16px #2563eb66;z-index:6}
+.hero{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff}.hero .muted{color:#cbd5e1}.xl{font-size:40px}.hero .pos{color:#4ade80}
+.bar{margin:10px 0}.bl{display:flex;justify-content:space-between;font-size:15px}.bt{background:#e2e8f0;border-radius:6px;height:12px;margin-top:4px}.bt div{background:#2563eb;height:12px;border-radius:6px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));background:#0f172a;color:#fff;padding:12px 18px;border-radius:12px;z-index:9}
+main{padding-bottom:90px}
+</style></head><body>
+<header><select id="msel"></select><button id="newm">+ Mes</button></header>
+<main id="v"></main>
+<nav><button data-t="ini" class="on"><b>🏠</b>Inicio</button><button data-t="res"><b>📊</b>Mes</button><button data-t="cue"><b>💳</b>Cuentas</button><button data-t="com"><b>🛒</b>Compras</button><button data-t="rep"><b>📈</b>Reportes</button><button data-t="cfg"><b>⚙️</b>Ajustes</button></nav>
+<button id="fab" aria-label="Nuevo gasto">+</button>
+<dialog id="dlg"></dialog>
+<script src="app.js"></script></body></html>
