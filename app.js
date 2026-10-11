@@ -19,6 +19,8 @@ try{Object.values(S.months||{}).forEach(m=>{if(m.cards&&!m.cards.some(c=>/affirm
 // ---------- migración / modelo ----------
 const CATS=['🛒 Comida/Supermercado','🍽️ Restaurantes','⛽ Gasolina','🚗 Transporte','🏠 Hogar','💡 Servicios','💊 Salud','👕 Ropa','🎬 Entretenimiento','📺 Suscripciones','💸 Envíos a familia','🤝 Tony','📦 Otros'];
 const SHARED_CAT='🛒 Comida/Supermercado';
+const INC_CATS=['💼 Cheque','💵 Propinas/Tips','🤝 Pago de Carlos','🎁 Regalo','↩️ Reembolso','📦 Otros'];
+if(!S.incCats)S.incCats=INC_CATS.slice();
 if(!S.catsV2){S.cats=[...CATS,...(S.cats||[]).filter(c=>!CATS.some(x=>x.endsWith(' '+c)))];S.catsV2=1}
 S.checks=S.checks||[];
 const VAR=/^(gas|food|water|electricity)$/i;
@@ -144,21 +146,29 @@ function com(){const m=M(),c=calc(m);return `<div class="card"><button style="wi
 function moves(m){return [
  ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:(x.recipient?'→ '+x.recipient+(x.desc?' · ':''):'')+(x.desc||''),method:x.method,recipient:x.recipient})),
  ...m.purchases.map(p=>{const T=+p.shares.Tony||0,Cc=+p.shares.Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v));return {id:p.id,kind:'compra',date:p.date,amount:-tot,cat:SHARED_CAT,desc:p.store+' (compartida)',method:p.method,mine:(m=>m<0.02?0:m)(r2(tot-T-Cc))}}),
- ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay')?-e.amount:e.amount,cat:e.type==='tony'?'🤝 Tony':e.type==='todebit'?'🔁 Transferencia a débito':e.type==='cardpay'?'💳 Pago de tarjeta':'💵 Ingreso',desc:e.desc,method:'deb'}))
+ ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay')?-e.amount:e.amount,cat:e.type==='income'?(e.concept||'📦 Otros'):e.type==='check'?'💼 Cheque':e.type==='carlos'?'🤝 Pago de Carlos':e.type==='tony'?'🤝 Tony':e.type==='todebit'?'🔁 Transferencia a débito':e.type==='cardpay'?'💳 Pago de tarjeta':'💵 Ingreso',desc:e.desc,method:e.method||'deb'}))
 ].sort((a,b)=>(b.date||'')<(a.date||'')?-1:1)}
 // gasto real de Joe por categoría (compartidas: solo su parte; transferencia a Tony no cuenta como gasto)
 function spent(m){const by={};moves(m).forEach(x=>{if(x.kind==='gasto')by[x.cat]=(by[x.cat]||0)+(-x.amount);if(x.kind==='compra'&&x.mine)by[x.cat]=(by[x.cat]||0)+x.mine});
  return {by,total:Object.values(by).reduce((a,b)=>a+b,0)}}
+// ingresos por concepto (cheques, pagos de Carlos, ingresos registrados; no transferencias propias ni pagos de tarjeta)
+const INC_KINDS=['income','check','carlos'];
+function earned(m){const by={};moves(m).forEach(x=>{if(INC_KINDS.includes(x.kind))by[x.cat]=(by[x.cat]||0)+x.amount});
+ const k=keys().find(k=>S.months[k]===m);(S.checks||[]).filter(c=>c.legacy&&c.month===k).forEach(c=>by['💼 Cheque']=(by['💼 Cheque']||0)+(+c.amount||0));
+ return {by,total:Object.values(by).reduce((a,b)=>a+b,0)}}
+const bars=(by,cls)=>{const mx=Math.max(1,...Object.values(by));return Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar" onclick="filt='${esc(k)}';render()"><div class="bl"><span>${esc(k)}</span><b class="${cls||''}">${f(v)}</b></div><div class="bt"><div style="width:${Math.max(2,v/mx*100)}%${cls?';background:#16a34a':''}"></div></div></div>`).join('')};
 function remCard(m){const by={};m.personal.filter(x=>isRem(x.cat)).forEach(x=>{const r=x.recipient||'Sin destinatario';by[r]=(by[r]||0)+(+x.amount||0)});const e=Object.entries(by);if(!e.length)return'';
  return `<div class="card"><h2>💸 Remesas por destinatario<span>${f(e.reduce((a,[,v])=>a+v,0))}</span></h2>${e.sort((a,b)=>b[1]-a[1]).map(([r,v])=>`<div class="row"><span class="n">${esc(r)}</span>${f(v)}</div>`).join('')}</div>`}
 function rep(){const m=M(),sp=spent(m),mx=Math.max(1,...Object.values(sp.by)),mv=moves(m).filter(x=>!filt||x.cat===filt),cats=[...new Set(moves(m).map(x=>x.cat))];
- const all=keys().map(k=>[k,spent(S.months[k]).total]),acc=all.reduce((a,[,t])=>a+t,0);
+ const er=earned(m),all=keys().map(k=>[k,spent(S.months[k]).total,earned(S.months[k]).total]),acc=all.reduce((a,[,t])=>a+t,0),accI=all.reduce((a,[,,i])=>a+i,0);
  return `<div class="card"><h2>Gasto por categoría<span>${f(sp.total)}</span></h2><div class="muted">${lbl(S.cur)} · compras compartidas cuentan solo tu parte</div>
  ${Object.entries(sp.by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar" onclick="filt='${esc(k)}';render()"><div class="bl"><span>${esc(k)}</span><b>${f(v)}</b></div><div class="bt"><div style="width:${Math.max(2,v/mx*100)}%"></div></div></div>`).join('')||'<div class="muted">Sin gastos registrados.</div>'}</div>
+ <div class="card" id="inccard"><h2>Ingresos por concepto<span class="pos">${f(er.total)}</span></h2><div class="muted">${lbl(S.cur)} · sin transferencias entre tus cuentas ni pagos de tarjeta</div>${bars(er.by,'pos')||'<div class="muted">Sin ingresos registrados.</div>'}</div>
  ${remCard(m)}<div class="card"><h2>Movimientos</h2><select style="width:100%" onchange="filt=this.value;render()"><option value="">Todas las categorías</option>${cats.map(c=>`<option${c===filt?' selected':''}>${esc(c)}</option>`).join('')}</select>
  ${mv.map(x=>`<div class="row"><span class="n">${esc(x.desc)||esc(x.cat)}<div class="muted">${fdate(x.date)} · ${esc(x.cat)} · ${methName(x.method)}</div></span><b class="${x.kind==='todebit'?'':x.amount>=0?'pos':''}">${x.kind==='todebit'?'↔ ':x.amount>=0?'+':'−'}${f(Math.abs(x.amount))}</b>${x.kind==='compra'?'':`<button class="del" onclick="delMove('${x.kind}','${x.id}')">✕</button>`}</div>`).join('')||'<div class="muted">Nada aquí.</div>'}</div>
- <div class="card"><h2>Acumulado<span>${f(acc)}</span></h2>${all.reverse().map(([k,t])=>`<div class="row"><span class="n">${lbl(k)}</span>${f(t)}</div>`).join('')}</div>`}
-function cfg(){return `<div class="card"><h2>Categorías</h2><div class="muted">Una por línea (puedes poner emoji)</div><textarea id="cats" rows="9" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.cats=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);save()">${esc(S.cats.join('\n'))}</textarea></div>
+ <div class="card"><h2>Acumulado</h2><div class="row"><span class="n"><b>Total</b></span><span class="pos">+${f(accI)}</span>&nbsp;<span>−${f(acc)}</span></div>${all.reverse().map(([k,t,i])=>`<div class="row"><span class="n">${lbl(k)}<div class="muted">Neto ${f(i-t)}</div></span><span class="pos">+${f(i)}</span>&nbsp;<span>−${f(t)}</span></div>`).join('')}</div>`}
+function cfg(){return `<div class="card"><h2>Conceptos de ingreso</h2><div class="muted">Uno por línea</div><textarea rows="6" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.incCats=this.value.split('\n').map(s=>s.trim()).filter(Boolean);save()">${esc(S.incCats.join('\n'))}</textarea></div>
+ <div class="card"><h2>Categorías</h2><div class="muted">Una por línea (puedes poner emoji)</div><textarea id="cats" rows="9" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.cats=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);save()">${esc(S.cats.join('\n'))}</textarea></div>
  <div class="card"><h2>Personas</h2><input class="name" value="${esc(S.people.join(', '))}" onchange="S.people=this.value.split(',').map(s=>s.trim()).filter(Boolean);save()"></div>
  <div class="card"><h2>Tiendas</h2><input class="name" value="${esc(S.stores.join(', '))}" onchange="S.stores=this.value.split(',').map(s=>s.trim()).filter(Boolean);save()"></div>
  ${window.syncCard?window.syncCard():''}
@@ -173,7 +183,8 @@ function addItem(k){M()[k].push({id:uid(),name:'',amount:0,...(k==='bills'?{fixe
 function upd(k,id,fld,val){const x=M()[k].find(x=>x.id===id);x[fld]=fld==='amount'?r2(val):val;save();render()}
 function delItem(k,id){if(k==='income'&&debE(M()).id===id)return alert('La línea de débito no se puede borrar (puedes renombrarla)');M()[k]=M()[k].filter(x=>x.id!==id);save();render()}
 const dlg=()=>document.getElementById('dlg');
-function quick(){dlg().innerHTML=`<h2>Nuevo gasto</h2>
+const qtabs=on=>`<div class="chips" style="margin-bottom:10px"><button id="tabg" class="chip ${on==='g'?'on':''}" onclick="quick()">➖ Gasto</button><button id="tabi" class="chip ${on==='i'?'on':''}" onclick="incDlg()">➕ Ingreso</button></div>`;
+function quick(){dlg().innerHTML=qtabs('g')+`<h2>Nuevo gasto</h2>
  <input id="qa" class="name" type="number" inputmode="decimal" step="0.01" placeholder="Monto $" style="font-size:24px">
  <div class="chips" id="qcats">${S.cats.map((c,i)=>`<button class="chip ${i===0?'on':''}" data-c="${esc(c)}" onclick="document.querySelectorAll('#qcats .chip').forEach(b=>b.classList.remove('on'));this.classList.add('on');document.getElementById('qrec').hidden=!isRem(this.dataset.c)">${esc(c)}</button>`).join('')}</div>
  <div id="qrec" hidden><div class="muted">¿A quién se lo enviaste?</div><div class="chips" id="qrecs">${(S.recipients||[]).map(r=>`<button class="chip" data-r="${esc(r)}" onclick="pickRec(this)">${esc(r)}</button>`).join('')}</div>
@@ -181,9 +192,19 @@ function quick(){dlg().innerHTML=`<h2>Nuevo gasto</h2>
  <p><input id="qd" class="name" placeholder="Descripción (opcional)"></p>
  <div class="grid"><input id="qf" type="date" value="${today()}"><select id="qm">${methOpts('deb')}</select></div>
  <div class="grid" style="margin-top:12px"><button class="sec" onclick="dlg().close()">Cancelar</button><button id="qsave" onclick="saveQuick()">Guardar</button></div>
- <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close();editP()">🛒 Es compra compartida (Tony/Carlos)</button>`;dlg().showModal()}
+ <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close();editP()">🛒 Es compra compartida (Tony/Carlos)</button>`;if(!dlg().open)dlg().showModal()}
 const isRem=c=>/env[ií]os? a familia|remesa/i.test(c||'');
 function pickRec(b){document.querySelectorAll('#qrecs .chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');document.getElementById('qrn').value=''}
+function incDlg(){const lines=L().income;dlg().innerHTML=qtabs('i')+`<h2>Registrar ingreso</h2>
+ <input id="ia" class="name" type="number" inputmode="decimal" step="0.01" placeholder="Monto $" style="font-size:24px">
+ <div class="chips" id="icats">${S.incCats.map((c,i)=>`<button class="chip ${i===0?'on':''}" data-c="${esc(c)}" onclick="document.querySelectorAll('#icats .chip').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${esc(c)}</button>`).join('')}</div>
+ <p><input id="id_" class="name" placeholder="Descripción (opcional)"></p>
+ <div class="grid"><input id="if_" type="date" value="${today()}"><select id="im">${lines.map(x=>{const v=x===debE(L())?'deb':'money:'+x.name;return `<option value="${esc(v)}">→ ${esc(x.name)}</option>`}).join('')}</select></div>
+ <div class="grid" style="margin-top:12px"><button class="sec" onclick="dlg().close()">Cancelar</button><button id="isave" onclick="saveInc()">Guardar</button></div>`;if(!dlg().open)dlg().showModal()}
+function saveInc(){const a=r2(document.getElementById('ia').value);if(!a||a<=0)return alert('Pon un monto');
+ const date=document.getElementById('if_').value,method=document.getElementById('im').value,concept=document.querySelector('#icats .chip.on').dataset.c,desc=document.getElementById('id_').value;
+ spend(method,-a);S.months[monthFor(date)].events.push({id:uid(),type:'income',date,amount:a,concept,desc:desc||concept.replace(/^\S+\s/,''),method});
+ save();dlg().close();render();toast('Ingreso guardado')}
 function saveQuick(){const a=r2(document.getElementById('qa').value);if(!a)return alert('Pon un monto');
  const date=document.getElementById('qf').value,method=document.getElementById('qm').value,cat=document.querySelector('#qcats .chip.on').dataset.c;
  let recipient;if(isRem(cat)){recipient=(document.getElementById('qrn').value.trim()||document.querySelector('#qrecs .chip.on')?.dataset.r||'');if(!recipient)return alert('Elige o escribe el destinatario');
@@ -223,6 +244,7 @@ function delMove(kind,id){if(!confirm('¿Borrar este movimiento? Se revierte el 
   if(e.type==='tony'){spend('deb',-e.amount);m.tonyPaid=0}
   if(e.type==='carlos'){spend('deb',e.amount);m.carlosPaid=0}
   if(e.type==='todebit'){const db=debE(L());db.amount=r2((+db.amount||0)-e.amount);const lm=S.months[e.lineMonth],ln=lm&&lm.income.find(y=>y.id===e.lineId);if(ln)ln.amount=r2((+ln.amount||0)+e.amount)}
+  if(e.type==='income')spend(e.method||'deb',e.amount);
   if(e.type==='cardpay'){spend('deb',-e.amount);const cm=S.months[e.cardMonth],c=cm&&cm.cards.find(c=>c.id===e.cardId);if(c)c.amount=r2(c.amount+e.amount)}
   if(e.type==='check'){spend('deb',e.amount);const c=S.checks.find(c=>c.id===e.checkId);if(c)c.status='pending'}
   m.events=m.events.filter(y=>y.id!==id)}
