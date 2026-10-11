@@ -19,8 +19,9 @@ try{Object.values(S.months||{}).forEach(m=>{if(m.cards&&!m.cards.some(c=>/affirm
 // ---------- migración / modelo ----------
 const CATS=['🛒 Comida/Supermercado','🍽️ Restaurantes','⛽ Gasolina','🚗 Transporte','🏠 Hogar','💡 Servicios','💊 Salud','👕 Ropa','🎬 Entretenimiento','📺 Suscripciones','💸 Envíos a familia','🤝 Tony','📦 Otros'];
 const SHARED_CAT='🛒 Comida/Supermercado';
-const INC_CATS=['💼 Cheque','💵 Propinas/Tips','🤝 Pago de Carlos','🎁 Regalo','↩️ Reembolso','📦 Otros'];
+const INC_CATS=['💼 Cheque','💵 Propinas/Tips','🎁 Regalo','↩️ Reembolso','📦 Otros'];
 if(!S.incCats)S.incCats=INC_CATS.slice();
+S.incCats=S.incCats.filter(c=>!/pago de carlos/i.test(c));
 if(!S.catsV2){S.cats=[...CATS,...(S.cats||[]).filter(c=>!CATS.some(x=>x.endsWith(' '+c)))];S.catsV2=1}
 S.checks=S.checks||[];
 const VAR=/^(gas|food|water|electricity)$/i;
@@ -146,13 +147,13 @@ function com(){const m=M(),c=calc(m);return `<div class="card"><button style="wi
 function moves(m){return [
  ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:(x.recipient?'→ '+x.recipient+(x.desc?' · ':''):'')+(x.desc||''),method:x.method,recipient:x.recipient})),
  ...m.purchases.map(p=>{const T=+p.shares.Tony||0,Cc=+p.shares.Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v));return {id:p.id,kind:'compra',date:p.date,amount:-tot,cat:SHARED_CAT,desc:p.store+' (compartida)',method:p.method,mine:(m=>m<0.02?0:m)(r2(tot-T-Cc))}}),
- ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay')?-e.amount:e.amount,cat:e.type==='income'?(e.concept||'📦 Otros'):e.type==='check'?'💼 Cheque':e.type==='carlos'?'🤝 Pago de Carlos':e.type==='tony'?'🤝 Tony':e.type==='todebit'?'🔁 Transferencia a débito':e.type==='cardpay'?'💳 Pago de tarjeta':'💵 Ingreso',desc:e.desc,method:e.method||'deb'}))
+ ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay')?-e.amount:e.amount,cat:e.type==='income'?(e.concept||'📦 Otros'):e.type==='check'?'💼 Cheque':e.type==='carlos'?'↩️ Reembolso de Carlos':e.type==='tony'?'🤝 Tony':e.type==='todebit'?'🔁 Transferencia a débito':e.type==='cardpay'?'💳 Pago de tarjeta':'💵 Ingreso',desc:e.desc,method:e.method||'deb'}))
 ].sort((a,b)=>(b.date||'')<(a.date||'')?-1:1)}
 // gasto real de Joe por categoría (compartidas: solo su parte; transferencia a Tony no cuenta como gasto)
 function spent(m){const by={};moves(m).forEach(x=>{if(x.kind==='gasto')by[x.cat]=(by[x.cat]||0)+(-x.amount);if(x.kind==='compra'&&x.mine)by[x.cat]=(by[x.cat]||0)+x.mine});
  return {by,total:Object.values(by).reduce((a,b)=>a+b,0)}}
 // ingresos por concepto (cheques, pagos de Carlos, ingresos registrados; no transferencias propias ni pagos de tarjeta)
-const INC_KINDS=['income','check','carlos'];
+const INC_KINDS=['income','check']; // reembolsos (Carlos) y transferencias propias no son ingreso
 function earned(m){const by={};moves(m).forEach(x=>{if(INC_KINDS.includes(x.kind))by[x.cat]=(by[x.cat]||0)+x.amount});
  const k=keys().find(k=>S.months[k]===m);(S.checks||[]).filter(c=>c.legacy&&c.month===k).forEach(c=>by['💼 Cheque']=(by['💼 Cheque']||0)+(+c.amount||0));
  return {by,total:Object.values(by).reduce((a,b)=>a+b,0)}}
@@ -163,9 +164,9 @@ function rep(){const m=M(),sp=spent(m),mx=Math.max(1,...Object.values(sp.by)),mv
  const er=earned(m),all=keys().map(k=>[k,spent(S.months[k]).total,earned(S.months[k]).total]),acc=all.reduce((a,[,t])=>a+t,0),accI=all.reduce((a,[,,i])=>a+i,0);
  return `<div class="card"><h2>Gasto por categoría<span>${f(sp.total)}</span></h2><div class="muted">${lbl(S.cur)} · compras compartidas cuentan solo tu parte</div>
  ${Object.entries(sp.by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar" onclick="filt='${esc(k)}';render()"><div class="bl"><span>${esc(k)}</span><b>${f(v)}</b></div><div class="bt"><div style="width:${Math.max(2,v/mx*100)}%"></div></div></div>`).join('')||'<div class="muted">Sin gastos registrados.</div>'}</div>
- <div class="card" id="inccard"><h2>Ingresos por concepto<span class="pos">${f(er.total)}</span></h2><div class="muted">${lbl(S.cur)} · sin transferencias entre tus cuentas ni pagos de tarjeta</div>${bars(er.by,'pos')||'<div class="muted">Sin ingresos registrados.</div>'}</div>
+ <div class="card" id="inccard"><h2>Ingresos por concepto<span class="pos">${f(er.total)}</span></h2><div class="muted">${lbl(S.cur)} · sin reembolsos, transferencias entre tus cuentas ni pagos de tarjeta</div>${bars(er.by,'pos')||'<div class="muted">Sin ingresos registrados.</div>'}</div>
  ${remCard(m)}<div class="card"><h2>Movimientos</h2><select style="width:100%" onchange="filt=this.value;render()"><option value="">Todas las categorías</option>${cats.map(c=>`<option${c===filt?' selected':''}>${esc(c)}</option>`).join('')}</select>
- ${mv.map(x=>`<div class="row"><span class="n">${esc(x.desc)||esc(x.cat)}<div class="muted">${fdate(x.date)} · ${esc(x.cat)} · ${methName(x.method)}</div></span><b class="${x.kind==='todebit'?'':x.amount>=0?'pos':''}">${x.kind==='todebit'?'↔ ':x.amount>=0?'+':'−'}${f(Math.abs(x.amount))}</b>${x.kind==='compra'?'':`<button class="del" onclick="delMove('${x.kind}','${x.id}')">✕</button>`}</div>`).join('')||'<div class="muted">Nada aquí.</div>'}</div>
+ ${mv.map(x=>`<div class="row"><span class="n">${esc(x.desc)||esc(x.cat)}<div class="muted">${fdate(x.date)} · ${esc(x.cat)} · ${methName(x.method)}</div></span><b class="${x.kind==='todebit'||x.kind==='carlos'?'':x.amount>=0?'pos':''}">${x.kind==='todebit'||x.kind==='carlos'?'↔ ':x.amount>=0?'+':'−'}${f(Math.abs(x.amount))}</b>${x.kind==='compra'?'':`<button class="del" onclick="delMove('${x.kind}','${x.id}')">✕</button>`}</div>`).join('')||'<div class="muted">Nada aquí.</div>'}</div>
  <div class="card"><h2>Acumulado</h2><div class="row"><span class="n"><b>Total</b></span><span class="pos">+${f(accI)}</span>&nbsp;<span>−${f(acc)}</span></div>${all.reverse().map(([k,t,i])=>`<div class="row"><span class="n">${lbl(k)}<div class="muted">Neto ${f(i-t)}</div></span><span class="pos">+${f(i)}</span>&nbsp;<span>−${f(t)}</span></div>`).join('')}</div>`}
 function cfg(){return `<div class="card"><h2>Conceptos de ingreso</h2><div class="muted">Uno por línea</div><textarea rows="6" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.incCats=this.value.split('\n').map(s=>s.trim()).filter(Boolean);save()">${esc(S.incCats.join('\n'))}</textarea></div>
  <div class="card"><h2>Categorías</h2><div class="muted">Una por línea (puedes poner emoji)</div><textarea id="cats" rows="9" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.cats=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);save()">${esc(S.cats.join('\n'))}</textarea></div>
