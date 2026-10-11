@@ -73,6 +73,13 @@ let chkEdit=false;
 const wd=d=>{const[y,m,dd]=d.split('-');return ['dom','lun','mar','mié','jue','vie','sáb'][new Date(d+'T12:00').getDay()]+' '+dd+'/'+m};
 function setCheck(){const a=r2(document.getElementById('chk').value),d=document.getElementById('chkd').value;if(!a)return alert('Pon el monto del cheque');
  const pc=pendingCheck();if(pc){pc.amount=a;pc.date=d}else S.checks.push({id:uid(),amount:a,date:d,status:'pending'});chkEdit=false;save();render();toast('Próximo cheque guardado')}
+// Depósito automático: cheques pendientes cuya fecha llegó a las 5:00 AM (hora local)
+let autoNote=null;
+function autoDeposit(){if(!S.checks)return;const now=new Date(),dueL=S.checks.filter(c=>c.status==='pending'&&c.date&&new Date(c.date+'T05:00:00')<=now).sort((a,b)=>a.date<b.date?-1:1);
+ if(!dueL.length)return;let tot=0;const m=L();
+ dueL.forEach(c=>{c.status='deposited';c.auto=true;c.depositedOn=today();debE(m).amount=r2((+debE(m).amount||0)+c.amount);tot+=c.amount;
+  S.months[monthFor(c.date)].events.push({id:uid(),type:'check',date:c.date,amount:c.amount,desc:'Cheque '+fdate(c.date)+' (automático)',checkId:c.id,auto:true})});
+ autoNote={total:r2(tot),n:dueL.length};save();if(unlocked)render();toast(`Cheque de ${f(tot)} depositado automáticamente`)}
 function confirmCheck(){const c=pendingCheck(),a=r2(document.getElementById('cfa').value||c.amount);
  c.amount=a;c.status='deposited';c.depositedOn=today();const m=L();debE(m).amount=r2(debE(m).amount+a);
  S.months[monthFor(c.date)].events.push({id:uid(),type:'check',date:c.date,amount:a,desc:'Cheque '+fdate(c.date),checkId:c.id});
@@ -88,9 +95,9 @@ function render(){if(!unlocked)return;
  v.innerHTML=({ini,res,cue,com,rep,cfg})[tab]();
 }
 function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,cash=+cashE(m).amount||0,disp=deb+cash;const ss=window.syncStatus?`<div class="muted" id="syncst" style="text-align:right;margin:-4px 4px 6px">${window.syncStatus()}</div>`:'';
- const pc=pendingCheck(),due=pc&&pc.date<=today();
+ const pc=pendingCheck(),due=false;
  const tonyDue=m.tonyPaid?0:Math.max(0,c.toTony),cards=c.credit,next=pc?pc.amount:0,proj=disp+next-tonyDue-cards;
- return ss+`<div class="card hero"><div class="muted">Disponible ahora</div><div class="big xl ${disp>=0?'pos':'neg'}">${f(disp)}</div>
+ return ss+(autoNote?`<div class="card" style="background:#dcfce7;border:1px solid #86efac" id="autonote">✅ ${autoNote.n>1?autoNote.n+' cheques por ':'Cheque de '}${f(autoNote.total)} depositado${autoNote.n>1?'s':''} automáticamente <button class="sec" style="min-height:32px;padding:2px 10px;float:right" onclick="autoNote=null;render()">OK</button></div>`:'')+`<div class="card hero"><div class="muted">Disponible ahora</div><div class="big xl ${disp>=0?'pos':'neg'}">${f(disp)}</div>
  <div class="muted">Débito ${f(deb)} · Efectivo ${f(cash)}</div></div>
  ${due?`<div class="card" style="border:2px solid #15803d"><h2>💵 Confirmar depósito</h2><div class="muted">Cheque del ${fdate(pc.date)}. Ajusta si llegó otro monto.</div>
   <div class="grid" style="margin-top:8px"><input id="cfa" type="number" inputmode="decimal" step="0.01" value="${pc.amount}"><button id="cfbtn" onclick="confirmCheck()">Confirmar</button></div></div>`:''}
@@ -133,18 +140,20 @@ function com(){const m=M(),c=calc(m);return `<div class="card"><button style="wi
  <div class="muted">${fdate(p.date)} · ${methName(p.method)} · ${Object.entries(p.shares).filter(([k,v])=>+v).map(([k,v])=>esc(k)+' '+f(v)).join(' · ')}</div></div>`).join('')||'<div class="card muted">Sin compras este mes.</div>'}`}
 // movimientos unificados de un mes
 function moves(m){return [
- ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:x.desc,method:x.method})),
- ...m.purchases.map(p=>({id:p.id,kind:'compra',date:p.date,amount:-p.total,cat:SHARED_CAT,desc:p.store+' (compartida)',method:p.method,mine:(m=>Math.abs(m)<0.02?0:m)(r2(p.total-(+p.shares.Tony||0)-(+p.shares.Carlos||0)))})),
+ ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:(x.recipient?'→ '+x.recipient+(x.desc?' · ':''):'')+(x.desc||''),method:x.method,recipient:x.recipient})),
+ ...m.purchases.map(p=>{const T=+p.shares.Tony||0,Cc=+p.shares.Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v));return {id:p.id,kind:'compra',date:p.date,amount:-tot,cat:SHARED_CAT,desc:p.store+' (compartida)',method:p.method,mine:(m=>m<0.02?0:m)(r2(tot-T-Cc))}}),
  ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay')?-e.amount:e.amount,cat:e.type==='tony'?'🤝 Tony':e.type==='cardpay'?'💳 Pago de tarjeta':'💵 Ingreso',desc:e.desc,method:'deb'}))
 ].sort((a,b)=>(b.date||'')<(a.date||'')?-1:1)}
 // gasto real de Joe por categoría (compartidas: solo su parte; transferencia a Tony no cuenta como gasto)
 function spent(m){const by={};moves(m).forEach(x=>{if(x.kind==='gasto')by[x.cat]=(by[x.cat]||0)+(-x.amount);if(x.kind==='compra'&&x.mine)by[x.cat]=(by[x.cat]||0)+x.mine});
  return {by,total:Object.values(by).reduce((a,b)=>a+b,0)}}
+function remCard(m){const by={};m.personal.filter(x=>isRem(x.cat)).forEach(x=>{const r=x.recipient||'Sin destinatario';by[r]=(by[r]||0)+(+x.amount||0)});const e=Object.entries(by);if(!e.length)return'';
+ return `<div class="card"><h2>💸 Remesas por destinatario<span>${f(e.reduce((a,[,v])=>a+v,0))}</span></h2>${e.sort((a,b)=>b[1]-a[1]).map(([r,v])=>`<div class="row"><span class="n">${esc(r)}</span>${f(v)}</div>`).join('')}</div>`}
 function rep(){const m=M(),sp=spent(m),mx=Math.max(1,...Object.values(sp.by)),mv=moves(m).filter(x=>!filt||x.cat===filt),cats=[...new Set(moves(m).map(x=>x.cat))];
  const all=keys().map(k=>[k,spent(S.months[k]).total]),acc=all.reduce((a,[,t])=>a+t,0);
  return `<div class="card"><h2>Gasto por categoría<span>${f(sp.total)}</span></h2><div class="muted">${lbl(S.cur)} · compras compartidas cuentan solo tu parte</div>
  ${Object.entries(sp.by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar" onclick="filt='${esc(k)}';render()"><div class="bl"><span>${esc(k)}</span><b>${f(v)}</b></div><div class="bt"><div style="width:${Math.max(2,v/mx*100)}%"></div></div></div>`).join('')||'<div class="muted">Sin gastos registrados.</div>'}</div>
- <div class="card"><h2>Movimientos</h2><select style="width:100%" onchange="filt=this.value;render()"><option value="">Todas las categorías</option>${cats.map(c=>`<option${c===filt?' selected':''}>${esc(c)}</option>`).join('')}</select>
+ ${remCard(m)}<div class="card"><h2>Movimientos</h2><select style="width:100%" onchange="filt=this.value;render()"><option value="">Todas las categorías</option>${cats.map(c=>`<option${c===filt?' selected':''}>${esc(c)}</option>`).join('')}</select>
  ${mv.map(x=>`<div class="row"><span class="n">${esc(x.desc)||esc(x.cat)}<div class="muted">${fdate(x.date)} · ${esc(x.cat)} · ${methName(x.method)}</div></span><b class="${x.amount>=0?'pos':''}">${x.amount>=0?'+':'−'}${f(Math.abs(x.amount))}</b>${x.kind==='compra'?'':`<button class="del" onclick="delMove('${x.kind}','${x.id}')">✕</button>`}</div>`).join('')||'<div class="muted">Nada aquí.</div>'}</div>
  <div class="card"><h2>Acumulado<span>${f(acc)}</span></h2>${all.reverse().map(([k,t])=>`<div class="row"><span class="n">${lbl(k)}</span>${f(t)}</div>`).join('')}</div>`}
 function cfg(){return `<div class="card"><h2>Categorías</h2><div class="muted">Una por línea (puedes poner emoji)</div><textarea id="cats" rows="9" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.cats=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);save()">${esc(S.cats.join('\n'))}</textarea></div>
@@ -164,14 +173,20 @@ function delItem(k,id){M()[k]=M()[k].filter(x=>x.id!==id);save();render()}
 const dlg=()=>document.getElementById('dlg');
 function quick(){dlg().innerHTML=`<h2>Nuevo gasto</h2>
  <input id="qa" class="name" type="number" inputmode="decimal" step="0.01" placeholder="Monto $" style="font-size:24px">
- <div class="chips" id="qcats">${S.cats.map((c,i)=>`<button class="chip ${i===0?'on':''}" data-c="${esc(c)}" onclick="document.querySelectorAll('#qcats .chip').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${esc(c)}</button>`).join('')}</div>
+ <div class="chips" id="qcats">${S.cats.map((c,i)=>`<button class="chip ${i===0?'on':''}" data-c="${esc(c)}" onclick="document.querySelectorAll('#qcats .chip').forEach(b=>b.classList.remove('on'));this.classList.add('on');document.getElementById('qrec').hidden=!isRem(this.dataset.c)">${esc(c)}</button>`).join('')}</div>
+ <div id="qrec" hidden><div class="muted">¿A quién se lo enviaste?</div><div class="chips" id="qrecs">${(S.recipients||[]).map(r=>`<button class="chip" data-r="${esc(r)}" onclick="pickRec(this)">${esc(r)}</button>`).join('')}</div>
+ <input id="qrn" class="name" placeholder="+ Nuevo destinatario" oninput="if(this.value)document.querySelectorAll('#qrecs .chip').forEach(b=>b.classList.remove('on'))"></div>
  <p><input id="qd" class="name" placeholder="Descripción (opcional)"></p>
  <div class="grid"><input id="qf" type="date" value="${today()}"><select id="qm">${methOpts('deb')}</select></div>
  <div class="grid" style="margin-top:12px"><button class="sec" onclick="dlg().close()">Cancelar</button><button id="qsave" onclick="saveQuick()">Guardar</button></div>
  <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close();editP()">🛒 Es compra compartida (Tony/Carlos)</button>`;dlg().showModal()}
+const isRem=c=>/env[ií]os? a familia|remesa/i.test(c||'');
+function pickRec(b){document.querySelectorAll('#qrecs .chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');document.getElementById('qrn').value=''}
 function saveQuick(){const a=r2(document.getElementById('qa').value);if(!a)return alert('Pon un monto');
- const date=document.getElementById('qf').value,method=document.getElementById('qm').value;
- S.months[monthFor(date)].personal.unshift({id:uid(),date,amount:a,cat:document.querySelector('#qcats .chip.on').dataset.c,desc:document.getElementById('qd').value,method});
+ const date=document.getElementById('qf').value,method=document.getElementById('qm').value,cat=document.querySelector('#qcats .chip.on').dataset.c;
+ let recipient;if(isRem(cat)){recipient=(document.getElementById('qrn').value.trim()||document.querySelector('#qrecs .chip.on')?.dataset.r||'');if(!recipient)return alert('Elige o escribe el destinatario');
+  S.recipients=S.recipients||[];if(!S.recipients.includes(recipient))S.recipients.push(recipient)}
+ S.months[monthFor(date)].personal.unshift({id:uid(),date,amount:a,cat,desc:document.getElementById('qd').value,method,...(recipient?{recipient}:{})});
  spend(method,a);save();dlg().close();render();toast('Gasto guardado')}
 function cardPayDlg(id){const c=M().cards.find(x=>x.id===id);if(!c||!(+c.amount>0))return;
  dlg().innerHTML=`<h2>Pagar ${esc(c.name)}</h2><div class="muted">Saldo ${f(c.amount)} · se descuenta del débito. Cambia el monto para un pago parcial.</div>
@@ -273,7 +288,10 @@ async function pinKey(d){const fl=fails();if(fl.until>Date.now()&&d!=='del')retu
  if(await checkPin(pin)){localStorage.removeItem(FK);if(LK.mode==='old'){LK.mode='new1';return drawLock()}return unlock()}
  const n=fl.n+1;localStorage.setItem(FK,JSON.stringify(n>=5?{n:0,until:Date.now()+30000}:{n,until:0}));
  LK.msg=n>=5?'':`PIN incorrecto (${5-n} intento${5-n===1?'':'s'} antes de esperar)`;drawLock()}
-function unlock(){unlocked=true;closeLock();render();window.afterUnlock&&window.afterUnlock()}
+function unlock(){unlocked=true;closeLock();render();window.afterUnlock&&window.afterUnlock();setTimeout(autoDeposit,2500)}
+setInterval(()=>{if(unlocked)autoDeposit()},60000);
+addEventListener('focus',()=>{if(unlocked)setTimeout(autoDeposit,2500)});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&unlocked)setTimeout(autoDeposit,2500)});
 function forgotPin(){if(!confirm('⚠️ Si reinicias el PIN se BORRARÁN todos los datos de la app en este dispositivo (meses, gastos, compras). ¿Continuar?'))return;
  if(!confirm('¿Seguro? Esto no se puede deshacer. Exporta un respaldo antes si puedes.'))return;
  [K,PK,FK].forEach(x=>localStorage.removeItem(x));location.reload()}
