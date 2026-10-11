@@ -27,7 +27,12 @@ Object.values(S.months).forEach(m=>{
  if(!m.income.some(x=>/^efectivo$/i.test(x.name)))m.income.push({id:uid(),name:'Efectivo',amount:0});
  if(!m.income.some(x=>/d[eé]bit/i.test(x.name)))m.income.unshift({id:uid(),name:'Débito',amount:0});
 });
-const save=()=>localStorage.setItem(K,JSON.stringify(S));
+function save(){S.updatedAt=Date.now();localStorage.setItem(K,JSON.stringify(S));window.onLocalSave&&window.onLocalSave()}
+// puente para sync.js
+window.getState=()=>S;
+window.setState=(obj)=>{S=obj;localStorage.setItem(K,JSON.stringify(S));if(!S.months[S.cur])S.cur=Object.keys(S.months).sort().at(-1)||'';render()};
+window.hasUserData=()=>!!S.updatedAt;
+window.rerender=()=>render();
 const M=()=>S.months[S.cur];
 const keys=()=>Object.keys(S.months).sort();
 const L=()=>S.months[keys().at(-1)];               // mes "vivo": saldos actuales
@@ -74,10 +79,10 @@ function render(){if(!unlocked)return;
  if(!M()){v.innerHTML='<div class="card">Crea un mes con “+ Mes”.</div>';return}
  v.innerHTML=({ini,res,cue,com,rep,cfg})[tab]();
 }
-function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,cash=+cashE(m).amount||0,disp=deb+cash;
+function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,cash=+cashE(m).amount||0,disp=deb+cash;const ss=window.syncStatus?`<div class="muted" id="syncst" style="text-align:right;margin:-4px 4px 6px">${window.syncStatus()}</div>`:'';
  const pc=pendingCheck(),due=pc&&pc.date<=today();
  const tonyDue=m.tonyPaid?0:Math.max(0,c.toTony),cards=c.credit,next=pc?pc.amount:0,proj=disp+next-tonyDue-cards;
- return `<div class="card hero"><div class="muted">Disponible ahora</div><div class="big xl ${disp>=0?'pos':'neg'}">${f(disp)}</div>
+ return ss+`<div class="card hero"><div class="muted">Disponible ahora</div><div class="big xl ${disp>=0?'pos':'neg'}">${f(disp)}</div>
  <div class="muted">Débito ${f(deb)} · Efectivo ${f(cash)}</div></div>
  ${due?`<div class="card" style="border:2px solid #15803d"><h2>💵 Confirmar depósito</h2><div class="muted">Cheque del ${fdate(pc.date)}. Ajusta si llegó otro monto.</div>
   <div class="grid" style="margin-top:8px"><input id="cfa" type="number" inputmode="decimal" step="0.01" value="${pc.amount}"><button id="cfbtn" onclick="confirmCheck()">Confirmar</button></div></div>`:''}
@@ -135,6 +140,7 @@ function rep(){const m=M(),sp=spent(m),mx=Math.max(1,...Object.values(sp.by)),mv
 function cfg(){return `<div class="card"><h2>Categorías</h2><div class="muted">Una por línea (puedes poner emoji)</div><textarea id="cats" rows="9" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.cats=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);save()">${esc(S.cats.join('\n'))}</textarea></div>
  <div class="card"><h2>Personas</h2><input class="name" value="${esc(S.people.join(', '))}" onchange="S.people=this.value.split(',').map(s=>s.trim()).filter(Boolean);save()"></div>
  <div class="card"><h2>Tiendas</h2><input class="name" value="${esc(S.stores.join(', '))}" onchange="S.stores=this.value.split(',').map(s=>s.trim()).filter(Boolean);save()"></div>
+ ${window.syncCard?window.syncCard():''}
  <div class="card"><h2>Seguridad</h2><button id="chpin" class="sec" style="width:100%" onclick="changePin()">🔒 Cambiar PIN</button></div>
  <div class="card"><h2>Respaldo</h2><div class="grid"><button onclick="exp()">Exportar JSON</button><button class="sec" onclick="document.getElementById('imp').click()">Importar JSON</button></div>
  <input type="file" id="imp" accept="application/json,.json" hidden onchange="imp(this.files[0])"></div>
@@ -247,7 +253,7 @@ async function pinKey(d){const fl=fails();if(fl.until>Date.now()&&d!=='del')retu
  if(await checkPin(pin)){localStorage.removeItem(FK);if(LK.mode==='old'){LK.mode='new1';return drawLock()}return unlock()}
  const n=fl.n+1;localStorage.setItem(FK,JSON.stringify(n>=5?{n:0,until:Date.now()+30000}:{n,until:0}));
  LK.msg=n>=5?'':`PIN incorrecto (${5-n} intento${5-n===1?'':'s'} antes de esperar)`;drawLock()}
-function unlock(){unlocked=true;closeLock();render()}
+function unlock(){unlocked=true;closeLock();render();window.afterUnlock&&window.afterUnlock()}
 function forgotPin(){if(!confirm('⚠️ Si reinicias el PIN se BORRARÁN todos los datos de la app en este dispositivo (meses, gastos, compras). ¿Continuar?'))return;
  if(!confirm('¿Seguro? Esto no se puede deshacer. Exporta un respaldo antes si puedes.'))return;
  [K,PK,FK].forEach(x=>localStorage.removeItem(x));location.reload()}
