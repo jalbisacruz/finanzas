@@ -66,7 +66,7 @@ function confirmCheck(){const c=pendingCheck(),a=r2(document.getElementById('cfa
  save();render();toast('Depósito confirmado')}
 // ---------- vistas ----------
 let tab='ini',filt='';
-function render(){
+function render(){if(!unlocked)return;
  const sel=document.getElementById('msel');
  sel.innerHTML=keys().reverse().map(k=>`<option value="${k}"${k===S.cur?' selected':''}>${lbl(k)}</option>`).join('');
  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
@@ -135,6 +135,7 @@ function rep(){const m=M(),sp=spent(m),mx=Math.max(1,...Object.values(sp.by)),mv
 function cfg(){return `<div class="card"><h2>Categorías</h2><div class="muted">Una por línea (puedes poner emoji)</div><textarea id="cats" rows="9" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.cats=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);save()">${esc(S.cats.join('\n'))}</textarea></div>
  <div class="card"><h2>Personas</h2><input class="name" value="${esc(S.people.join(', '))}" onchange="S.people=this.value.split(',').map(s=>s.trim()).filter(Boolean);save()"></div>
  <div class="card"><h2>Tiendas</h2><input class="name" value="${esc(S.stores.join(', '))}" onchange="S.stores=this.value.split(',').map(s=>s.trim()).filter(Boolean);save()"></div>
+ <div class="card"><h2>Seguridad</h2><button id="chpin" class="sec" style="width:100%" onclick="changePin()">🔒 Cambiar PIN</button></div>
  <div class="card"><h2>Respaldo</h2><div class="grid"><button onclick="exp()">Exportar JSON</button><button class="sec" onclick="document.getElementById('imp').click()">Importar JSON</button></div>
  <input type="file" id="imp" accept="application/json,.json" hidden onchange="imp(this.files[0])"></div>
  <div class="card"><h2>Mes</h2><button class="del" style="width:100%" onclick="if(confirm('¿Borrar ${lbl(S.cur)}?')){delete S.months[S.cur];S.cur=keys().at(-1)||'';save();render()}">Borrar este mes</button></div>`}
@@ -212,5 +213,45 @@ document.getElementById('newm').onclick=()=>{
  S.cur=k;save();tab='ini';render()};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;filt='';render();scrollTo(0,0)});
 document.getElementById('fab').onclick=quick;
-render();
+// ---------- PIN ----------
+const PK='finanzas-pin',FK='finanzas-pin-fails';
+const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+async function hashPin(pin,salt){return hex(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+':'+pin)))}
+const pinRec=()=>JSON.parse(localStorage.getItem(PK)||'null');
+async function setPin(pin){const salt=hex(crypto.getRandomValues(new Uint8Array(16)));localStorage.setItem(PK,JSON.stringify({salt,hash:await hashPin(pin,salt)}))}
+async function checkPin(pin){const r=pinRec();return !!r&&await hashPin(pin,r.salt)===r.hash}
+const fails=()=>JSON.parse(localStorage.getItem(FK)||'{"n":0,"until":0}');
+let LK={mode:'unlock',buf:'',first:'',msg:''},unlocked=false,hiddenAt=0,cdTimer;
+const TITLES={create1:'Crea tu PIN (4 a 6 dígitos)',create2:'Repite el PIN',unlock:'Introduce tu PIN',old:'PIN actual',new1:'Nuevo PIN (4 a 6 dígitos)',new2:'Repite el nuevo PIN'};
+function lockScreen(mode){LK={mode,buf:'',first:'',msg:''};
+ if(mode!=='old'&&mode!=='new1'){unlocked=false;document.body.classList.add('locked');document.getElementById('v').innerHTML='';dlg().open&&dlg().close()}
+ let el=document.getElementById('lock');if(!el){el=document.createElement('div');el.id='lock';document.body.appendChild(el)}drawLock()}
+function drawLock(){const el=document.getElementById('lock');if(!el)return;const fl=fails(),wait=Math.ceil((fl.until-Date.now())/1000),cd=wait>0;
+ const k=d=>`<button class="key" ${cd?'disabled':''} onclick="pinKey('${d}')">${d}</button>`;
+ el.innerHTML=`<div class="lk"><div style="font-size:44px">🔒</div><h2 style="justify-content:center">${TITLES[LK.mode]}</h2>
+ <div class="dots">${[0,1,2,3,4,5].map(i=>`<span class="${i<LK.buf.length?'on':''}${i>=4?' opt':''}"></span>`).join('')}</div>
+ <div class="lmsg">${cd?`Demasiados intentos. Espera ${wait}s`:esc(LK.msg)}</div>
+ <div class="pad">${[1,2,3,4,5,6,7,8,9].map(k).join('')}<button class="key fn" onclick="pinKey('del')">⌫</button>${k(0)}<button class="key ok" ${cd?'disabled':''} onclick="pinKey('ok')">OK</button></div>
+ ${LK.mode==='unlock'?`<button class="lnk" onclick="forgotPin()">Olvidé mi PIN</button>`:''}
+ ${LK.mode==='old'||LK.mode==='new1'||LK.mode==='new2'?`<button class="lnk" onclick="closeLock()">Cancelar</button>`:''}</div>`;
+ clearTimeout(cdTimer);if(cd)cdTimer=setTimeout(drawLock,1000)}
+function closeLock(){document.getElementById('lock')?.remove();document.body.classList.remove('locked')}
+async function pinKey(d){const fl=fails();if(fl.until>Date.now()&&d!=='del')return;
+ if(d==='del'){LK.buf=LK.buf.slice(0,-1);return drawLock()}
+ if(d!=='ok'){if(LK.buf.length<6)LK.buf+=d;LK.msg='';drawLock();if(LK.buf.length<6)return}
+ const pin=LK.buf;LK.buf='';
+ if(pin.length<4){LK.msg='El PIN debe tener de 4 a 6 dígitos';return drawLock()}
+ if(LK.mode==='create1'||LK.mode==='new1'){LK.first=pin;LK.mode=LK.mode==='create1'?'create2':'new2';return drawLock()}
+ if(LK.mode==='create2'||LK.mode==='new2'){if(pin!==LK.first){LK.mode=LK.mode==='create2'?'create1':'new1';LK.msg='No coinciden, inténtalo de nuevo';return drawLock()}
+  const was=LK.mode;await setPin(pin);if(was==='new2'){closeLock();toast('PIN cambiado')}else unlock();return}
+ if(await checkPin(pin)){localStorage.removeItem(FK);if(LK.mode==='old'){LK.mode='new1';return drawLock()}return unlock()}
+ const n=fl.n+1;localStorage.setItem(FK,JSON.stringify(n>=5?{n:0,until:Date.now()+30000}:{n,until:0}));
+ LK.msg=n>=5?'':`PIN incorrecto (${5-n} intento${5-n===1?'':'s'} antes de esperar)`;drawLock()}
+function unlock(){unlocked=true;closeLock();render()}
+function forgotPin(){if(!confirm('⚠️ Si reinicias el PIN se BORRARÁN todos los datos de la app en este dispositivo (meses, gastos, compras). ¿Continuar?'))return;
+ if(!confirm('¿Seguro? Esto no se puede deshacer. Exporta un respaldo antes si puedes.'))return;
+ [K,PK,FK].forEach(x=>localStorage.removeItem(x));location.reload()}
+function changePin(){let el=document.getElementById('lock');if(!el){el=document.createElement('div');el.id='lock';document.body.appendChild(el)}LK={mode:'old',buf:'',first:'',msg:''};drawLock()}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)hiddenAt=Date.now();else if(unlocked&&hiddenAt&&Date.now()-hiddenAt>60000)lockScreen('unlock')});
+lockScreen(pinRec()?'unlock':'create1');
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');

@@ -34,6 +34,14 @@ dialog{max-height:calc(100dvh - 40px);overflow-y:auto;border:0;border-radius:16p
 .bar{margin:10px 0}.bl{display:flex;justify-content:space-between;font-size:15px}.bt{background:#e2e8f0;border-radius:6px;height:12px;margin-top:4px}.bt div{background:#2563eb;height:12px;border-radius:6px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));background:#0f172a;color:#fff;padding:12px 18px;border-radius:12px;z-index:9}
 main{padding-bottom:90px}
+body.locked header,body.locked nav,body.locked #fab,body.locked main{display:none}
+#lock{position:fixed;inset:0;z-index:50;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
+.lk{width:100%;max-width:340px;text-align:center}.dots{display:flex;gap:14px;justify-content:center;margin:18px 0 8px}
+.dots span{width:16px;height:16px;border-radius:8px;border:2px solid #94a3b8}.dots span.on{background:#fff;border-color:#fff}.dots span.opt{opacity:.45}
+.lmsg{min-height:22px;color:#fca5a5;font-size:14px;margin-bottom:10px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;justify-items:center}
+.key{width:76px;height:76px;border-radius:38px;background:#1e293b;color:#fff;font-size:28px;font-weight:500}.key:active{background:#334155}.key.ok{background:#2563eb;font-size:20px}.key.fn{font-size:24px}.key:disabled{opacity:.35}
+.lnk{background:none;color:#93c5fd;margin-top:18px;font-weight:500}
 </style></head><body>
 <header><select id="msel"></select><button id="newm">+ Mes</button></header>
 <main id="v"></main>
