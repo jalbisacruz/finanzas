@@ -10,11 +10,12 @@ function seed(){
  const P=(store,tony,carlos,note)=>({id:uid(),store,date:'',total:r2(tony+carlos),mode:'manual',shares:{Tony:tony,Carlos:carlos},note:note||'Importado de Excel'});
  return {people:['Yo','Tony','Carlos'],stores:STORES.slice(),cur:'2026-10',months:{
  '2026-10':{income:[{id:uid(),name:'Débito',amount:0},{id:uid(),name:'Efectivo',amount:0}],
-  cards:bills([['BOA 1',0],['BOA 2',0],['Chase',0],['Amazon',0],['Capital One',0]]),
+  cards:bills([['BOA 1',0],['BOA 2',0],['Chase',0],['Amazon',0],['Capital One',0],['Affirm',0]]),
   bills:bills([['Car Insurance',0],['Car Letter',0],['Rent House',0],['Phone',0],['Internet',0],['Purifier',0],['Gas',0],['Food',0],['Water',0],['Electricity',0]]),
   purchases:[]}}};
 }
 let S=JSON.parse(localStorage.getItem(K)||'null')||seed();
+try{Object.values(S.months||{}).forEach(m=>{if(m.cards&&!m.cards.some(c=>/affirm/i.test(c.name)))m.cards.push({id:uid(),name:'Affirm',amount:0})})}catch(e){}
 // ---------- migración / modelo ----------
 const CATS=['🛒 Comida/Supermercado','🍽️ Restaurantes','⛽ Gasolina','🚗 Transporte','🏠 Hogar','💡 Servicios','💊 Salud','👕 Ropa','🎬 Entretenimiento','📺 Suscripciones','💸 Envíos a familia','🤝 Tony','📦 Otros'];
 const SHARED_CAT='🛒 Comida/Supermercado';
