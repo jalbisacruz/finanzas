@@ -3,7 +3,7 @@
   "auth": { "providers": { "googleSignIn": { "oAuthBrandDisplayName": "Finanzas", "supportEmail": "jalbisa.cruz@gmail.com" } } },
   "hosting": {
     "public": ".",
-    "ignore": ["firebase.json", "firestore.rules", ".firebaserc", "**/.*", "shots/**", "**/node_modules/**"],
+    "ignore": ["firebase.json", "firestore.rules", ".firebaserc", "**/.*", ".git/**", "**/.git/**", ".firebase/**", "shots/**", "**/node_modules/**"],
     "headers": [{ "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }]
   }
 }
