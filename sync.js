@@ -1,6 +1,8 @@
 // Sincronización en la nube con Firebase (Auth Google + Firestore). Doc: users/{uid}/data/state
 const V='11.10.0',B=`https://www.gstatic.com/firebasejs/${V}/`;
-const cfg=window.FB_CONFIG;
+const cfg=window.FB_CONFIG&&{...window.FB_CONFIG};
+// En Firebase Hosting usamos el mismo dominio para el login (más fiable en iPhone/PWA)
+if(cfg&&/\.(web\.app|firebaseapp\.com)$/.test(location.hostname))cfg.authDomain=location.hostname;
 let status='off',user=null,pushT=null,applying=false,unsub=null,fs=null,api=null,lastRemote=0;
 const LBL={off:'',out:'☁️ Sin sesión',pend:'⏳ Sincronización pendiente',ok:'☁️ Sincronizado',offline:'📴 Sin conexión (se sincroniza al volver)',err:'⚠️ Error de sincronización'};
 window.syncStatus=()=>cfg?LBL[status]:'';
