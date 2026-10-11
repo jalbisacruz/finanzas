@@ -240,7 +240,7 @@ function saveP(){const{isNew,orig,...p}=D;if(orig)spend(orig.method,-orig.total)
  const m=isNew?S.months[monthFor(p.date)]:M(),i=m.purchases.findIndex(x=>x.id===p.id);i>=0?m.purchases[i]=p:m.purchases.unshift(p);save();dlg().close();render();toast('Compra guardada')}
 function delP(){if(D.orig)spend(D.orig.method,-D.orig.total);M().purchases=M().purchases.filter(x=>x.id!==D.id);save();dlg().close();render()}
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='finanzas-'+today()+'.json';a.click()}
-function imp(file){if(!file)return;file.text().then(t=>{const d=JSON.parse(t);if(!d.months)throw 0;localStorage.setItem(K,t);location.reload()}).catch(()=>alert('Archivo inválido'))}
+function imp(file){if(!file)return;file.text().then(t=>{const d=JSON.parse(t);if(!d.months)throw 0;d.updatedAt=Date.now();localStorage.setItem(K,JSON.stringify(d));localStorage.setItem('finanzas-force-push','1');location.reload()}).catch(()=>alert('Archivo inválido'))}
 document.getElementById('msel').onchange=e=>{S.cur=e.target.value;save();render()};
 document.getElementById('newm').onclick=()=>{
  const ks=keys(),last=ks.at(-1);let k;

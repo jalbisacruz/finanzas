@@ -40,7 +40,7 @@ if(cfg){
  A.onAuthStateChanged(auth,async u=>{user=u;unsub&&unsub();unsub=null;
   if(!u){setS('out');rerender();return}
   setS('pend');rerender();
-  try{await firstLink()}catch(e){console.warn(e);setS('err');return}
+  try{if(localStorage.getItem('finanzas-force-push')){localStorage.setItem('finanzas-sync-uid',u.uid);await push();localStorage.removeItem('finanzas-force-push')}else await firstLink()}catch(e){console.warn(e);setS('err');return}
   unsub=F.onSnapshot(ref(),{includeMetadataChanges:true},sn=>{if(!sn.exists())return;
    if(!sn.metadata.hasPendingWrites)applyRemote(sn.data());
    setS(sn.metadata.hasPendingWrites?'pend':sn.metadata.fromCache&&!navigator.onLine?'offline':'ok')},e=>{console.warn(e);setS('err')});
