@@ -119,7 +119,7 @@ function res(){const c=calc(M());return `<div class="card"><div class="muted">Mi
  <div class="row"><span class="n"><b>Deuda total</b></span><b>${f(c.debt)}</b></div>
  <div class="row"><span class="n">Gastos registrados del mes</span>${f(spent(M()).total)}</div></div>`}
 function list(key,title,hint){const m=M(),t=sum(m[key],x=>x.amount);return `<div class="card"><h2>${title}<button class="sec" onclick="addItem('${key}')">+ Añadir</button></h2>${hint?`<div class="muted">${hint}</div>`:''}
- ${m[key].map(x=>`<div class="row"><input class="name n" value="${esc(x.name)}" onchange="upd('${key}','${x.id}','name',this.value)"><input type="number" inputmode="decimal" step="0.01" value="${x.amount||''}" placeholder="0" onchange="upd('${key}','${x.id}','amount',this.value)">${key==='bills'?`<button class="chip ${x.fixed?'on':''}" style="min-width:56px" onclick="tgFix('${x.id}')">${x.fixed?'Fija':'Var.'}</button>`:''}<button class="del" onclick="delItem('${key}','${x.id}')">✕</button></div>`).join('')}
+ ${m[key].map(x=>`<div class="row"><input class="name n" value="${esc(x.name)}" onchange="upd('${key}','${x.id}','name',this.value)"><input type="number" inputmode="decimal" step="0.01" value="${x.amount||''}" placeholder="0" onchange="upd('${key}','${x.id}','amount',this.value)">${key==='cards'?`<button class="pay" ${+x.amount>0?'':'disabled'} onclick="cardPayDlg('${x.id}')">PAGAR</button>`:''}${key==='bills'?`<button class="chip ${x.fixed?'on':''}" style="min-width:56px" onclick="tgFix('${x.id}')">${x.fixed?'Fija':'Var.'}</button>`:''}<button class="del" onclick="delItem('${key}','${x.id}')">✕</button></div>`).join('')}
  <div class="tot"><span>Subtotal</span><span>${f(t)}</span></div></div>`}
 function cue(){const m=M();return list('income','Mi dinero','Débito y efectivo se actualizan solos con cada movimiento. Los cheques se registran en Inicio.')+
  
@@ -134,7 +134,7 @@ function com(){const m=M(),c=calc(m);return `<div class="card"><button style="wi
 function moves(m){return [
  ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:x.desc,method:x.method})),
  ...m.purchases.map(p=>({id:p.id,kind:'compra',date:p.date,amount:-p.total,cat:SHARED_CAT,desc:p.store+' (compartida)',method:p.method,mine:(m=>Math.abs(m)<0.02?0:m)(r2(p.total-(+p.shares.Tony||0)-(+p.shares.Carlos||0)))})),
- ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:e.type==='tony'?-e.amount:e.amount,cat:e.type==='tony'?'🤝 Tony':'💵 Ingreso',desc:e.desc,method:'deb'}))
+ ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay')?-e.amount:e.amount,cat:e.type==='tony'?'🤝 Tony':e.type==='cardpay'?'💳 Pago de tarjeta':'💵 Ingreso',desc:e.desc,method:'deb'}))
 ].sort((a,b)=>(b.date||'')<(a.date||'')?-1:1)}
 // gasto real de Joe por categoría (compartidas: solo su parte; transferencia a Tony no cuenta como gasto)
 function spent(m){const by={};moves(m).forEach(x=>{if(x.kind==='gasto')by[x.cat]=(by[x.cat]||0)+(-x.amount);if(x.kind==='compra'&&x.mine)by[x.cat]=(by[x.cat]||0)+x.mine});
@@ -172,6 +172,15 @@ function saveQuick(){const a=r2(document.getElementById('qa').value);if(!a)retur
  const date=document.getElementById('qf').value,method=document.getElementById('qm').value;
  S.months[monthFor(date)].personal.unshift({id:uid(),date,amount:a,cat:document.querySelector('#qcats .chip.on').dataset.c,desc:document.getElementById('qd').value,method});
  spend(method,a);save();dlg().close();render();toast('Gasto guardado')}
+function cardPayDlg(id){const c=M().cards.find(x=>x.id===id);if(!c||!(+c.amount>0))return;
+ dlg().innerHTML=`<h2>Pagar ${esc(c.name)}</h2><div class="muted">Saldo ${f(c.amount)} · se descuenta del débito. Cambia el monto para un pago parcial.</div>
+ <p><input id="cpa" class="name" type="number" inputmode="decimal" step="0.01" value="${r2(c.amount)}" style="font-size:24px"></p><input id="cpf" class="name" type="date" value="${today()}">
+ <div class="grid" style="margin-top:12px"><button class="sec" onclick="dlg().close()">Cancelar</button><button id="cpok" onclick="doCardPay('${id}')">Confirmar pago</button></div>`;dlg().showModal()}
+function doCardPay(id){const c=M().cards.find(x=>x.id===id),a=r2(document.getElementById('cpa').value),d=document.getElementById('cpf').value;
+ if(!a||a<=0)return alert('Pon un monto');if(a>r2(c.amount)+0.001&&!confirm('El monto es mayor que el saldo. ¿Continuar?'))return;
+ c.amount=r2(c.amount-a);spend('deb',a);
+ S.months[monthFor(d)].events.push({id:uid(),type:'cardpay',date:d,amount:a,desc:'Pago '+c.name,cardId:c.id,cardMonth:S.cur});
+ save();dlg().close();render();toast('Pago registrado')}
 function payDlg(who,k){const m=S.months[k],c=calc(m),amt=who==='tony'?c.toTony:c.carlosOwes;
  dlg().innerHTML=`<h2>${who==='tony'?'Transferí a Tony':'Carlos me pagó'}</h2><div class="muted">${lbl(k)} · ${who==='tony'?'se descuenta del débito':'se suma al débito'}</div>
  <p><input id="pa" class="name" type="number" inputmode="decimal" step="0.01" value="${r2(amt)}" style="font-size:24px"></p><input id="pf" class="name" type="date" value="${today()}">
@@ -186,6 +195,7 @@ function delMove(kind,id){if(!confirm('¿Borrar este movimiento? Se revierte el 
  else{const m=findMonth('events',id),e=m.events.find(x=>x.id===id);
   if(e.type==='tony'){spend('deb',-e.amount);m.tonyPaid=0}
   if(e.type==='carlos'){spend('deb',e.amount);m.carlosPaid=0}
+  if(e.type==='cardpay'){spend('deb',-e.amount);const cm=S.months[e.cardMonth],c=cm&&cm.cards.find(c=>c.id===e.cardId);if(c)c.amount=r2(c.amount+e.amount)}
   if(e.type==='check'){spend('deb',e.amount);const c=S.checks.find(c=>c.id===e.checkId);if(c)c.status='pending'}
   m.events=m.events.filter(y=>y.id!==id)}
  save();render()}
