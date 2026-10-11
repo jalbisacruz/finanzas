@@ -175,18 +175,21 @@ function delMove(kind,id){if(!confirm('¿Borrar este movimiento? Se revierte el 
  save();render()}
 let D;
 function editP(id){const p=id?M().purchases.find(x=>x.id===id):null;
- D=p?JSON.parse(JSON.stringify(p)):{id:uid(),store:S.stores[0],date:today(),total:0,mode:'eq',who:['Yo','Tony','Carlos'],shares:{},method:'deb'};
+ D=p?JSON.parse(JSON.stringify(p)):{id:uid(),store:S.stores[0],date:today(),total:0,mode:'fam',who:['Yo','Tony','Carlos'],shares:{},method:'deb'};
  if(!D.who)D.who=Object.keys(D.shares).filter(k=>+D.shares[k]);D.orig=p?{method:p.method||'',total:p.total}:null;D.isNew=!p;drawP();dlg().showModal()}
-function recomputeEq(){if(D.mode!=='eq')return;const n=D.who.length||1,each=r2(D.total/n);D.shares={};D.who.forEach(w=>D.shares[w]=each)}
+function recomputeEq(){if(D.mode==='fam'){const t=r2(D.total),tn=r2(t*.5),c=r2(t*.25);D.shares={Tony:tn,Carlos:c,Yo:r2(t-tn-c)};return}
+ if(D.mode!=='eq')return;const n=D.who.length||1,each=r2(D.total/n);D.shares={};D.who.forEach(w=>D.shares[w]=each)}
 function drawP(){recomputeEq();const ppl=[...new Set([...S.people,...Object.keys(D.shares)])],tot=r2(Object.values(D.shares).reduce((s,v)=>s+(+v||0),0));
  dlg().innerHTML=`<h2>${D.isNew?'Compra compartida':'Editar compra'}</h2>
  <div class="grid"><select onchange="D.store=this.value">${[...new Set([...S.stores,D.store])].map(s=>`<option${s===D.store?' selected':''}>${esc(s)}</option>`).join('')}</select>
  <input type="date" value="${D.date||''}" onchange="D.date=this.value"></div>
  <div class="grid" style="margin-top:8px"><input id="tot" type="number" inputmode="decimal" step="0.01" placeholder="Total $" value="${D.total||''}" onchange="D.total=r2(this.value);drawP()">
  <select onchange="D.method=this.value"><option value="">Sin afectar saldo</option>${methOpts(D.method)}</select></div>
- <div class="chips"><button class="chip ${D.mode==='eq'?'on':''}" onclick="D.mode='eq';drawP()">Dividir igual</button><button class="chip ${D.mode==='manual'?'on':''}" onclick="D.mode='manual';drawP()">Manual</button></div>
+ <div class="chips"><button id="mfam" class="chip ${D.mode==='fam'?'on':''}" onclick="D.mode='fam';drawP()">Familia 50/25/25</button><button id="meq" class="chip ${D.mode==='eq'?'on':''}" onclick="D.mode='eq';drawP()">Iguales</button><button class="chip ${D.mode==='manual'?'on':''}" id="mman" onclick="D.mode='manual';drawP()">Manual</button></div>
  ${D.mode==='eq'?`<div class="muted">Entre quiénes (${D.who.length}):</div><div class="chips">${ppl.map(w=>`<button class="chip ${D.who.includes(w)?'on':''}" onclick="tg('${esc(w)}')">${esc(w)}</button>`).join('')}</div>`:''}
- ${ppl.map(w=>`<div class="row"><span class="n">${esc(w)}</span><input type="number" inputmode="decimal" step="0.01" value="${D.shares[w]||''}" placeholder="0" ${D.mode==='eq'?'disabled':''} onchange="D.shares['${esc(w)}']=r2(this.value);drawP()"></div>`).join('')}
+ ${ppl.map(w=>`<div class="row"><span class="n">${esc(w)}</span><input type="number" inputmode="decimal" step="0.01" value="${D.shares[w]||''}" placeholder="0" ${D.mode!=='manual'?'disabled':''} onchange="D.shares['${esc(w)}']=r2(this.value);drawP()"></div>`).join('')}
+ ${D.mode==='fam'?'<div class="muted">Tony 50% · Carlos 25% · Yo 25% (el redondeo va a Yo)</div>':''}
+ ${D.mode==='manual'&&r2(D.total-tot)>0.009?`<div class="muted">Falta ${f(D.total-tot)} — asignar a:</div><div class="chips">${ppl.map(w=>`<button class="chip rem" onclick="D.shares['${esc(w)}']=r2((+D.shares['${esc(w)}']||0)+${r2(D.total-tot)});drawP()">${esc(w)}</button>`).join('')}</div>`:''}
  <div class="muted">Repartido ${f(tot)} de ${f(D.total)}${Math.abs(tot-D.total)>0.02?' ⚠️ no cuadra':''}</div>
  <div class="grid" style="margin-top:12px">${D.isNew?'<span></span>':`<button class="del" onclick="delP()">Borrar</button>`}<button id="psave" onclick="saveP()">Guardar</button></div>
  <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close()">Cancelar</button>`}
