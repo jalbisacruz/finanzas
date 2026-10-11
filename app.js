@@ -12,7 +12,7 @@ function seed(){
  '2026-10':{income:[{id:uid(),name:'Débito',amount:0},{id:uid(),name:'Efectivo',amount:0}],
   cards:bills([['BOA 1',0],['BOA 2',0],['Chase',0],['Amazon',0],['Capital One',0]]),
   bills:bills([['Car Insurance',0],['Car Letter',0],['Rent House',0],['Phone',0],['Internet',0],['Purifier',0],['Gas',0],['Food',0],['Water',0],['Electricity',0]]),
-  purchases:[],carlosAdj:0}}};
+  purchases:[]}}};
 }
 let S=JSON.parse(localStorage.getItem(K)||'null')||seed();
 // ---------- migración / modelo ----------
@@ -25,6 +25,7 @@ const VAR=/^(gas|food|water|electricity)$/i;
 Object.entries(S.months).forEach(([k,m])=>{m.income=m.income.filter(x=>{const mt=/^cheque\b\s*(?:(\d{1,2})\/(\d{1,2}))?/i.exec(x.name||'');if(!mt)return true;
  if(+x.amount){const y=k.slice(0,4),date=mt[1]?`${y}-${mt[1].padStart(2,'0')}-${mt[2].padStart(2,'0')}`:k+'-01';S.checks.push({id:uid(),amount:r2(x.amount),date,status:'deposited',legacy:true,month:k})}
  return false})});
+if(Object.values(S.months).some(m=>'carlosAdj'in m)){Object.values(S.months).forEach(m=>delete m.carlosAdj);localStorage.setItem(K,JSON.stringify(S))}
 Object.values(S.months).forEach(m=>{
  m.bills.forEach(b=>{if(b.fixed===undefined)b.fixed=!VAR.test(b.name)});
  m.personal=m.personal||[];m.events=m.events||[];
@@ -57,7 +58,7 @@ const methOpts=sel=>[['deb','Débito'],['cash','Efectivo'],...L().cards.map(c=>[
 function calc(m){
  const tony=sum(m.purchases,x=>x.shares.Tony),carlos=sum(m.purchases,x=>x.shares.Carlos);
  const mk=Object.keys(S.months).find(k=>S.months[k]===m),inc=sum(m.income,x=>x.amount)+sum(S.checks.filter(c=>c.legacy&&c.month===mk),c=>c.amount),credit=sum(m.cards,x=>x.amount),bills=sum(m.bills,x=>x.amount);
- const carlosOwes=carlos+(+m.carlosAdj||0),toTony=bills-tony;
+ const carlosOwes=carlos,toTony=bills-tony;
  const money=inc+(m.tonyPaid?0:tony)+(m.carlosPaid?0:carlosOwes), debt=credit+(m.tonyPaid?0:bills);
  return {tony,carlos,carlosOwes,inc,credit,bills,money,debt,toTony,bal:money-debt,pers:sum(m.personal,x=>x.amount)};
 }
@@ -121,12 +122,12 @@ function list(key,title,hint){const m=M(),t=sum(m[key],x=>x.amount);return `<div
  ${m[key].map(x=>`<div class="row"><input class="name n" value="${esc(x.name)}" onchange="upd('${key}','${x.id}','name',this.value)"><input type="number" inputmode="decimal" step="0.01" value="${x.amount||''}" placeholder="0" onchange="upd('${key}','${x.id}','amount',this.value)">${key==='bills'?`<button class="chip ${x.fixed?'on':''}" style="min-width:56px" onclick="tgFix('${x.id}')">${x.fixed?'Fija':'Var.'}</button>`:''}<button class="del" onclick="delItem('${key}','${x.id}')">✕</button></div>`).join('')}
  <div class="tot"><span>Subtotal</span><span>${f(t)}</span></div></div>`}
 function cue(){const m=M();return list('income','Mi dinero','Débito y efectivo se actualizan solos con cada movimiento. Los cheques se registran en Inicio.')+
- `<div class="card"><h2>Ajuste manual Carlos</h2><input class="name" type="number" inputmode="decimal" step="0.01" value="${m.carlosAdj||''}" placeholder="0" onchange="M().carlosAdj=r2(this.value);save();render()"></div>`+
+ 
  list('cards','Tarjetas de crédito')+list('bills','Bills to Tony','“Fija” pasa su monto al mes siguiente; “Var.” empieza en 0')+
  `<div class="card"><h2>Cheques depositados (${lbl(S.cur)})<span>${f(sum(depChecks(),c=>c.amount))}</span></h2>${depChecks().map(c=>`<div class="row"><span class="n">${wd(c.date)}<div class="muted">✅ Depositado${c.legacy?' · importado':''}</div></span>${f(c.amount)}</div>`).join('')||'<div class="muted">Aún no hay cheques depositados este mes. Se agregan al confirmar el depósito en Inicio.</div>'}</div>`}
 const depChecks=()=>S.checks.filter(c=>c.status==='deposited'&&(c.legacy?c.month===S.cur:(c.date||'').startsWith(S.cur))).sort((a,b)=>a.date<b.date?-1:1);
 function com(){const m=M(),c=calc(m);return `<div class="card"><button style="width:100%" onclick="editP()">+ Nueva compra compartida</button>
- <div class="tot"><span>Tony ${f(c.tony)}</span><span>Carlos ${f(c.carlos)}</span></div></div>
+ <div class="tot"><span>Tony ${f(c.tony)}</span><span>Carlos ${f(c.carlos)}</span></div><div class="muted">Toca una compra para editarla o borrarla.</div></div>
  ${m.purchases.map(p=>`<div class="card p" onclick="editP('${p.id}')"><div class="tot" style="padding:0"><span>${esc(p.store)}</span><span>${f(p.total)}</span></div>
  <div class="muted">${fdate(p.date)} · ${methName(p.method)} · ${Object.entries(p.shares).filter(([k,v])=>+v).map(([k,v])=>esc(k)+' '+f(v)).join(' · ')}</div></div>`).join('')||'<div class="card muted">Sin compras este mes.</div>'}`}
 // movimientos unificados de un mes
@@ -223,7 +224,7 @@ document.getElementById('newm').onclick=()=>{
  const inc=prev?prev.income.filter(x=>!/^cheque/i.test(x.name)).map(x=>({id:uid(),name:x.name,amount:(debE(prev)===x||cashE(prev)===x)?x.amount:0})):[{id:uid(),name:'Débito',amount:0}];
  if(!inc.some(x=>/^efectivo$/i.test(x.name)))inc.push({id:uid(),name:'Efectivo',amount:0});
  S.months[k]={income:inc,cards:prev?cl(prev.cards):[{id:uid(),name:'BOA',amount:0},{id:uid(),name:'Amazon',amount:0},{id:uid(),name:'Capital One',amount:0}],
-  bills:prev?prev.bills.map(x=>({id:uid(),name:x.name,fixed:!!x.fixed,amount:x.fixed?x.amount:0})):[],purchases:[],personal:[],events:[],carlosAdj:0,carlosPaid:0,tonyPaid:0};
+  bills:prev?prev.bills.map(x=>({id:uid(),name:x.name,fixed:!!x.fixed,amount:x.fixed?x.amount:0})):[],purchases:[],personal:[],events:[],carlosPaid:0,tonyPaid:0};
  S.cur=k;save();tab='ini';render()};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;filt='';render();scrollTo(0,0)});
 document.getElementById('fab').onclick=quick;
