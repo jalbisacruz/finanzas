@@ -18,10 +18,10 @@ if(cfg){
  const ref=()=>F.doc(fs,'users',user.uid,'data','state');
  const standalone=()=>navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
  window.fbSignIn=async()=>{const pr=new A.GoogleAuthProvider();pr.setCustomParameters({prompt:'select_account'});
-  try{ if(standalone()) return A.signInWithRedirect(auth,pr); await A.signInWithPopup(auth,pr)}
+  try{ await A.signInWithPopup(auth,pr)}
   catch(e){ if(/popup|cancelled|operation-not-supported/i.test(e.code||'')) return A.signInWithRedirect(auth,pr); alert('No se pudo iniciar sesión: '+(e.code||e.message))}};
  window.fbSignOut=async()=>{if(!confirm('¿Cerrar sesión? Los datos se quedan en este dispositivo.'))return;await A.signOut(auth)};
- A.getRedirectResult(auth).catch(e=>console.warn('redirect',e.code));
+ A.getRedirectResult(auth).catch(e=>{console.warn('redirect',e.code);if(e.code)alert('Error al iniciar sesión: '+e.code)});
  async function push(){if(!user)return;clearTimeout(pushT);const S=getState();
   try{await F.setDoc(ref(),{state:JSON.stringify(S),updatedAt:S.updatedAt||Date.now(),device:navigator.userAgent.slice(0,80)});setS(navigator.onLine?'ok':'offline')}
   catch(e){console.warn(e);setS('err')}}
