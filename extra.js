@@ -92,3 +92,17 @@ async function loadBk(){const el=document.getElementById('bklist');if(!el||!wind
  `<button class="sec" style="width:100%;margin-top:6px" onclick="window.fbBackupNow().then(()=>{toast(T('Respaldo guardado'));loadBk()})">${T('Respaldo ahora')}</button>`}
 async function restoreBk(id){if(!confirm(T('¿Restaurar el respaldo del {0}? Primero se descargará una copia de tus datos actuales.',fdate(id)+' '+id.slice(0,4))))return;
  exp();try{await window.fbRestore(id);toast(T('Respaldo restaurado'))}catch(e){console.warn(e);alert(T('No se pudo restaurar'))}}
+// ---------- 6. plan del mes ----------
+function planCard(){const ent=Object.entries(S.budgets).filter(([,l])=>+l>0);
+ if(!ent.length)return `<div class="muted" id="planhint" style="margin:0 4px 10px">🎯 ${T('Define un presupuesto para ver tu plan del mes.')} <a href="#" onclick="tab='cfg';render();setTimeout(()=>document.getElementById('budcfg')?.scrollIntoView(),50);return false">${T('Ajustes › Presupuesto')}</a></div>`;
+ const k=keys().at(-1),m=L(),rec=earned(m).total,pend=S.checks.filter(c=>c.status==='pending'&&(c.date||'').startsWith(k)),pendT=sum(pend,c=>c.amount);
+ const known=S.checks.filter(c=>c.date&&!c.legacy).sort((a,b)=>a.date<b.date?-1:1),last=known.at(-1),lastAmt=last?+last.amount||0:0;
+ let est=0,n=0;if(last&&lastAmt>0){let x=nextThu(last.date);while(x<today())x=nextThu(x);while(x.startsWith(k)){est+=lastAmt;n++;x=nextThu(x)}}
+ const inc=r2(rec+pendT+est),bud=r2(sum(ent,([,l])=>+l)),plan=r2(inc-bud),by=budBy(m).by,sp=r2(sum(ent,([c])=>by[c]||0)),remB=r2(bud-sp),real=r2(rec-sp);
+ const c=calc(m),proj=r2(sum(m.income,x=>x.amount)+(pendingCheck()?pendingCheck().amount:0)-c.tonyDue-sum(prevPend(),p=>p.c.tonyDue)-c.credit),cl=v=>v>=0?'pos':'neg';
+ return `<div class="card" id="plancard"><h2>📋 ${T('Plan del mes')}<span class="muted" style="font-size:13px">${lbl(k)}</span></h2>
+ <div class="row"><span class="n">${T('Ingresos esperados')}${n?` <span class="muted">(~${T(n>1?'{0} estimados':'{0} estimado',n)})</span>`:''}</span>${n?'~':''}${f(inc)}</div>
+ <div class="row"><span class="n">${T('− Presupuesto')}</span>${f(bud)}</div>
+ <div class="row"><span class="n"><b>${T('Sobrante planificado')}</b></span><b class="${cl(plan)}">${n?'~':''}${f(plan)}</b></div>
+ <div class="row"><span class="n">${T('Gastado {0} · quedan {1}',f(sp),`<span class="${cl(remB)}">${f(remB)}</span>`)}<div class="muted">${T('Recibido {0} − gastado = sobrante real',f(rec))} · ${T('Disponible proyectado')} <span class="${cl(proj)}">${f(proj)}</span></div></span><b class="${cl(real)}">${f(real)}</b></div></div>`}
+Object.assign(EN,{"Define un presupuesto para ver tu plan del mes.":"Set a budget to see your monthly plan.","Ajustes › Presupuesto":"Settings › Budget","Plan del mes":"Monthly plan","Ingresos esperados":"Expected income","{0} estimado":"{0} estimated","{0} estimados":"{0} estimated","− Presupuesto":"− Budget","Sobrante planificado":"Planned leftover","Gastado {0} · quedan {1}":"Spent {0} · {1} left","Recibido {0} − gastado = sobrante real":"Received {0} − spent = real leftover"});

@@ -155,7 +155,7 @@ function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,disp=sum(m.income,x=
  <div class="row"><span class="n">${T('− Transferencia a Tony')} ${tonyDue>0.005?T('(pendiente)'):'✅'}</span>${f(tonyDue)}</div>
  ${oldT>0.005?`<div class="row"><span class="n">${T('− Pendiente a Tony (meses anteriores)')}</span>${f(oldT)}</div>`:''}
  <div class="row"><span class="n">${T('− Pagos de tarjetas')}</span>${f(cards)}</div></div>
- ${goalCards()}${closeCard(m,keys().at(-1))}${pendCard()}`}
+ ${typeof planCard==='function'?planCard():''}${goalCards()}${closeCard(m,keys().at(-1))}${pendCard()}`}
 function closeCard(m,k){const c=calc(m),tp=c.tonyDue>0.005,cp=c.carlosDue>0.005,empty=m.bills.filter(b=>!(+b.amount));return `<div class="card"><h2>${T('Cierre {0}',lbl(k))}</h2>
  <div class="row"><span class="n">➡️ ${T('Transferir a Tony')}<div class="muted">${T('Cuentas {0} − comida Tony {1}',f(c.bills),f(c.tony))}${c.xfer?T(' − ya transferido {0}',f(c.xfer)):''}</div></span><b>${tp?f(c.tonyDue):'✅ '+f(c.xfer)}</b></div>
  ${empty.length?`<div class="muted">⏳ ${T('Sin monto aún')}: ${empty.map(b=>esc(DN(b.name))).join(', ')}${tp?T(' — si transfieres ahora, se paga solo lo que tiene monto'):''}</div>`:''}
