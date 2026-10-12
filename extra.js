@@ -96,7 +96,7 @@ async function restoreBk(id){if(!confirm(T('¿Restaurar el respaldo del {0}? Pri
 function planCard(){const ent=Object.entries(S.budgets).filter(([,l])=>+l>0);
  if(!ent.length)return `<div class="muted" id="planhint" style="margin:0 4px 10px">🎯 ${T('Define un presupuesto para ver tu plan del mes.')} <a href="#" onclick="tab='cfg';render();setTimeout(()=>document.getElementById('budcfg')?.scrollIntoView(),50);return false">${T('Ajustes › Presupuesto')}</a></div>`;
  const k=keys().at(-1),m=L(),rec=earned(m).total,pend=S.checks.filter(c=>c.status==='pending'&&(c.date||'').startsWith(k)),pendT=sum(pend,c=>c.amount);
- const known=S.checks.filter(c=>c.date&&!c.legacy).sort((a,b)=>a.date<b.date?-1:1),last=known.at(-1),lastAmt=last?+last.amount||0:0;
+ const known=S.checks.filter(c=>c.date&&!c.legacy).sort((a,b)=>a.date<b.date?-1:1),last=known.at(-1),pc0=pendingCheck(),lastDep=known.filter(c=>c.status==='deposited').at(-1),lastAmt=pc0&&+pc0.amount>0?+pc0.amount:(lastDep?+lastDep.amount||0:0);
  let est=0,n=0;if(last&&lastAmt>0){let x=nextThu(last.date);while(x<today())x=nextThu(x);while(x.startsWith(k)){est+=lastAmt;n++;x=nextThu(x)}}
  const inc=r2(rec+pendT+est),bud=r2(sum(ent,([,l])=>+l)),plan=r2(inc-bud),by=budBy(m).by,sp=r2(sum(ent,([c])=>by[c]||0)),remB=r2(bud-sp),real=r2(rec-sp);
  const c=calc(m),proj=r2(sum(m.income,x=>x.amount)+(pendingCheck()?pendingCheck().amount:0)-c.tonyDue-sum(prevPend(),p=>p.c.tonyDue)-c.credit),cl=v=>v>=0?'pos':'neg';
