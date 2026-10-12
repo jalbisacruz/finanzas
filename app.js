@@ -5,7 +5,7 @@ const EN=/*EN*/{"Eliminar": "Delete", "¿Qué línea quieres eliminar?": "Which 
 function T(s,...a){const r=LANG==='en'&&EN[s]!==undefined?EN[s]:s;return r.replace(/\{(\d)\}/g,(_,i)=>a[i])}
 // nombres por defecto guardados en los datos: se traducen solo al mostrar
 const NM={es:{'Rent House':'Renta de casa','Car Insurance':'Seguro del carro','Car Letter':'Letra del carro','Phone':'Teléfono','Purifier':'Purificador','Food':'Comida','Water':'Agua','Electricity':'Electricidad'},
- en:{'Débito':'Debit','Efectivo':'Cash','Otros efectivos':'Other cash','Yo':'Me','🛒 Comida/Supermercado':'🛒 Food/Groceries','🍽️ Restaurantes':'🍽️ Restaurants','⛽ Gasolina':'⛽ Gasoline','🚗 Transporte':'🚗 Transportation','🏠 Hogar':'🏠 Home','💡 Servicios':'💡 Utilities','💊 Salud':'💊 Health','👕 Ropa':'👕 Clothing','🎬 Entretenimiento':'🎬 Entertainment','📺 Suscripciones':'📺 Subscriptions','💸 Envíos a familia':'💸 Remittances to family','📦 Otros':'📦 Other','💼 Cheque':'💼 Paycheck','💵 Propinas/Tips':'💵 Tips','💵 Propinas':'💵 Tips','💳 Reembolso en efectivo':'💳 Cash Back','🎁 Regalo':'🎁 Gift','↩️ Reembolso':'↩️ Refund','↩️ Reembolso de Carlos':'↩️ Carlos reimbursement','🔁 Transferencia a débito':'🔁 Transfer to debit','💳 Pago de tarjeta':'💳 Card payment','💵 Ingreso':'💵 Income'}};
+ en:{'Débito':'Debit','Efectivo':'Cash','Otros efectivos':'Other cash','Yo':'Me','🛒 Comida/Supermercado':'🛒 Food/Groceries','🍽️ Restaurantes':'🍽️ Restaurants','⛽ Gasolina':'⛽ Gasoline','🚗 Transporte':'🚗 Transportation','🏠 Hogar':'🏠 Home','💡 Servicios':'📡 Communications','📡 Comunicaciones':'📡 Communications','📈 Kalshi':'📈 Kalshi','Kalshi':'Kalshi','💊 Salud':'💊 Health','👕 Ropa':'👕 Clothing','🎬 Entretenimiento':'🎬 Entertainment','📺 Suscripciones':'📺 Subscriptions','💸 Envíos a familia':'💸 Remittances to family','📦 Otros':'📦 Other','💼 Cheque':'💼 Paycheck','💵 Propinas/Tips':'💵 Tips','💵 Propinas':'💵 Tips','💳 Reembolso en efectivo':'💳 Cash Back','🎁 Regalo':'🎁 Gift','↩️ Reembolso':'↩️ Refund','↩️ Reembolso de Carlos':'↩️ Carlos reimbursement','🔁 Transferencia a débito':'🔁 Transfer to debit','💳 Pago de tarjeta':'💳 Card payment','💵 Ingreso':'💵 Income'}};
 const DN=s=>{const x=NM[LANG][s];return x!==undefined?x:s};
 const DNrev=s=>{for(const[k,v]of Object.entries(NM[LANG]))if(v===s)return k;return s};
 function navLbl(){document.documentElement.lang=LANG;document.querySelectorAll('nav button').forEach(b=>b.lastChild.textContent=T(b.dataset.l));const n=document.getElementById('newm');if(n)n.textContent=T('+ Mes');const fb=document.getElementById('fab');if(fb)fb.setAttribute('aria-label',T('Nuevo gasto'))}
@@ -27,9 +27,9 @@ function seed(){
 let S=JSON.parse(localStorage.getItem(K)||'null')||seed();
 try{Object.values(S.months||{}).forEach(m=>{if(m.cards&&!m.cards.some(c=>/affirm/i.test(c.name)))m.cards.push({id:uid(),name:'Affirm',amount:0})})}catch(e){}
 // ---------- migración / modelo ----------
-const CATS=['🛒 Comida/Supermercado','🍽️ Restaurantes','⛽ Gasolina','🚗 Transporte','🏠 Hogar','💡 Servicios','💊 Salud','👕 Ropa','🎬 Entretenimiento','📺 Suscripciones','💸 Envíos a familia','🤝 Tony','📦 Otros'];
+const CATS=['🛒 Comida/Supermercado','🍽️ Restaurantes','⛽ Gasolina','🚗 Transporte','🏠 Hogar','📡 Comunicaciones','💊 Salud','👕 Ropa','🎬 Entretenimiento','📺 Suscripciones','💸 Envíos a familia','📈 Kalshi','🤝 Tony','📦 Otros'];
 const SHARED_CAT='🛒 Comida/Supermercado';
-const INC_CATS=['💼 Cheque','💵 Propinas','💳 Reembolso en efectivo','🎁 Regalo','↩️ Reembolso','📦 Otros'];
+const INC_CATS=['💼 Cheque','💵 Propinas','💳 Reembolso en efectivo','🎁 Regalo','↩️ Reembolso','📈 Kalshi','📦 Otros'];
 if(!S.incCats)S.incCats=INC_CATS.slice();
 S.incCats=S.incCats.filter(c=>!/pago de carlos/i.test(c));
 if(!S.catsV2){S.cats=[...CATS,...(S.cats||[]).filter(c=>!CATS.some(x=>x.endsWith(' '+c)))];S.catsV2=1}
@@ -58,7 +58,13 @@ function migrateInc(st){st.incCats=(st.incCats||INC_CATS.slice()).map(c=>/^💵\
  if(!st.incCats.includes('💳 Reembolso en efectivo'))st.incCats.splice(st.incCats.indexOf('💵 Propinas')+1,0,'💳 Reembolso en efectivo');
  Object.values(st.months||{}).forEach(m=>(m.events||[]).forEach(e=>{if(e.concept&&/^💵\s*propinas\s*\/\s*tips$/i.test(e.concept.trim())){e.concept='💵 Propinas';if(/^propinas\/tips$/i.test(e.desc||''))e.desc='Propinas'}}));
  pruneTips(st)}
-function migrate(st){migrateInc(st);Object.values(st.months||{}).forEach(m=>{m.events=m.events||[];m.bills=m.bills||[];m.purchases=m.purchases||[];
+// v37: Servicios -> Comunicaciones; Kalshi como ingreso y gasto
+const OLDSERV='💡 Servicios',NEWCOM='📡 Comunicaciones',KAL='📈 Kalshi';
+function migrateCats(st){if(st.cats){st.cats=st.cats.map(c=>c===OLDSERV?NEWCOM:c).filter((c,i,a)=>a.indexOf(c)===i);if(!st.cats.includes(KAL)){const i=st.cats.indexOf('🤝 Tony');st.cats.splice(i<0?st.cats.length:i,0,KAL)}}
+ if(st.incCats&&!st.incCats.includes(KAL)){const i=st.incCats.indexOf('📦 Otros');st.incCats.splice(i<0?st.incCats.length:i,0,KAL)}
+ if(st.budgets&&st.budgets[OLDSERV]!==undefined){if(st.budgets[NEWCOM]===undefined)st.budgets[NEWCOM]=st.budgets[OLDSERV];delete st.budgets[OLDSERV]}
+ const walk=o=>{if(Array.isArray(o))o.forEach(walk);else if(o&&typeof o==='object'){if(o.cat===OLDSERV)o.cat=NEWCOM;if(o.category===OLDSERV)o.category=NEWCOM;Object.values(o).forEach(v=>{if(v&&typeof v==='object')walk(v)})}};walk(st.months||{})}
+function migrate(st){migrateCats(st);migrateInc(st);Object.values(st.months||{}).forEach(m=>{m.events=m.events||[];m.bills=m.bills||[];m.purchases=m.purchases||[];
  const ev=t=>m.events.filter(e=>e.type===t).reduce((s,e)=>s+(+e.amount||0),0);
  if(m.tonyBase===undefined){const b=m.bills.reduce((s,x)=>s+(+x.amount||0),0),fd=m.purchases.reduce((s,x)=>s+(+(x.shares||{}).Tony||0),0);
   m.tonyBase=m.tonyPaid?r2(Math.max(0,b-fd-ev('tony'))):0;if(m.tonyPaid)m.bills.forEach(x=>{if(+x.amount&&x.paid===undefined)x.paid=r2(x.amount)})}
