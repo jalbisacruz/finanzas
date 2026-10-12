@@ -283,7 +283,7 @@ document.getElementById('newm').onclick=()=>{
  k=prompt('Mes nuevo (AAAA-MM):',k);if(!k||!/^\d{4}-\d{2}$/.test(k))return;if(S.months[k]){S.cur=k;save();render();return}
  const prev=S.months[last],cl=a=>a.map(x=>({id:uid(),name:x.name,amount:0}));
  const inc=prev?prev.income.filter(x=>!/^cheque/i.test(x.name)).map(x=>({id:uid(),name:x.name,amount:+x.amount||0,...(debE(prev)===x?{role:'debit'}:{})})):[{id:uid(),name:'Débito',amount:0,role:'debit'},{id:uid(),name:'Efectivo',amount:0}];
- S.months[k]={income:inc,cards:prev?cl(prev.cards):[{id:uid(),name:'BOA',amount:0},{id:uid(),name:'Amazon',amount:0},{id:uid(),name:'Capital One',amount:0}],
+ S.months[k]={income:inc,cards:prev?prev.cards.map(x=>({id:uid(),name:x.name,amount:+x.amount||0})):[{id:uid(),name:'BOA',amount:0},{id:uid(),name:'Amazon',amount:0},{id:uid(),name:'Capital One',amount:0}],
   bills:prev?prev.bills.map(x=>({id:uid(),name:x.name,fixed:!!x.fixed,amount:x.fixed?x.amount:0})):[],purchases:[],personal:[],events:[],carlosPaid:0,tonyPaid:0};
  S.cur=k;save();tab='ini';render()};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;filt='';render();scrollTo(0,0)});
