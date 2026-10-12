@@ -351,20 +351,33 @@ function editP(id){const p=id?M().purchases.find(x=>x.id===id):null;
  if(!D.who)D.who=Object.keys(D.shares).filter(k=>+D.shares[k]);D.orig=p?{method:p.method||'',total:p.total}:null;D.isNew=!p;drawP();dlg().showModal()}
 function recomputeEq(){if(D.mode==='fam'){const t=r2(D.total),tn=r2(t*.5),c=r2(t*.25);D.shares={Tony:tn,Carlos:c,Yo:r2(t-tn-c)};return}
  if(D.mode!=='eq')return;const n=D.who.length||1,each=r2(D.total/n);D.shares={};D.who.forEach(w=>D.shares[w]=each)}
+function splitBalHtml(tot,total){const d=r2(total-tot);if(Math.abs(d)<0.005)return`<span style="color:#15803d;font-weight:700">${T('✅ Cuadra')}</span>`;
+ if(d>0)return`<span style="color:#d97706;font-weight:700">${T('Falta {0}',f(d))}</span>`;
+ return`<span style="color:#b91c1c;font-weight:700">${T('Sobra {0}',f(-d))}</span>`}
+function splitRemHtml(tot,total,ppl){const miss=r2(total-tot);if(!(miss>0.009))return'';
+ return`<div class="muted">${T('Falta {0} — asignar a:',f(miss))}</div><div class="chips">${ppl.map(w=>`<button class="chip rem" onclick="D.shares['${esc(w)}']=r2((+D.shares['${esc(w)}']||0)+${miss});drawP()">${esc(DN(w))}</button>`).join('')}</div>`}
+function liveSplit(){if(!D||D.mode!=='manual')return;const totEl=document.getElementById('tot');if(totEl)D.total=r2(totEl.value);
+ document.querySelectorAll('#dlg input[data-w]').forEach(inp=>{D.shares[inp.dataset.w]=r2(inp.value)});
+ const ppl=[...new Set([...S.people,...Object.keys(D.shares)])],tot=r2(Object.values(D.shares).reduce((s,v)=>s+(+v||0),0));
+ const bal=document.getElementById('splitbal');if(bal)bal.innerHTML=splitBalHtml(tot,D.total);
+ const rem=document.getElementById('splitrem');if(rem)rem.innerHTML=splitRemHtml(tot,D.total,ppl);
+ const info=document.getElementById('splitinfo');if(info)info.textContent=T('Repartido {0} de {1}',f(tot),f(D.total))}
 function drawP(){recomputeEq();const ppl=[...new Set([...S.people,...Object.keys(D.shares)])],tot=r2(Object.values(D.shares).reduce((s,v)=>s+(+v||0),0));
  dlg().innerHTML=`<h2>${D.isNew?T('Compra compartida'):T('Editar compra')}</h2>
  <div class="grid"><select onchange="D.store=this.value">${[...new Set([...S.stores,D.store])].map(s=>`<option${s===D.store?' selected':''}>${esc(s)}</option>`).join('')}</select>
  <input type="date" value="${D.date||''}" onchange="D.date=this.value"></div>
- <div class="grid" style="margin-top:8px"><input id="tot" type="number" inputmode="decimal" step="0.01" placeholder="${T('Total $')}" value="${D.total||''}" onchange="D.total=r2(this.value);drawP()">
+ <div class="grid" style="margin-top:8px"><input id="tot" type="number" inputmode="decimal" step="0.01" placeholder="${T('Total $')}" value="${D.total||''}" oninput="D.total=r2(this.value);if(D.mode==='manual')liveSplit()" onchange="D.total=r2(this.value);if(D.mode!=='manual')drawP()">
  <select onchange="D.method=this.value"><option value="">${T('Sin afectar saldo')}</option>${methOpts(D.method)}</select></div>
  <div class="chips"><button id="mfam" class="chip ${D.mode==='fam'?'on':''}" onclick="D.mode='fam';drawP()">${T('Familia 50/25/25')}</button><button id="meq" class="chip ${D.mode==='eq'?'on':''}" onclick="D.mode='eq';drawP()">${T('Iguales')}</button><button class="chip ${D.mode==='manual'?'on':''}" id="mman" onclick="D.mode='manual';drawP()">${T('Manual')}</button></div>
  ${D.mode==='eq'?`<div class="muted">${T('Entre quiénes ({0}):',D.who.length)}</div><div class="chips">${ppl.map(w=>`<button class="chip ${D.who.includes(w)?'on':''}" onclick="tg('${esc(w)}')">${esc(DN(w))}</button>`).join('')}</div>`:''}
- ${ppl.map(w=>`<div class="row"><span class="n">${esc(DN(w))}</span><input type="number" inputmode="decimal" step="0.01" value="${D.shares[w]||''}" placeholder="0" ${D.mode!=='manual'?'disabled':''} onchange="D.shares['${esc(w)}']=r2(this.value);drawP()"></div>`).join('')}
+ ${ppl.map(w=>`<div class="row"><span class="n">${esc(DN(w))}</span><input type="number" inputmode="decimal" step="0.01" data-w="${esc(w)}" value="${D.shares[w]||''}" placeholder="0" ${D.mode!=='manual'?'disabled':''} oninput="D.shares['${esc(w)}']=r2(this.value);liveSplit()" onchange="D.shares['${esc(w)}']=r2(this.value);if(D.mode!=='manual')drawP()"></div>`).join('')}
  ${D.mode==='fam'?'<div class="muted">'+T('Tony 50% · Carlos 25% · Yo 25% (el redondeo va a Yo)')+'</div>':''}
- ${D.mode==='manual'&&r2(D.total-tot)>0.009?`<div class="muted">${T('Falta {0} — asignar a:',f(D.total-tot))}</div><div class="chips">${ppl.map(w=>`<button class="chip rem" onclick="D.shares['${esc(w)}']=r2((+D.shares['${esc(w)}']||0)+${r2(D.total-tot)});drawP()">${esc(DN(w))}</button>`).join('')}</div>`:''}
- <div class="muted">${T('Repartido {0} de {1}',f(tot),f(D.total))}${Math.abs(tot-D.total)>0.02?' ⚠️ '+T('no cuadra'):''}</div>
+ <div id="splitrem">${D.mode==='manual'?splitRemHtml(tot,D.total,ppl):''}</div>
+ ${D.mode==='manual'?`<div id="splitbal" style="margin-top:8px;font-size:15px">${splitBalHtml(tot,D.total)}</div>`:''}
+ <div id="splitinfo" class="muted">${T('Repartido {0} de {1}',f(tot),f(D.total))}</div>
  <div class="grid" style="margin-top:12px">${D.isNew?'<span></span>':`<button class="del" onclick="delP()">${T('Borrar')}</button>`}<button id="psave" onclick="saveP()">${T('Guardar')}</button></div>
  <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close()">${T('Cancelar')}</button>`}
+Object.assign(EN,{'Falta {0}':'Missing {0}','Sobra {0}':'Over by {0}','✅ Cuadra':'✅ Balanced'});
 function tg(w){D.who=D.who.includes(w)?D.who.filter(x=>x!==w):[...D.who,w];drawP()}
 function saveP(){const{isNew,orig,...p}=D;{const o=orig&&orig.method==='deb'?orig.total:0,n=p.method==='deb'?p.total:0;if(noDeb(r2(n-o)))return}if(orig)spend(orig.method,-orig.total);spend(p.method,p.total);
  const m=isNew?S.months[monthFor(p.date)]:M(),i=m.purchases.findIndex(x=>x.id===p.id);i>=0?m.purchases[i]=p:m.purchases.unshift(p);save();dlg().close();render();toast(T('Compra guardada'))}
