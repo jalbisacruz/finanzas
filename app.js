@@ -131,12 +131,12 @@ function render(){if(!unlocked)return;if(pruneTips(S))save();
  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
  const v=document.getElementById('v');
  if(!M()){v.innerHTML='<div class="card">'+T('Crea un mes con “+ Mes”.')+'</div>';return}
- v.innerHTML=({ini,res,cue,com,rep,cfg})[tab]();
+ v.innerHTML=({ini,res,cue,com,rep,cfg})[tab]();if(tab==='cfg'&&typeof loadBk==='function')loadBk();
 }
 function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,disp=sum(m.income,x=>x.amount);const ss=window.syncStatus?`<div class="muted" id="syncst" style="text-align:right;margin:-4px 4px 6px">${window.syncStatus()}</div>`:'';
  const pc=pendingCheck(),due=false;
  const pp=prevPend(),oldT=sum(pp,p=>p.c.tonyDue),tonyDue=c.tonyDue,cards=c.credit,next=pc?pc.amount:0,proj=disp+next-tonyDue-oldT-cards;
- return ss+(autoNote?`<div class="card" style="background:#dcfce7;border:1px solid #86efac" id="autonote">✅ ${autoNote.n>1?T('{0} cheques por {1} depositados automáticamente',autoNote.n,f(autoNote.total)):T('Cheque de {0} depositado automáticamente',f(autoNote.total))} <button class="sec" style="min-height:32px;padding:2px 10px;float:right" onclick="autoNote=null;render()">OK</button></div>`:'')+`<div class="card hero"><div class="muted">${T('Disponible ahora')}</div><div class="big xl ${disp>=0?'pos':'neg'}">${f(disp)}</div>
+ return ss+thuCard()+dueBanners()+budWarn()+(autoNote?`<div class="card" style="background:#dcfce7;border:1px solid #86efac" id="autonote">✅ ${autoNote.n>1?T('{0} cheques por {1} depositados automáticamente',autoNote.n,f(autoNote.total)):T('Cheque de {0} depositado automáticamente',f(autoNote.total))} <button class="sec" style="min-height:32px;padding:2px 10px;float:right" onclick="autoNote=null;render()">OK</button></div>`:'')+`<div class="card hero"><div class="muted">${T('Disponible ahora')}</div><div class="big xl ${disp>=0?'pos':'neg'}">${f(disp)}</div>
  <div class="muted">${m.income.map(x=>esc(DN(x.name)||'—')+' '+f(x.amount)).join(' · ')}</div></div>
  ${due?`<div class="card" style="border:2px solid #15803d"><h2>💵 ${T('Confirmar depósito')}</h2><div class="muted">${T('Cheque del {0}. Ajusta si llegó otro monto.',fdate(pc.date))}</div>
   <div class="grid" style="margin-top:8px"><input id="cfa" type="number" inputmode="decimal" step="0.01" value="${pc.amount}"><button id="cfbtn" onclick="confirmCheck()">${T('Confirmar')}</button></div></div>`:''}
@@ -149,7 +149,7 @@ function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,disp=sum(m.income,x=
  <div class="row"><span class="n">${T('− Transferencia a Tony')} ${tonyDue>0.005?T('(pendiente)'):'✅'}</span>${f(tonyDue)}</div>
  ${oldT>0.005?`<div class="row"><span class="n">${T('− Pendiente a Tony (meses anteriores)')}</span>${f(oldT)}</div>`:''}
  <div class="row"><span class="n">${T('− Pagos de tarjetas')}</span>${f(cards)}</div></div>
- ${closeCard(m,keys().at(-1))}${pendCard()}`}
+ ${goalCards()}${closeCard(m,keys().at(-1))}${pendCard()}`}
 function closeCard(m,k){const c=calc(m),tp=c.tonyDue>0.005,cp=c.carlosDue>0.005,empty=m.bills.filter(b=>!(+b.amount));return `<div class="card"><h2>${T('Cierre {0}',lbl(k))}</h2>
  <div class="row"><span class="n">➡️ ${T('Transferir a Tony')}<div class="muted">${T('Cuentas {0} − comida Tony {1}',f(c.bills),f(c.tony))}${c.xfer?T(' − ya transferido {0}',f(c.xfer)):''}</div></span><b>${tp?f(c.tonyDue):'✅ '+f(c.xfer)}</b></div>
  ${empty.length?`<div class="muted">⏳ ${T('Sin monto aún')}: ${empty.map(b=>esc(DN(b.name))).join(', ')}${tp?T(' — si transfieres ahora, se paga solo lo que tiene monto'):''}</div>`:''}
@@ -177,7 +177,7 @@ function list(key,title,hint){const m=M(),t=sum(m[key],x=>x.amount);return `<div
 function billSt(b){const p=+b.paid||0,a=+b.amount||0;if(!p)return'';return a-p>0.005?`<span class="muted" title="${T('pendiente')}" style="white-space:nowrap">+${f(a-p)}</span>`:'<span title="'+T('pagado')+'">✅</span>'}
 function cue(){const m=M();return list('income',T('Mi dinero'),T('La primera línea es tu débito. Las demás (efectivo…) se pueden depositar al débito. Los cheques se registran en Inicio.')+' '+T('Los saldos cambian solo con ingresos, gastos y pagos. Usa Ajustar para corregir.'))+
  
- list('cards',T('Tarjetas de crédito'),T('Los saldos cambian solo con ingresos, gastos y pagos. Usa Ajustar para corregir.'))+list('bills',T('Cuentas para Tony'),T('“Fija” pasa su monto al mes siguiente; “Var.” empieza en 0'))+
+ list('cards',T('Tarjetas de crédito'),T('Los saldos cambian solo con ingresos, gastos y pagos. Usa Ajustar para corregir.'))+list('bills',T('Cuentas para Tony'),T('“Fija” pasa su monto al mes siguiente; “Var.” empieza en 0'))+dueCard()+
  `<div class="card"><h2>${T('Cheques depositados ({0})',lbl(S.cur))}<span>${f(sum(depChecks(),c=>c.amount))}</span></h2>${depChecks().map(c=>`<div class="row"><span class="n">${wd(c.date)}<div class="muted">✅ ${T('Depositado')}${c.legacy?' · '+T('importado'):''}</div></span>${f(c.amount)}</div>`).join('')||'<div class="muted">'+T('Aún no hay cheques depositados este mes. Se agregan al confirmar el depósito en Inicio.')+'</div>'}</div>`}
 const depChecks=()=>S.checks.filter(c=>c.status==='deposited'&&(c.legacy?c.month===S.cur:(c.date||'').startsWith(S.cur))).sort((a,b)=>a.date<b.date?-1:1);
 function com(){const m=M(),c=calc(m);return `<div class="card"><button style="width:100%" onclick="editP()">${T('+ Nueva compra compartida')}</button>
@@ -188,6 +188,7 @@ function com(){const m=M(),c=calc(m);return `<div class="card"><button style="wi
 function evDesc(e){const d=e.desc||'';let mt;
  if((e.type==='tony'&&d==='Transferencia a Tony')||(e.type==='carlos'&&d==='Pago de Carlos'))return T(d);
  if(e.type==='check'&&/^Cheque /.test(d))return T('Cheque')+' '+fdate(e.date)+(e.auto||/automático/.test(d)?' ('+T('automático')+')':'');
+ if(e.type==='saving')return (e.amount>=0?T('Aporte a {0}',e.goalName||''):T('Retiro de {0}',e.goalName||''));
  if(e.type==='adjust')return T('Ajuste de saldo · {0}',DN(e.lineName||'')||'—')+(e.note?' · '+e.note:'');
  if(e.type==='cardpay'&&/^Pago /.test(d))return T('Pago {0}',DN(d.slice(5)));
  if(e.type==='todebit'&&(mt=/^Transferencia a débito \((.*)\)$/.exec(d)))return T('Transferencia a débito ({0})',DN(mt[1]));
@@ -197,7 +198,7 @@ function evDesc(e){const d=e.desc||'';let mt;
 function moves(m){return [
  ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:(x.recipient?'→ '+x.recipient+(x.desc?' · ':''):'')+(x.desc||''),method:x.method,recipient:x.recipient})),
  ...m.purchases.map(p=>{const Tn=+p.shares.Tony||0,Cc=+p.shares.Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v));return {id:p.id,kind:'compra',date:p.date,amount:-tot,cat:SHARED_CAT,desc:p.store+' ('+T('compartida')+')',method:p.method,mine:(m=>m<0.02?0:m)(r2(tot-Tn-Cc))}}),
- ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay')?-e.amount:e.type==='adjust'?e.diff:e.amount,cat:e.type==='income'?(e.concept||'📦 Otros'):e.type==='check'?'💼 Cheque':e.type==='carlos'?'↩️ Reembolso de Carlos':e.type==='tony'?'🤝 Tony':e.type==='todebit'?'🔁 Transferencia a débito':e.type==='cardpay'?'💳 Pago de tarjeta':e.type==='adjust'?'🛠️ Ajuste de saldo':'💵 Ingreso',desc:evDesc(e)+(e.card?' · 💳 '+DN(e.card):''),method:e.type==='adjust'?(e.lineKind==='cards'?'card:':'money:')+(e.lineName||''):e.method||'deb'}))
+ ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay'||e.type==='saving')?-e.amount:e.type==='adjust'?e.diff:e.amount,cat:e.type==='income'?(e.concept||'📦 Otros'):e.type==='check'?'💼 Cheque':e.type==='carlos'?'↩️ Reembolso de Carlos':e.type==='tony'?'🤝 Tony':e.type==='todebit'?'🔁 Transferencia a débito':e.type==='cardpay'?'💳 Pago de tarjeta':e.type==='adjust'?'🛠️ Ajuste de saldo':e.type==='saving'?'🐷 Ahorro':'💵 Ingreso',desc:evDesc(e)+(e.card?' · 💳 '+DN(e.card):''),method:e.type==='adjust'?(e.lineKind==='cards'?'card:':'money:')+(e.lineName||''):e.method||'deb'}))
 ].sort((a,b)=>(b.date||'')<(a.date||'')?-1:1)}
 // gasto real de Joe por categoría (compartidas: solo su parte; transferencia a Tony no cuenta como gasto)
 function spent(m){const by={};moves(m).forEach(x=>{if(x.kind==='gasto')by[x.cat]=(by[x.cat]||0)+(-x.amount);if(x.kind==='compra'&&x.mine)by[x.cat]=(by[x.cat]||0)+x.mine});
@@ -217,9 +218,9 @@ function rep(){const m=M(),sp=spent(m),mx=Math.max(1,...Object.values(sp.by)),mv
  const er=earned(m),all=keys().map(k=>[k,spent(S.months[k]).total,earned(S.months[k]).total]),acc=all.reduce((a,[,t])=>a+t,0),accI=all.reduce((a,[,,i])=>a+i,0);
  return `<div class="card"><h2>${T('Gasto por categoría')}<span>${f(sp.total)}</span></h2><div class="muted">${lbl(S.cur)} · ${T('compras compartidas cuentan solo tu parte')}</div>
  ${Object.entries(sp.by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar" onclick="filt='${esc(k)}';render()"><div class="bl"><span>${esc(DN(k))}</span><b>${f(v)}</b></div><div class="bt"><div style="width:${Math.max(2,v/mx*100)}%"></div></div></div>`).join('')||'<div class="muted">'+T('Sin gastos registrados.')+'</div>'}</div>
- <div class="card" id="inccard"><h2>${T('Ingresos por concepto')}<span class="pos">${f(er.total)}</span></h2><div class="muted">${lbl(S.cur)} · ${T('sin reembolsos, transferencias entre tus cuentas ni pagos de tarjeta')}</div>${bars(er.by,'pos')||'<div class="muted">'+T('Sin ingresos registrados.')+'</div>'}</div>
+ ${budRep(m)}<div class="card" id="inccard"><h2>${T('Ingresos por concepto')}<span class="pos">${f(er.total)}</span></h2><div class="muted">${lbl(S.cur)} · ${T('sin reembolsos, transferencias entre tus cuentas ni pagos de tarjeta')}</div>${bars(er.by,'pos')||'<div class="muted">'+T('Sin ingresos registrados.')+'</div>'}</div>
  ${remCard(m)}${cbCard(cbBy([m]),lbl(S.cur))}<div class="card"><h2>${T('Movimientos')}</h2><select style="width:100%" onchange="filt=this.value;render()"><option value="">${T('Todas las categorías')}</option>${cats.map(c=>`<option value="${esc(c)}"${c===filt?' selected':''}>${esc(DN(c))}</option>`).join('')}</select>
- ${mv.map(x=>`<div class="row"><span class="n">${esc(x.desc)||esc(DN(x.cat))}<div class="muted">${fdate(x.date)} · ${esc(DN(x.cat))} · ${methName(x.method)}</div></span><b class="${x.kind==='todebit'||x.kind==='carlos'?'':x.amount>=0?'pos':''}">${x.kind==='todebit'||x.kind==='carlos'?'↔ ':x.amount>=0?'+':'−'}${f(Math.abs(x.amount))}</b>${x.kind==='compra'?'':`<button class="del" onclick="delMove('${x.kind}','${x.id}')">✕</button>`}</div>`).join('')||'<div class="muted">'+T('Nada aquí.')+'</div>'}</div>
+ ${mv.map(x=>`<div class="row"><span class="n">${esc(x.desc)||esc(DN(x.cat))}<div class="muted">${fdate(x.date)} · ${esc(DN(x.cat))} · ${methName(x.method)}</div></span><b class="${x.kind==='todebit'||x.kind==='carlos'||x.kind==='saving'?'':x.amount>=0?'pos':''}">${x.kind==='todebit'||x.kind==='carlos'||x.kind==='saving'?'↔ ':x.amount>=0?'+':'−'}${f(Math.abs(x.amount))}</b>${x.kind==='compra'?'':`<button class="del" onclick="delMove('${x.kind}','${x.id}')">✕</button>`}</div>`).join('')||'<div class="muted">'+T('Nada aquí.')+'</div>'}</div>
  <div class="card"><h2>${T('Acumulado')}</h2><div class="row"><span class="n"><b>${T('Total')}</b></span><span class="pos">+${f(accI)}</span>&nbsp;<span>−${f(acc)}</span></div>${all.reverse().map(([k,t,i])=>`<div class="row"><span class="n">${lbl(k)}<div class="muted">${T('Neto {0}',f(i-t))}</div></span><span class="pos">+${f(i)}</span>&nbsp;<span>−${f(t)}</span></div>`).join('')}</div>${cbCard(cbBy(keys().map(k=>S.months[k])),T('Acumulado'))}`}
 function cfg(){return `<div class="card"><h2>${T('Idioma')}</h2><div class="chips"><button id="lang-es" class="chip ${LANG==='es'?'on':''}" onclick="setLang('es')">🇪🇸 Español</button><button id="lang-en" class="chip ${LANG==='en'?'on':''}" onclick="setLang('en')">🇺🇸 English</button></div><div class="muted">${T('Se guarda solo en este dispositivo.')}</div></div><div class="card"><h2>${T('Conceptos de ingreso')}</h2><div class="muted">${T('Uno por línea')}</div><textarea rows="6" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.incCats=this.value.split('\n').map(s=>DNrev(s.trim())).filter(Boolean);save()">${esc(S.incCats.map(DN).join('\n'))}</textarea></div>
  <div class="card"><h2>${T('Categorías')}</h2><div class="muted">${T('Una por línea (puedes poner emoji)')}</div><textarea id="cats" rows="9" style="width:100%;font-size:16px;border-radius:10px;border:1px solid #cbd5e1;padding:8px" onchange="S.cats=this.value.split('\\n').map(s=>DNrev(s.trim())).filter(Boolean);save()">${esc(S.cats.map(DN).join('\n'))}</textarea></div>
@@ -227,8 +228,7 @@ function cfg(){return `<div class="card"><h2>${T('Idioma')}</h2><div class="chip
  <div class="card"><h2>${T('Tiendas')}</h2><input class="name" value="${esc(S.stores.join(', '))}" onchange="S.stores=this.value.split(',').map(s=>s.trim()).filter(Boolean);save()"></div>
  ${window.syncCard?window.syncCard():''}
  <div class="card"><h2>${T('Seguridad')}</h2><button id="chpin" class="sec" style="width:100%" onclick="changePin()">🔒 ${T('Cambiar PIN')}</button></div>
- <div class="card"><h2>${T('Respaldo')}</h2><div class="grid"><button onclick="exp()">${T('Exportar JSON')}</button><button class="sec" onclick="document.getElementById('imp').click()">${T('Importar JSON')}</button></div>
- <input type="file" id="imp" accept="application/json,.json" hidden onchange="imp(this.files[0])"></div>
+${budCfg()}${goalCfg()}${bkCfg()}
  <div class="card"><h2>${T('Mes')}</h2><button class="del" style="width:100%" onclick="if(confirm('${T('¿Borrar {0}?',lbl(S.cur))}')){delete S.months[S.cur];S.cur=keys().at(-1)||'';save();render()}">${T('Borrar este mes')}</button></div>`}
 // ---------- acciones ----------
 function toast(t){const d=document.createElement('div');d.textContent=t;d.className='toast';document.body.appendChild(d);setTimeout(()=>d.remove(),1800)}
@@ -326,8 +326,9 @@ function delMove(kind,id){if(!confirm(T('¿Borrar este movimiento? Se revierte e
  const DM='No se puede borrar: el débito quedaría negativo. Disponible: {0}';
  if(kind==='gasto'){const m=findMonth('personal',id),x=m.personal.find(x=>x.id===id);spend(x.method,-x.amount);m.personal=m.personal.filter(y=>y.id!==id)}
  else{const m=findMonth('events',id),e=m.events.find(x=>x.id===id);
-  const out=(e.type==='carlos'||e.type==='check'||e.type==='todebit'||(e.type==='income'&&(e.method||'deb')==='deb'))?e.amount:0;if(noDeb(out,DM))return;
+  const out=(e.type==='carlos'||e.type==='check'||e.type==='todebit'||(e.type==='income'&&(e.method||'deb')==='deb'))?e.amount:e.type==='saving'?-e.amount:0;if(noDeb(out,DM))return;
   if(e.type==='adjust'){const am=S.months[e.month]||m,ln=am[e.lineKind]&&am[e.lineKind].find(y=>y.id===e.lineId);if(ln){const nv=r2((+ln.amount||0)-e.diff);if(e.lineKind==='income'&&ln===debE(am)&&nv<-0.004)return alert(T(DM,f(+ln.amount||0)));ln.amount=nv}}
+  if(e.type==='saving'){const g=(S.goals||[]).find(g=>g.id===e.goalId);if(g&&r2((+g.bal||0)-e.amount)<-0.004)return alert(T('No hay tanto ahorrado. Ahorrado: {0}',f(g.bal)));if(g)g.bal=r2((+g.bal||0)-e.amount);spend('deb',-e.amount)}
   if(e.type==='tony')spend('deb',-e.amount);
   if(e.type==='carlos')spend('deb',e.amount);
   if(e.type==='todebit'){const db=debE(L());db.amount=r2((+db.amount||0)-e.amount);const lm=S.months[e.lineMonth],ln=lm&&lm.income.find(y=>y.id===e.lineId);if(ln)ln.amount=r2((+ln.amount||0)+e.amount);else if(lm&&lm===L()){const mt=/\((.*)\)$/.exec(e.desc||'');lm.income.push({id:e.lineId,name:mt?mt[1]:'Efectivo',amount:r2(e.amount)})}}

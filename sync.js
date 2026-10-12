@@ -26,6 +26,19 @@ if(cfg){
  async function push(){if(!user)return;clearTimeout(pushT);const S=getState();
   try{await F.setDoc(ref(),{state:JSON.stringify(S),updatedAt:S.updatedAt||Date.now(),device:navigator.userAgent.slice(0,80)});setS(navigator.onLine?'ok':'offline')}
   catch(e){console.warn(e);setS('err')}}
+ // Respaldo semanal: users/{uid}/backups/{YYYY-MM-DD}, se conservan los 8 últimos
+ const bcol=()=>F.collection(fs,'users',user.uid,'backups');
+ async function listB(){const q=await F.getDocs(bcol());return q.docs.map(d=>({id:d.id,createdAt:d.data().createdAt||0})).sort((a,b)=>a.id<b.id?1:-1)}
+ async function writeB(){const S=getState();if(!S||!S.months)return;const id=new Date().toLocaleDateString('en-CA');
+  await F.setDoc(F.doc(bcol(),id),{state:JSON.stringify(S),createdAt:Date.now(),updatedAt:S.updatedAt||0});
+  const all=await listB();for(const b of all.slice(8))await F.deleteDoc(F.doc(bcol(),b.id))}
+ async function autoBackup(){if(!user||!navigator.onLine)return;try{const l=await F.getDocs(F.query(bcol(),F.orderBy('createdAt','desc'),F.limit(1)),);const last=l.docs[0];
+  if(last&&Date.now()-(last.data().createdAt||0)<7*864e5)return;await writeB()}catch(e){console.warn('backup',e)}}
+ window.fbUser=()=>!!user;
+ window.fbBackups=async()=>user?listB():[];
+ window.fbBackupNow=async()=>{if(user)await writeB()};
+ window.fbRestore=async id=>{const sn=await F.getDoc(F.doc(bcol(),id));if(!sn.exists())throw new Error('missing');const st=JSON.parse(sn.data().state);st.updatedAt=Date.now();
+  applying=true;try{setState(st)}finally{applying=false}await push()};
  window.onLocalSave=()=>{if(!user||applying)return;setS('pend');clearTimeout(pushT);pushT=setTimeout(push,1500)};
  window.fbSyncNow=async()=>{await pull(true);await push();rerender()};
  function applyRemote(d){if(!d)return;const S=getState();if((d.updatedAt||0)>(S.updatedAt||0)){applying=true;try{setState(JSON.parse(d.state))}finally{applying=false}}}
@@ -46,7 +59,7 @@ if(cfg){
   unsub=F.onSnapshot(ref(),{includeMetadataChanges:true},sn=>{if(!sn.exists())return;
    if(!sn.metadata.hasPendingWrites)applyRemote(sn.data());
    setS(sn.metadata.hasPendingWrites?'pend':sn.metadata.fromCache&&!navigator.onLine?'offline':'ok')},e=>{console.warn(e);setS('err')});
-  rerender()});
+  rerender();setTimeout(autoBackup,5000)});
  addEventListener('focus',()=>pull());document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
  addEventListener('online',()=>{if(status==='offline'||status==='pend')push()});addEventListener('offline',()=>user&&setS('offline'));
  // Primera vez después del PIN: ofrecer iniciar sesión
