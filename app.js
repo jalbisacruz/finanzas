@@ -129,12 +129,12 @@ function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,disp=sum(m.income,x=
 function closeCard(m,k){const c=calc(m),tp=c.tonyDue>0.005,cp=c.carlosDue>0.005,empty=m.bills.filter(b=>!(+b.amount));return `<div class="card"><h2>Cierre ${lbl(k)}</h2>
  <div class="row"><span class="n">➡️ Transferir a Tony<div class="muted">Cuentas ${f(c.bills)} − comida Tony ${f(c.tony)}${c.xfer?' − ya transferido '+f(c.xfer):''}</div></span><b>${tp?f(c.tonyDue):'✅ '+f(c.xfer)}</b></div>
  ${empty.length?`<div class="muted">⏳ Sin monto aún: ${empty.map(b=>esc(b.name)).join(', ')}${tp?' — si transfieres ahora, se paga solo lo que tiene monto':''}</div>`:''}
- ${tp?`<button id="tonybtn" style="width:100%;margin:4px 0 8px" onclick="payDlg('tony','${k}')">Transferí a Tony</button>`:''}
+ ${tp?`<button id="tonybtn" style="width:100%;margin:4px 0 8px" onclick="payDlg('tony','${k}')">Transferir a Tony</button>`:''}
  <div class="row"><span class="n">💰 Carlos te debe${c.recv&&cp?`<div class="muted">Ya pagó ${f(c.recv)}</div>`:''}</span><b>${cp?f(c.carlosDue):'✅ '+f(c.recv)}</b></div>
- ${cp?`<button id="carlosbtn" class="sec" style="width:100%;margin-top:4px" onclick="payDlg('carlos','${k}')">Carlos me pagó</button>`:''}</div>`}
+ ${cp?`<button id="carlosbtn" class="sec" style="width:100%;margin-top:4px" onclick="payDlg('carlos','${k}')">Cobrar a Carlos</button>`:''}</div>`}
 function pendCard(){const pp=prevPend();if(!pp.length)return'';return `<div class="card" id="pendcard" style="border:2px solid #f59e0b"><h2>⏳ Pendientes de meses anteriores</h2><div class="muted">No se mezclan con el mes actual. Si llega un bill tarde, anótalo en su mes (Cuentas) y aquí se actualiza.</div>
- ${pp.map(({k,c})=>(c.tonyDue>0.005?`<div class="row"><span class="n">Tony – ${lbl(k)}</span><b>${f(c.tonyDue)}</b><button class="pay" onclick="payDlg('tony','${k}')">Transferí a Tony</button></div>`:'')+
-  (c.carlosDue>0.005?`<div class="row"><span class="n">Carlos – ${lbl(k)}</span><b>${f(c.carlosDue)}</b><button class="pay dep" onclick="payDlg('carlos','${k}')">Carlos me pagó</button></div>`:'')).join('')}</div>`}
+ ${pp.map(({k,c})=>(c.tonyDue>0.005?`<div class="row"><span class="n">Tony – ${lbl(k)}</span><b>${f(c.tonyDue)}</b><button class="pay" onclick="payDlg('tony','${k}')">Transferir a Tony</button></div>`:'')+
+  (c.carlosDue>0.005?`<div class="row"><span class="n">Carlos – ${lbl(k)}</span><b>${f(c.carlosDue)}</b><button class="pay dep" onclick="payDlg('carlos','${k}')">Cobrar a Carlos</button></div>`:'')).join('')}</div>`}
 function res(){const c=calc(M());return `<div class="card"><div class="muted">Mi balance ${lbl(S.cur)} (modelo Excel)</div><div class="big ${c.bal>=0?'pos':'neg'}">${f(c.bal)}</div>
  <div class="muted">Mi dinero ${f(c.money)} − Deuda total ${f(c.debt)}</div></div>${closeCard(M(),S.cur)}${pendCard()}
  <div class="card"><h2>Detalle</h2>
@@ -248,7 +248,7 @@ function doCardPay(id){const c=M().cards.find(x=>x.id===id),a=r2(document.getEle
  S.months[monthFor(d)].events.push({id:uid(),type:'cardpay',date:d,amount:a,desc:'Pago '+c.name,cardId:c.id,cardMonth:S.cur});
  save();dlg().close();render();toast('Pago registrado')}
 function payDlg(who,k){const m=S.months[k],c=calc(m),amt=who==='tony'?c.tonyDue:c.carlosDue;
- dlg().innerHTML=`<h2>${who==='tony'?'Transferí a Tony':'Carlos me pagó'}</h2><div class="muted">${lbl(k)} · ${who==='tony'?'se descuenta del débito':'se suma al débito'}</div>
+ dlg().innerHTML=`<h2>${who==='tony'?'Transferir a Tony':'Cobrar a Carlos'}</h2><div class="muted">${lbl(k)} · ${who==='tony'?'se descuenta del débito':'se suma al débito'}</div>
  <p><input id="pa" class="name" type="number" inputmode="decimal" step="0.01" value="${r2(amt)}" style="font-size:24px"></p><input id="pf" class="name" type="date" value="${today()}">
  <div class="grid" style="margin-top:12px"><button class="sec" onclick="dlg().close()">Cancelar</button><button id="payok" onclick="doPay('${who}','${k}')">Confirmar</button></div>`;dlg().showModal()}
 function doPay(who,k){const a=r2(document.getElementById('pa').value),d=document.getElementById('pf').value,m=S.months[k];if(!a)return;
