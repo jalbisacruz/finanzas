@@ -36,10 +36,17 @@ Object.values(S.months).forEach(m=>{
  // Débito se identifica por role:'debit' (no por nombre). Respeta las líneas del usuario (no re-agrega 'Efectivo').
  if(!m.income.some(x=>x.role==='debit')){const d=m.income.find(x=>/d[eé]bit/i.test(x.name||''))||m.income[0];if(d)d.role='debit';else m.income.unshift({id:uid(),name:'Débito',amount:0,role:'debit'})}
 });
+// v24: transferencias parciales a Tony / pagos parciales de Carlos. tonyBase/carlosBase = lo ya saldado antes de v24.
+function migrate(st){Object.values(st.months||{}).forEach(m=>{m.events=m.events||[];m.bills=m.bills||[];m.purchases=m.purchases||[];
+ const ev=t=>m.events.filter(e=>e.type===t).reduce((s,e)=>s+(+e.amount||0),0);
+ if(m.tonyBase===undefined){const b=m.bills.reduce((s,x)=>s+(+x.amount||0),0),fd=m.purchases.reduce((s,x)=>s+(+(x.shares||{}).Tony||0),0);
+  m.tonyBase=m.tonyPaid?r2(Math.max(0,b-fd-ev('tony'))):0;if(m.tonyPaid)m.bills.forEach(x=>{if(+x.amount&&x.paid===undefined)x.paid=r2(x.amount)})}
+ if(m.carlosBase===undefined){const ow=m.purchases.reduce((s,x)=>s+(+(x.shares||{}).Carlos||0),0);m.carlosBase=m.carlosPaid?r2(Math.max(0,ow-ev('carlos'))):0}})}
+{const b4=JSON.stringify(S);migrate(S);if(JSON.stringify(S)!==b4)localStorage.setItem(K,JSON.stringify(S))}
 function save(){S.updatedAt=Date.now();localStorage.setItem(K,JSON.stringify(S));window.onLocalSave&&window.onLocalSave()}
 // puente para sync.js
 window.getState=()=>S;
-window.setState=(obj)=>{S=obj;localStorage.setItem(K,JSON.stringify(S));if(!S.months[S.cur])S.cur=Object.keys(S.months).sort().at(-1)||'';render()};
+window.setState=(obj)=>{S=obj;migrate(S);localStorage.setItem(K,JSON.stringify(S));if(!S.months[S.cur])S.cur=Object.keys(S.months).sort().at(-1)||'';render()};
 window.hasUserData=()=>!!S.updatedAt;
 window.rerender=()=>render();
 const M=()=>S.months[S.cur];
@@ -49,6 +56,9 @@ const lbl=k=>{const[y,m]=k.split('-');return MES[m-1]+' '+y};
 const today=()=>new Date().toLocaleDateString('en-CA');
 const fdate=d=>{if(!d)return 'sin fecha';const[y,m,dd]=d.split('-');return +dd+' '+MES[m-1]};
 const sum=(a,fn)=>a.reduce((s,x)=>s+(+fn(x)||0),0);
+const tXfer=m=>r2(sum(m.events.filter(e=>e.type==='tony'),e=>e.amount)+(+m.tonyBase||0));
+const cRecv=m=>r2(sum(m.events.filter(e=>e.type==='carlos'),e=>e.amount)+(+m.carlosBase||0));
+const prevPend=()=>keys().slice(0,-1).map(k=>({k,c:calc(S.months[k])})).filter(p=>p.c.tonyDue>0.005||p.c.carlosDue>0.005);
 const debE=m=>m.income.find(x=>x.role==='debit')||m.income[0];
 const cashLines=m=>m.income.filter(x=>x!==debE(m));
 // 'cash' (antiguo) = línea llamada Efectivo o la primera no-débito; 'money:<nombre>' = línea por nombre
@@ -64,9 +74,9 @@ const methOpts=sel=>[['deb',debE(L()).name||'Débito'],...cashLines(L()).map(x=>
 function calc(m){
  const tony=sum(m.purchases,x=>x.shares.Tony),carlos=sum(m.purchases,x=>x.shares.Carlos);
  const mk=Object.keys(S.months).find(k=>S.months[k]===m),inc=sum(m.income,x=>x.amount)+sum(S.checks.filter(c=>c.legacy&&c.month===mk),c=>c.amount),credit=sum(m.cards,x=>x.amount),bills=sum(m.bills,x=>x.amount);
- const carlosOwes=carlos,toTony=bills-tony;
- const money=inc+(m.tonyPaid?0:tony)+(m.carlosPaid?0:carlosOwes), debt=credit+(m.tonyPaid?0:bills);
- return {tony,carlos,carlosOwes,inc,credit,bills,money,debt,toTony,bal:money-debt,pers:sum(m.personal,x=>x.amount)};
+ const carlosOwes=carlos,toTony=r2(bills-tony),xfer=tXfer(m),recv=cRecv(m),tonyDue=Math.max(0,r2(toTony-xfer)),carlosDue=Math.max(0,r2(carlosOwes-recv));
+ const money=inc+tony+carlosDue, debt=credit+bills-xfer;
+ return {tony,carlos,carlosOwes,inc,credit,bills,money,debt,toTony,xfer,recv,tonyDue,carlosDue,bal:money-debt,pers:sum(m.personal,x=>x.amount)};
 }
 // ---------- cheques ----------
 function nextThu(from){const d=new Date(from+'T12:00');do d.setDate(d.getDate()+1);while(d.getDay()!==4);return d.toLocaleDateString('en-CA')}
@@ -101,7 +111,7 @@ function render(){if(!unlocked)return;
 }
 function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,disp=sum(m.income,x=>x.amount);const ss=window.syncStatus?`<div class="muted" id="syncst" style="text-align:right;margin:-4px 4px 6px">${window.syncStatus()}</div>`:'';
  const pc=pendingCheck(),due=false;
- const tonyDue=m.tonyPaid?0:Math.max(0,c.toTony),cards=c.credit,next=pc?pc.amount:0,proj=disp+next-tonyDue-cards;
+ const pp=prevPend(),oldT=sum(pp,p=>p.c.tonyDue),tonyDue=c.tonyDue,cards=c.credit,next=pc?pc.amount:0,proj=disp+next-tonyDue-oldT-cards;
  return ss+(autoNote?`<div class="card" style="background:#dcfce7;border:1px solid #86efac" id="autonote">✅ ${autoNote.n>1?autoNote.n+' cheques por ':'Cheque de '}${f(autoNote.total)} depositado${autoNote.n>1?'s':''} automáticamente <button class="sec" style="min-height:32px;padding:2px 10px;float:right" onclick="autoNote=null;render()">OK</button></div>`:'')+`<div class="card hero"><div class="muted">Disponible ahora</div><div class="big xl ${disp>=0?'pos':'neg'}">${f(disp)}</div>
  <div class="muted">${m.income.map(x=>esc(x.name||'—')+' '+f(x.amount)).join(' · ')}</div></div>
  ${due?`<div class="card" style="border:2px solid #15803d"><h2>💵 Confirmar depósito</h2><div class="muted">Cheque del ${fdate(pc.date)}. Ajusta si llegó otro monto.</div>
@@ -112,28 +122,35 @@ function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,disp=sum(m.income,x=
  <div class="card"><h2>Disponible proyectado<span class="${proj>=0?'pos':'neg'}">${f(proj)}</span></h2>
  <div class="row"><span class="n">Disponible ahora</span>${f(disp)}</div>
  <div class="row"><span class="n">+ Próximo cheque</span>${f(next)}</div>
- <div class="row"><span class="n">− Transferencia a Tony ${m.tonyPaid?'✅':'(pendiente)'}</span>${f(tonyDue)}</div>
+ <div class="row"><span class="n">− Transferencia a Tony ${tonyDue>0.005?'(pendiente)':'✅'}</span>${f(tonyDue)}</div>
+ ${oldT>0.005?`<div class="row"><span class="n">− Pendiente a Tony (meses anteriores)</span>${f(oldT)}</div>`:''}
  <div class="row"><span class="n">− Pagos de tarjetas</span>${f(cards)}</div></div>
- ${closeCard(m,keys().at(-1))}`}
-function closeCard(m,k){const c=calc(m);return `<div class="card"><h2>Cierre ${lbl(k)}</h2>
- <div class="row"><span class="n">➡️ Transferir a Tony<div class="muted">Cuentas ${f(c.bills)} − comida Tony ${f(c.tony)}</div></span><b>${m.tonyPaid?'✅ '+f(m.tonyPaid):f(c.toTony)}</b></div>
- ${m.tonyPaid?'':`<button id="tonybtn" style="width:100%;margin:4px 0 8px" onclick="payDlg('tony','${k}')">Transferí a Tony</button>`}
- <div class="row"><span class="n">💰 Carlos te debe</span><b>${m.carlosPaid?'✅ '+f(m.carlosPaid===true?c.carlosOwes:m.carlosPaid):f(c.carlosOwes)}</b></div>
- ${m.carlosPaid?'':`<button id="carlosbtn" class="sec" style="width:100%;margin-top:4px" onclick="payDlg('carlos','${k}')">Carlos me pagó</button>`}</div>`}
+ ${closeCard(m,keys().at(-1))}${pendCard()}`}
+function closeCard(m,k){const c=calc(m),tp=c.tonyDue>0.005,cp=c.carlosDue>0.005,empty=m.bills.filter(b=>!(+b.amount));return `<div class="card"><h2>Cierre ${lbl(k)}</h2>
+ <div class="row"><span class="n">➡️ Transferir a Tony<div class="muted">Cuentas ${f(c.bills)} − comida Tony ${f(c.tony)}${c.xfer?' − ya transferido '+f(c.xfer):''}</div></span><b>${tp?f(c.tonyDue):'✅ '+f(c.xfer)}</b></div>
+ ${empty.length?`<div class="muted">⏳ Sin monto aún: ${empty.map(b=>esc(b.name)).join(', ')}${tp?' — si transfieres ahora, se paga solo lo que tiene monto':''}</div>`:''}
+ ${tp?`<button id="tonybtn" style="width:100%;margin:4px 0 8px" onclick="payDlg('tony','${k}')">Transferí a Tony</button>`:''}
+ <div class="row"><span class="n">💰 Carlos te debe${c.recv&&cp?`<div class="muted">Ya pagó ${f(c.recv)}</div>`:''}</span><b>${cp?f(c.carlosDue):'✅ '+f(c.recv)}</b></div>
+ ${cp?`<button id="carlosbtn" class="sec" style="width:100%;margin-top:4px" onclick="payDlg('carlos','${k}')">Carlos me pagó</button>`:''}</div>`}
+function pendCard(){const pp=prevPend();if(!pp.length)return'';return `<div class="card" id="pendcard" style="border:2px solid #f59e0b"><h2>⏳ Pendientes de meses anteriores</h2><div class="muted">No se mezclan con el mes actual. Si llega un bill tarde, anótalo en su mes (Cuentas) y aquí se actualiza.</div>
+ ${pp.map(({k,c})=>(c.tonyDue>0.005?`<div class="row"><span class="n">Tony – ${lbl(k)}</span><b>${f(c.tonyDue)}</b><button class="pay" onclick="payDlg('tony','${k}')">Transferí a Tony</button></div>`:'')+
+  (c.carlosDue>0.005?`<div class="row"><span class="n">Carlos – ${lbl(k)}</span><b>${f(c.carlosDue)}</b><button class="pay dep" onclick="payDlg('carlos','${k}')">Carlos me pagó</button></div>`:'')).join('')}</div>`}
 function res(){const c=calc(M());return `<div class="card"><div class="muted">Mi balance ${lbl(S.cur)} (modelo Excel)</div><div class="big ${c.bal>=0?'pos':'neg'}">${f(c.bal)}</div>
- <div class="muted">Mi dinero ${f(c.money)} − Deuda total ${f(c.debt)}</div></div>${closeCard(M(),S.cur)}
+ <div class="muted">Mi dinero ${f(c.money)} − Deuda total ${f(c.debt)}</div></div>${closeCard(M(),S.cur)}${pendCard()}
  <div class="card"><h2>Detalle</h2>
  <div class="row"><span class="n">Ingresos (débito, efectivo, cheques)</span>${f(c.inc)}</div>
- <div class="row"><span class="n">Income Tony (su comida)${M().tonyPaid?' — descontado':''}</span>${f(c.tony)}</div>
- <div class="row"><span class="n">Income Carlos${M().carlosPaid?' — cobrado':''}</span>${f(c.carlosOwes)}</div>
+ <div class="row"><span class="n">Income Tony (su comida)</span>${f(c.tony)}</div>
+ <div class="row"><span class="n">Income Carlos (por cobrar)${c.recv?'<div class="muted">ya cobrado '+f(c.recv)+'</div>':''}</span>${f(c.carlosDue)}</div>
  <div class="row"><span class="n"><b>Mi dinero</b></span><b>${f(c.money)}</b></div>
  <div class="row"><span class="n">SubT Credit</span>${f(c.credit)}</div>
- <div class="row"><span class="n">Bills to Tony${M().tonyPaid?' — pagado':''}</span>${f(c.bills)}</div>
+ <div class="row"><span class="n">Bills to Tony</span>${f(c.bills)}</div>
+ ${c.xfer?`<div class="row"><span class="n">− Ya transferido a Tony</span>${f(c.xfer)}</div>`:''}
  <div class="row"><span class="n"><b>Deuda total</b></span><b>${f(c.debt)}</b></div>
  <div class="row"><span class="n">Gastos registrados del mes</span>${f(spent(M()).total)}</div></div>`}
 function list(key,title,hint){const m=M(),t=sum(m[key],x=>x.amount);return `<div class="card"><h2>${title}<button class="sec" onclick="addItem('${key}')">+ Añadir</button></h2>${hint?`<div class="muted">${hint}</div>`:''}
- ${m[key].map(x=>`<div class="row"><input class="name n" value="${esc(x.name)}" onchange="upd('${key}','${x.id}','name',this.value)"><input type="number" inputmode="decimal" step="0.01" value="${x.amount||''}" placeholder="0" onchange="upd('${key}','${x.id}','amount',this.value)">${key==='income'&&x!==debE(m)?`<button class="pay dep" ${+x.amount>0?'':'disabled'} onclick="depDlg('${x.id}')">Depositar</button>`:''}${key==='cards'?`<button class="pay" ${+x.amount>0?'':'disabled'} onclick="cardPayDlg('${x.id}')">PAGAR</button>`:''}${key==='bills'?`<button class="chip ${x.fixed?'on':''}" style="min-width:56px" onclick="tgFix('${x.id}')">${x.fixed?'Fija':'Var.'}</button>`:''}<button class="del" onclick="delItem('${key}','${x.id}')">✕</button></div>`).join('')}
+ ${m[key].map(x=>`<div class="row"><input class="name n" value="${esc(x.name)}" onchange="upd('${key}','${x.id}','name',this.value)"><input type="number" inputmode="decimal" step="0.01" value="${x.amount||''}" placeholder="0" onchange="upd('${key}','${x.id}','amount',this.value)">${key==='income'&&x!==debE(m)?`<button class="pay dep" ${+x.amount>0?'':'disabled'} onclick="depDlg('${x.id}')">Depositar</button>`:''}${key==='cards'?`<button class="pay" ${+x.amount>0?'':'disabled'} onclick="cardPayDlg('${x.id}')">PAGAR</button>`:''}${key==='bills'?billSt(x):''}${key==='bills'?`<button class="chip ${x.fixed?'on':''}" style="min-width:56px" onclick="tgFix('${x.id}')">${x.fixed?'Fija':'Var.'}</button>`:''}<button class="del" onclick="delItem('${key}','${x.id}')">✕</button></div>`).join('')}
  <div class="tot"><span>Subtotal</span><span>${f(t)}</span></div></div>`}
+function billSt(b){const p=+b.paid||0,a=+b.amount||0;if(!p)return'';return a-p>0.005?`<span class="muted" title="pendiente" style="white-space:nowrap">+${f(a-p)}</span>`:'<span title="pagado">✅</span>'}
 function cue(){const m=M();return list('income','Mi dinero','La primera línea es tu débito. Las demás (efectivo, tips…) se pueden depositar al débito. Los cheques se registran en Inicio.')+
  
  list('cards','Tarjetas de crédito')+list('bills','Bills to Tony','“Fija” pasa su monto al mes siguiente; “Var.” empieza en 0')+
@@ -230,25 +247,27 @@ function doCardPay(id){const c=M().cards.find(x=>x.id===id),a=r2(document.getEle
  c.amount=r2(c.amount-a);spend('deb',a);
  S.months[monthFor(d)].events.push({id:uid(),type:'cardpay',date:d,amount:a,desc:'Pago '+c.name,cardId:c.id,cardMonth:S.cur});
  save();dlg().close();render();toast('Pago registrado')}
-function payDlg(who,k){const m=S.months[k],c=calc(m),amt=who==='tony'?c.toTony:c.carlosOwes;
+function payDlg(who,k){const m=S.months[k],c=calc(m),amt=who==='tony'?c.tonyDue:c.carlosDue;
  dlg().innerHTML=`<h2>${who==='tony'?'Transferí a Tony':'Carlos me pagó'}</h2><div class="muted">${lbl(k)} · ${who==='tony'?'se descuenta del débito':'se suma al débito'}</div>
  <p><input id="pa" class="name" type="number" inputmode="decimal" step="0.01" value="${r2(amt)}" style="font-size:24px"></p><input id="pf" class="name" type="date" value="${today()}">
  <div class="grid" style="margin-top:12px"><button class="sec" onclick="dlg().close()">Cancelar</button><button id="payok" onclick="doPay('${who}','${k}')">Confirmar</button></div>`;dlg().showModal()}
 function doPay(who,k){const a=r2(document.getElementById('pa').value),d=document.getElementById('pf').value,m=S.months[k];if(!a)return;
  m.events.push({id:uid(),type:who,date:d,amount:a,desc:who==='tony'?'Transferencia a Tony':'Pago de Carlos'});
- if(who==='tony'){m.tonyPaid=a;spend('deb',a)}else{m.carlosPaid=a;spend('deb',-a)}
+ if(who==='tony'){m.bills.forEach(b=>{if(+b.amount>0)b.paid=r2(b.amount)});m.tonyPaid=tXfer(m);spend('deb',a)}else{m.carlosPaid=cRecv(m);spend('deb',-a)}
  save();dlg().close();render();toast(who==='tony'?'Transferencia registrada':'Pago registrado')}
 function findMonth(arr,id){return keys().map(k=>S.months[k]).find(m=>m[arr].some(x=>x.id===id))}
 function delMove(kind,id){if(!confirm('¿Borrar este movimiento? Se revierte el saldo.'))return;
  if(kind==='gasto'){const m=findMonth('personal',id),x=m.personal.find(x=>x.id===id);spend(x.method,-x.amount);m.personal=m.personal.filter(y=>y.id!==id)}
  else{const m=findMonth('events',id),e=m.events.find(x=>x.id===id);
-  if(e.type==='tony'){spend('deb',-e.amount);m.tonyPaid=0}
-  if(e.type==='carlos'){spend('deb',e.amount);m.carlosPaid=0}
+  if(e.type==='tony')spend('deb',-e.amount);
+  if(e.type==='carlos')spend('deb',e.amount);
   if(e.type==='todebit'){const db=debE(L());db.amount=r2((+db.amount||0)-e.amount);const lm=S.months[e.lineMonth],ln=lm&&lm.income.find(y=>y.id===e.lineId);if(ln)ln.amount=r2((+ln.amount||0)+e.amount)}
   if(e.type==='income')spend(e.method||'deb',e.amount);
   if(e.type==='cardpay'){spend('deb',-e.amount);const cm=S.months[e.cardMonth],c=cm&&cm.cards.find(c=>c.id===e.cardId);if(c)c.amount=r2(c.amount+e.amount)}
   if(e.type==='check'){spend('deb',e.amount);const c=S.checks.find(c=>c.id===e.checkId);if(c)c.status='pending'}
-  m.events=m.events.filter(y=>y.id!==id)}
+  m.events=m.events.filter(y=>y.id!==id);
+  if(e.type==='tony'){m.tonyPaid=tXfer(m);if(!m.tonyPaid)m.bills.forEach(b=>delete b.paid)}
+  if(e.type==='carlos')m.carlosPaid=cRecv(m)}
  save();render()}
 let D;
 function editP(id){const p=id?M().purchases.find(x=>x.id===id):null;
@@ -281,10 +300,12 @@ document.getElementById('newm').onclick=()=>{
  const ks=keys(),last=ks.at(-1);let k;
  if(last){let[y,m]=last.split('-').map(Number);m++;if(m>12){m=1;y++}k=y+'-'+String(m).padStart(2,'0')}else k=today().slice(0,7);
  k=prompt('Mes nuevo (AAAA-MM):',k);if(!k||!/^\d{4}-\d{2}$/.test(k))return;if(S.months[k]){S.cur=k;save();render();return}
- const prev=S.months[last],cl=a=>a.map(x=>({id:uid(),name:x.name,amount:0}));
+ const prev=S.months[last];if(prev){const c=calc(prev),t=c.tonyDue>0.005,cc=c.carlosDue>0.005;
+  if((t||cc)&&!confirm(`⚠️ ${t?'Aún debes '+f(c.tonyDue)+' a Tony':''}${t&&cc?' y ':''}${cc?(t?'Carlos te debe ':'Carlos aún te debe ')+f(c.carlosDue):''} (${lbl(last)}). Se pasarán a “Pendientes de meses anteriores” y el mes nuevo empieza limpio. ¿Continuar?`))return}
+ const cl=a=>a.map(x=>({id:uid(),name:x.name,amount:0}));
  const inc=prev?prev.income.filter(x=>!/^cheque/i.test(x.name)).map(x=>({id:uid(),name:x.name,amount:+x.amount||0,...(debE(prev)===x?{role:'debit'}:{})})):[{id:uid(),name:'Débito',amount:0,role:'debit'},{id:uid(),name:'Efectivo',amount:0}];
  S.months[k]={income:inc,cards:prev?prev.cards.map(x=>({id:uid(),name:x.name,amount:+x.amount||0})):[{id:uid(),name:'BOA',amount:0},{id:uid(),name:'Amazon',amount:0},{id:uid(),name:'Capital One',amount:0}],
-  bills:prev?prev.bills.map(x=>({id:uid(),name:x.name,fixed:!!x.fixed,amount:x.fixed?x.amount:0})):[],purchases:[],personal:[],events:[],carlosPaid:0,tonyPaid:0};
+  bills:prev?prev.bills.map(x=>({id:uid(),name:x.name,fixed:!!x.fixed,amount:x.fixed?x.amount:0})):[],purchases:[],personal:[],events:[],carlosPaid:0,tonyPaid:0,tonyBase:0,carlosBase:0};
  S.cur=k;save();tab='ini';render()};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;filt='';render();scrollTo(0,0)});
 document.getElementById('fab').onclick=quick;
