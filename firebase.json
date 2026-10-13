@@ -21,6 +21,8 @@
       "**/.git/**",
       ".firebase/**",
       "shots/**",
+      "tests/**",
+      "*.md",
       "**/node_modules/**"
     ],
     "headers": [
