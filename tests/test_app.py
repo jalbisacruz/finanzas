@@ -54,7 +54,7 @@ with app(ROOT) as pg:
     # catalogs: rename card updates refs everywhere; totals unchanged
     before=E("JSON.stringify(Object.fromEntries(keys().map(k=>[k,calc(S.months[k])])))")
     E("CTL.cards.edit(0)");pg.fill('#ndn','Visa Nueva');pg.fill('#ndd','20');E("_ndGo()")
-    check(E("keys().every(k=>!JSON.stringify(S.months[k]).includes('Visa Test'))") and E("S.cardDue['Visa Nueva']")==20,'card renamed everywhere')
+    check(E("DN('Visa Test')")=='Visa Nueva' and E("S.cardDue['Visa Test']")==20,'card label renamed (data keeps its key)')
     check(before==E("JSON.stringify(Object.fromEntries(keys().map(k=>[k,calc(S.months[k])])))"),'totals unchanged after rename')
     # duplicate refused
     E("CTL.stores.add()");pg.fill('#ndn','walmart');E("_ndGo()");check(E("S.stores.length")==3,'dup store refused');E("dlg().close()")

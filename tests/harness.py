@@ -12,7 +12,7 @@ METRICS_JS=r"""()=>{const o={};for(const k of keys()){const m=S.months[k],c=calc
 def free_port():
     s=socket.socket();s.bind(('',0));p=s.getsockname()[1];s.close();return p
 @contextlib.contextmanager
-def app(root, lang='es', now=NOW, state=None, width=390, height=900):
+def app(root, lang='es', now=NOW, state=None, width=390, height=900, init='', routes=None):
     port=free_port()
     srv=subprocess.Popen([sys.executable,'-m','http.server',str(port)],cwd=root,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     time.sleep(0.7)
@@ -23,10 +23,12 @@ def app(root, lang='es', now=NOW, state=None, width=390, height=900):
             pg.clock.install(time=now)
             pg.on('pageerror',lambda e:pg.errors.append('PE:'+str(e)))
             pg.on('console',lambda m:m.type=='error' and pg.errors.append('CE:'+m.text))
-            pg.on('dialog',lambda d:(pg.errors.append('DIALOG:'+d.message) if getattr(pg,'strict_dialogs',False) else None, d.accept()))
-            pg.route('**/firebase-config.js',lambda r:r.fulfill(body='',content_type='text/javascript'))
+            pg.on('dialog',lambda d:(pg.errors.append('DIALOG:'+d.message), d.accept()))
+            R={'**/firebase-config.js':''};R.update(routes or {})
+            for pat,body in R.items(): pg.route(pat,(lambda b:(lambda r:r.fulfill(body=b,content_type='text/javascript',headers={'Access-Control-Allow-Origin':'*'})))(body))
             st=json.dumps(state or FIX)
             pg.add_init_script(f"if(!sessionStorage.getItem('seeded')){{localStorage.clear();localStorage.setItem('finanzas-v1',{json.dumps(st)});localStorage.setItem('finanzas-sync-asked','1');localStorage.setItem('finanzas-lang','{lang}');sessionStorage.setItem('seeded','1')}}")
+            if init: pg.add_init_script(init)
             pg.goto(f'http://127.0.0.1:{port}/');pg.wait_for_timeout(800)
             pg.evaluate("()=>{unlocked=true;try{closeLock()}catch(e){};document.body.classList.remove('locked');render()}")
             pg.wait_for_timeout(200)

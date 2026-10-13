@@ -135,7 +135,7 @@ function planCard(){const ent=Object.entries(S.budgets).filter(([,l])=>+l>0);
 Object.assign(EN,{"Define un presupuesto para ver tu plan del mes.":"Set a budget to see your monthly plan.","Ajustes › Presupuesto":"Settings › Budget","Plan del mes":"Monthly plan","Ingresos esperados":"Expected income","{0} estimado":"{0} estimated","{0} estimados":"{0} estimated","− Presupuesto":"− Budget","Sobrante planificado":"Planned leftover","Gastado {0} · quedan {1}":"Spent {0} · {1} left","Recibido {0} − gastado = sobrante real":"Received {0} − spent = real leftover"});
 
 // editar categoría (nombre/emoji); las bloqueadas (y Kalshi, que la migración vuelve a crear) no se editan
-const CAT_NOEDIT=c=>CAT_LOCK(c)||c===KAL;
+let CAT_NOEDIT=c=>CAT_LOCK(c)||c===KAL;
 const EMOJIS=['🏷️','⚖️','🐶','🐱','🎁','🎓','📚','💼','🏋️','💇','🧴','🧸','👶','🍼','🎮','✈️','🏖️','🎉','⛪','🏥','💊','🔧','🧰','🚌','🅿️','🚕','📱','💻','🏦','💰','🧾','☕','🍔','🍕','🍺','🛍️','🪴','🐾','⚽','🎵'];
 function catEditDlg(){const L=S.cats.filter(c=>c!=='🤝 Tony');
  dlg().innerHTML=`<h2>${T('¿Qué categoría quieres editar?')}</h2><div style="max-height:60vh;overflow:auto">${L.map(c=>`<div class="row"><span class="n">${esc(DN(c))}</span>${CAT_NOEDIT(c)?'<span class="muted">🔒</span>':`<button class="sec" onclick="catEdit(${S.cats.indexOf(c)})">${T('Editar')}</button>`}</div>`).join('')}</div>

@@ -7,7 +7,8 @@ function T(s,...a){const r=LANG==='en'&&EN[s]!==undefined?EN[s]:s;return r.repla
 // nombres por defecto guardados en los datos: se traducen solo al mostrar
 const NM={es:{'Rent House':'Renta de casa','Car Insurance':'Seguro del carro','Car Letter':'Letra del carro','Phone':'Teléfono','Purifier':'Purificador','Food':'Comida','Water':'Agua','Electricity':'Electricidad'},
  en:{'Débito':'Debit','Efectivo':'Cash','Otros efectivos':'Other cash','Yo':'Me','🛒 Comida/Supermercado':'🛒 Food/Groceries','🍽️ Restaurantes':'🍽️ Restaurants','⛽ Gasolina':'⛽ Gasoline','🚗 Transporte':'🚗 Transportation','🏠 Hogar':'🏠 Home','💡 Servicios':'📡 Communications','📡 Comunicaciones':'📡 Communications','📈 Kalshi':'📈 Kalshi','Kalshi':'Kalshi','💊 Salud':'💊 Health','👕 Ropa':'👕 Clothing','🎬 Entretenimiento':'🎬 Entertainment','📺 Suscripciones':'📺 Subscriptions','💸 Envíos a familia':'💸 Remittances to family','📦 Otros':'📦 Other','💼 Cheque':'💼 Paycheck','💵 Propinas/Tips':'💵 Tips','💵 Propinas':'💵 Tips','💳 Reembolso en efectivo':'💳 Cash Back','🎁 Regalo':'🎁 Gift','↩️ Reembolso':'↩️ Refund','↩️ Reembolso de Carlos':'↩️ Carlos reimbursement','🔁 Transferencia a débito':'🔁 Transfer to debit','💳 Pago de tarjeta':'💳 Card payment','💵 Ingreso':'💵 Income'}};
-const DN=s=>{const x=NM[LANG][s];return x!==undefined?x:s};
+const DN0=s=>{const x=NM[LANG][s];return x!==undefined?x:s};
+const DN=s=>{const o=window.DNo?window.DNo(s):undefined;return o!==undefined?o:DN0(s)};
 const DNrev=s=>{for(const[k,v]of Object.entries(NM[LANG]))if(v===s)return k;return s};
 function navLbl(){document.documentElement.lang=LANG;document.querySelectorAll('nav button').forEach(b=>b.lastChild.textContent=T(b.dataset.l));const n=document.getElementById('newm');if(n)n.textContent=T('+ Mes');const fb=document.getElementById('fab');if(fb)fb.setAttribute('aria-label',T('Nuevo gasto'))}
 function setLang(l){LANG=l==='en'?'en':'es';localStorage.setItem(LANG_K,LANG);navLbl();if(unlocked)render();else drawLock()}
@@ -193,7 +194,7 @@ function cue(){const m=M();return list('income',T('Mi dinero'),T('La primera lí
 const depChecks=()=>S.checks.filter(c=>c.status==='deposited'&&(c.legacy?c.month===S.cur:(c.date||'').startsWith(S.cur))).sort((a,b)=>a.date<b.date?-1:1);
 function com(){const m=M(),c=calc(m);return `<div class="card"><button style="width:100%" onclick="editP()">${T('+ Nueva compra compartida')}</button>
  <div class="tot"><span>Tony ${f(c.tony)}</span><span>Carlos ${f(c.carlos)}</span></div><div class="muted">${T('Toca una compra para editarla o borrarla.')}</div></div>
- ${m.purchases.map(p=>`<div class="card p" onclick="editP('${p.id}')"><div class="tot" style="padding:0"><span>${esc(p.store)}</span><span>${f(p.total)}</span></div>
+ ${m.purchases.map(p=>`<div class="card p" onclick="editP('${p.id}')"><div class="tot" style="padding:0"><span>${esc(DN(p.store))}</span><span>${f(p.total)}</span></div>
  <div class="muted">${fdate(p.date)} · ${methName(p.method)} · ${Object.entries(p.shares).filter(([k,v])=>+v).map(([k,v])=>esc(DN(k))+' '+f(v)).join(' · ')}</div></div>`).join('')||'<div class="card muted">'+T('Sin compras este mes.')+'</div>'}`}
 // descripciones generadas por la app: se traducen al mostrar (los datos no cambian)
 function evDesc(e){const d=e.desc||'';let mt;
@@ -207,8 +208,8 @@ function evDesc(e){const d=e.desc||'';let mt;
  return d}
 // movimientos unificados de un mes
 function moves(m){return [
- ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:(x.recipient?'→ '+x.recipient+(x.desc?' · ':''):'')+(x.desc||''),method:x.method,recipient:x.recipient})),
- ...m.purchases.map(p=>{const Tn=+p.shares.Tony||0,Cc=+p.shares.Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v));return {id:p.id,kind:'compra',date:p.date,amount:-tot,cat:SHARED_CAT,desc:p.store+' ('+T('compartida')+')',method:p.method,mine:(m=>m<0.02?0:m)(r2(tot-Tn-Cc))}}),
+ ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:(x.recipient?'→ '+DN(x.recipient)+(x.desc?' · ':''):'')+(x.desc||''),method:x.method,recipient:x.recipient})),
+ ...m.purchases.map(p=>{const Tn=+p.shares.Tony||0,Cc=+p.shares.Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v));return {id:p.id,kind:'compra',date:p.date,amount:-tot,cat:SHARED_CAT,desc:DN(p.store)+' ('+T('compartida')+')',method:p.method,mine:(m=>m<0.02?0:m)(r2(tot-Tn-Cc))}}),
  ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay'||e.type==='saving')?-e.amount:e.type==='adjust'?e.diff:e.amount,cat:e.type==='income'?(e.concept||'📦 Otros'):e.type==='check'?'💼 Cheque':e.type==='carlos'?'↩️ Reembolso de Carlos':e.type==='tony'?'🤝 Tony':e.type==='todebit'?'🔁 Transferencia a débito':e.type==='cardpay'?'💳 Pago de tarjeta':e.type==='adjust'?'🛠️ Ajuste de saldo':e.type==='saving'?'🐷 Ahorro':'💵 Ingreso',desc:evDesc(e)+(e.card?' · 💳 '+DN(e.card):''),method:e.type==='adjust'?(e.lineKind==='cards'?'card:':'money:')+(e.lineName||''):e.method||'deb'}))
 ].sort((a,b)=>(b.date||'')<(a.date||'')?-1:1)}
 // gasto real de Joe por categoría (compartidas: solo su parte; transferencia a Tony no cuenta como gasto)
@@ -220,7 +221,7 @@ function earned(m){const by={};moves(m).forEach(x=>{if(INC_KINDS.includes(x.kind
  const k=keys().find(k=>S.months[k]===m);(S.checks||[]).filter(c=>c.legacy&&c.month===k).forEach(c=>by['💼 Cheque']=(by['💼 Cheque']||0)+(+c.amount||0));
  return {by,total:Object.values(by).reduce((a,b)=>a+b,0)}}
 const bars=(by,cls)=>{const mx=Math.max(1,...Object.values(by));return Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar" onclick="filt='${esc(k)}';render()"><div class="bl"><span>${esc(DN(k))}</span><b class="${cls||''}">${f(v)}</b></div><div class="bt"><div style="width:${Math.max(2,v/mx*100)}%${cls?';background:#16a34a':''}"></div></div></div>`).join('')};
-function remCard(m){const by={};m.personal.filter(x=>isRem(x.cat)).forEach(x=>{const r=x.recipient||T('Sin destinatario');by[r]=(by[r]||0)+(+x.amount||0)});const e=Object.entries(by);if(!e.length)return'';
+function remCard(m){const by={};m.personal.filter(x=>isRem(x.cat)).forEach(x=>{const r=x.recipient?DN(x.recipient):T('Sin destinatario');by[r]=(by[r]||0)+(+x.amount||0)});const e=Object.entries(by);if(!e.length)return'';
  return `<div class="card"><h2>💸 ${T('Remesas por destinatario')}<span>${f(e.reduce((a,[,v])=>a+v,0))}</span></h2>${e.sort((a,b)=>b[1]-a[1]).map(([r,v])=>`<div class="row"><span class="n">${esc(r)}</span>${f(v)}</div>`).join('')}</div>`}
 function cbBy(ms){const by={};ms.forEach(m=>(m.events||[]).filter(e=>e.type==='income'&&isCB(e.concept)).forEach(e=>{const k=e.card?DN(e.card):T('Sin tarjeta');by[k]=(by[k]||0)+(+e.amount||0)}));return by}
 function cbCard(by,sub,acc){const e=Object.entries(by),ta=acc?Object.values(acc).reduce((a,v)=>a+v,0):0;if(!e.length&&!ta)return'';
@@ -258,7 +259,7 @@ const qtabs=on=>`<div class="chips" style="margin-bottom:10px"><button id="tabg"
 function quick(){dlg().innerHTML=qtabs('g')+`<h2>${T('Nuevo gasto')}</h2>
  <input id="qa" class="name" type="number" inputmode="decimal" step="0.01" placeholder="${T('Monto $')}" style="font-size:24px">
  <div class="chips" id="qcats">${S.cats.map((c,i)=>`<button class="chip ${i===0?'on':''}" data-c="${esc(c)}" onclick="document.querySelectorAll('#qcats .chip').forEach(b=>b.classList.remove('on'));this.classList.add('on');document.getElementById('qrec').hidden=!isRem(this.dataset.c)">${esc(DN(c))}</button>`).join('')}</div>
- <div id="qrec" hidden><div class="muted">${T('¿A quién se lo enviaste?')}</div><div class="chips" id="qrecs">${(S.recipients||[]).map(r=>`<button class="chip" data-r="${esc(r)}" onclick="pickRec(this)">${esc(r)}</button>`).join('')}</div>
+ <div id="qrec" hidden><div class="muted">${T('¿A quién se lo enviaste?')}</div><div class="chips" id="qrecs">${(S.recipients||[]).map(r=>`<button class="chip" data-r="${esc(r)}" onclick="pickRec(this)">${esc(DN(r))}</button>`).join('')}</div>
  <input id="qrn" class="name" placeholder="${T('+ Nuevo destinatario')}" oninput="if(this.value)document.querySelectorAll('#qrecs .chip').forEach(b=>b.classList.remove('on'))"></div>
  <p><input id="qd" class="name" placeholder="${T('Descripción (opcional)')}"></p>
  <div class="grid"><input id="qf" type="date" value="${today()}"><select id="qm">${methOpts('deb')}</select></div>
@@ -369,7 +370,7 @@ function liveSplit(){if(!D||D.mode!=='manual')return;const totEl=document.getEle
  const info=document.getElementById('splitinfo');if(info)info.textContent=T('Repartido {0} de {1}',f(tot),f(D.total))}
 function drawP(){recomputeEq();const ppl=[...new Set([...S.people,...Object.keys(D.shares)])],tot=r2(Object.values(D.shares).reduce((s,v)=>s+(+v||0),0));
  dlg().innerHTML=`<h2>${D.isNew?T('Compra compartida'):T('Editar compra')}</h2>
- <div class="grid"><select onchange="D.store=this.value">${[...new Set([...S.stores,D.store])].map(s=>`<option${s===D.store?' selected':''}>${esc(s)}</option>`).join('')}</select>
+ <div class="grid"><select onchange="D.store=this.value">${[...new Set([...S.stores,D.store])].map(s=>`<option value="${esc(s)}"${s===D.store?' selected':''}>${esc(DN(s))}</option>`).join('')}</select>
  <input type="date" value="${D.date||''}" onchange="D.date=this.value"></div>
  <div class="grid" style="margin-top:8px"><input id="tot" type="number" inputmode="decimal" step="0.01" placeholder="${T('Total $')}" value="${D.total||''}" oninput="D.total=r2(this.value);if(D.mode==='manual')liveSplit()" onchange="D.total=r2(this.value);if(D.mode!=='manual')drawP()">
  <select onchange="D.method=this.value"><option value="">${T('Sin afectar saldo')}</option>${methOpts(D.method)}</select></div>

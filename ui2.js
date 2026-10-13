@@ -1,6 +1,6 @@
 // v52+: estructura nueva (Hoy · Movimientos · Mes · Reportes + Configuración desde ☰), catálogos uniformes, mejoras rápidas.
 // Solo interfaz: el formato de datos no cambia (campos nuevos opcionales: storeMem, check.ok).
-const APP_V='v52';
+const APP_V='v53';
 Object.assign(EN,{"Hoy":"Today","Transferir":"Transfer","Cobrar":"Collect","No se mezclan con el mes actual. Si llega un bill tarde, anótalo en su mes (Mes › Cuentas de Tony del mes) y aquí se actualiza.":"Kept separate from the current month. If a bill arrives late, enter it in its month (Month › Tony's bills this month) and this updates.","Configuración":"Settings","Versión":"Version","Por hacer":"To do","✅ Todo al día":"✅ All caught up",
 "Cheque de {0} depositado. ¿Llegó ese monto?":"Check for {0} deposited. Did that amount arrive?","Sí":"Yes","Otro monto":"Other amount","Monto que llegó $":"Amount that arrived $","Cheque corregido":"Check corrected",
 "Enviar mensaje":"Send message","Mensaje para {0}":"Message for {0}","Copiar":"Copy","Copiado":"Copied","Cerrar":"Close",
@@ -47,7 +47,7 @@ function chkFix(id){const c=S.checks.find(x=>x.id===id),a=r2(document.getElement
 function msgFor(who,k){const m=S.months[k],c=calc(m),L2=[];
  if(who==='tony'){L2.push(T('Hola Tony, cuentas de {0}:',lbl(k)));m.bills.filter(b=>+b.amount).forEach(b=>L2.push(`• ${DN(b.name)}: ${f(b.amount)}`));
   L2.push(`${T('Total cuentas')}: ${f(c.bills)}`,`${T('− Tu parte de las compras')}: ${f(c.tony)}`);if(c.xfer)L2.push(`${T('− Ya transferido')}: ${f(c.xfer)}`);L2.push(`${T('Te transfiero')}: ${f(c.tonyDue)}`)}
- else{L2.push(T('Hola Carlos, tu parte de las compras de {0}:',lbl(k)));m.purchases.filter(p=>+p.shares.Carlos).forEach(p=>L2.push(`• ${p.store} ${p.date?fdate(p.date):''}: ${f(p.shares.Carlos)}`));
+ else{L2.push(T('Hola Carlos, tu parte de las compras de {0}:',lbl(k)));m.purchases.filter(p=>+p.shares.Carlos).forEach(p=>L2.push(`• ${DN(p.store)} ${p.date?fdate(p.date):''}: ${f(p.shares.Carlos)}`));
   L2.push(`${T('Total')}: ${f(c.carlos)}`);if(c.recv)L2.push(`${T('− Ya pagado')}: ${f(c.recv)}`);L2.push(`${T('Pendiente')}: ${f(c.carlosDue)}`)}
  return L2.join('\n')}
 async function shareMsg(who,k){const t=msgFor(who,k);if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e&&e.name==='AbortError')return}}
