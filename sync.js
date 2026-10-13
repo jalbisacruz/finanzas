@@ -26,12 +26,12 @@ if(cfg){
  async function push(){if(!user)return;clearTimeout(pushT);const S=getState();
   try{await F.setDoc(ref(),{state:JSON.stringify(S),updatedAt:S.updatedAt||Date.now(),device:navigator.userAgent.slice(0,80)});setS(navigator.onLine?'ok':'offline')}
   catch(e){console.warn(e);setS('err')}}
- // Respaldo semanal: users/{uid}/backups/{YYYY-MM-DD}, se conservan los 8 últimos
+ // Respaldos: users/{uid}/backups/{YYYY-MM-DD_HH-MM-SS} (hora local; los antiguos YYYY-MM-DD siguen válidos), se conservan los 20 últimos
  const bcol=()=>F.collection(fs,'users',user.uid,'backups');
- async function listB(){const q=await F.getDocs(bcol());return q.docs.map(d=>({id:d.id,createdAt:d.data().createdAt||0})).sort((a,b)=>a.id<b.id?1:-1)}
- async function writeB(){const S=getState();if(!S||!S.months)return;const id=new Date().toLocaleDateString('en-CA');
+ async function listB(){const q=await F.getDocs(bcol());return q.docs.map(d=>({id:d.id,createdAt:d.data().createdAt||0})).sort((a,b)=>(b.createdAt-a.createdAt)||(a.id<b.id?1:-1))}
+ async function writeB(){const S=getState();if(!S||!S.months)return;const d=new Date(),p=n=>String(n).padStart(2,'0'),id=d.toLocaleDateString('en-CA')+'_'+p(d.getHours())+'-'+p(d.getMinutes())+'-'+p(d.getSeconds());
   await F.setDoc(F.doc(bcol(),id),{state:JSON.stringify(S),createdAt:Date.now(),updatedAt:S.updatedAt||0});
-  const all=await listB();for(const b of all.slice(8))await F.deleteDoc(F.doc(bcol(),b.id))}
+  const all=await listB();for(const b of all.slice(20))await F.deleteDoc(F.doc(bcol(),b.id))}
  async function autoBackup(){if(!user||!navigator.onLine)return;try{const l=await F.getDocs(F.query(bcol(),F.orderBy('createdAt','desc'),F.limit(1)),);const last=l.docs[0];
   if(last&&Date.now()-(last.data().createdAt||0)<7*864e5)return;await writeB()}catch(e){console.warn('backup',e)}}
  window.fbUser=()=>!!user;
