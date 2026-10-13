@@ -48,11 +48,12 @@ body.locked header,body.locked nav,body.locked #fab,body.locked main{display:non
 </style></head><body>
 <header><select id="msel"></select><button id="newm">+ Mes</button></header>
 <main id="v"></main>
-<nav><button data-t="ini" class="on" data-l="Inicio"><b>🏠</b>Inicio</button><button data-t="res" data-l="Mes"><b>📊</b>Mes</button><button data-t="cue" data-l="Cuentas"><b>💳</b>Cuentas</button><button data-t="com" data-l="Compras"><b>🛒</b>Compras</button><button data-t="rep" data-l="Reportes"><b>📈</b>Reportes</button><button data-t="cfg" data-l="Ajustes"><b>⚙️</b>Ajustes</button></nav>
+<nav><button data-t="ini" class="on" data-l="Hoy"><b>🏠</b>Hoy</button><button data-t="mov" data-l="Movimientos"><b>📝</b>Movimientos</button><button data-t="res" data-l="Mes"><b>📅</b>Mes</button><button data-t="rep" data-l="Reportes"><b>📈</b>Reportes</button></nav>
 <button id="fab" aria-label="Nuevo gasto">+</button>
 <dialog id="dlg"></dialog>
 <script src="app.js"></script>
 <script src="extra.js"></script>
+<script src="ui2.js"></script>
 <script src="nav.js"></script>
 <script src="firebase-config.js"></script>
 <script type="module" src="sync.js"></script></body></html>

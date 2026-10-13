@@ -1,7 +1,7 @@
 // ---------- navegación: menú ☰, chips de secciones, colapsables, volver arriba ----------
 Object.assign(EN,{"Menú":"Menu","Secciones":"Sections","Volver arriba":"Back to top","Mes":"Month","Plegar o desplegar":"Collapse or expand","Sección":"Section"});
 const NAV_COL='finanzas-collapsed';let navCol={};try{navCol=JSON.parse(localStorage.getItem(NAV_COL)||'{}')}catch(e){}
-const navTabs=[['ini','🏠','Inicio'],['res','📊','Mes'],['cue','💳','Cuentas'],['com','🛒','Compras'],['rep','📈','Reportes'],['cfg','⚙️','Ajustes']];
+const navTabs=[['ini','🏠','Hoy'],['mov','📝','Movimientos'],['res','📅','Mes'],['rep','📈','Reportes'],['cfg','⚙️','Configuración']];
 function secTitle(c){const h=c.querySelector(':scope>h2');let t='';
  if(h){h.childNodes.forEach(n=>{if(n.nodeType===3)t+=n.textContent;else if(n.tagName!=='SPAN'&&!n.classList.contains('cv'))t+=n.textContent})}
  return t.replace(/\s+/g,' ').trim()}
@@ -9,15 +9,16 @@ function navSlug(s){return s.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/
 function navSections(){const out=[];document.querySelectorAll('#v>.card').forEach((c,i)=>{const t=secTitle(c);if(!t)return;
  if(!c.id)c.id='s-'+tab+'-'+(navSlug(t)||i);c.dataset.sec=t;out.push({id:c.id,t})});return out}
 function navOff(){const h=document.querySelector('header'),cb=document.getElementById('chipbar');return (h?h.offsetHeight:0)+(cb&&cb.offsetParent?cb.offsetHeight:0)+8}
+const c_isCol=el=>el.classList.contains('col');
 function goSec(id){const el=document.getElementById(id);if(!el)return;closeDrawer();
- const k=el.dataset.ck;if(k&&navCol[k]){delete navCol[k];localStorage.setItem(NAV_COL,JSON.stringify(navCol));el.classList.remove('col')}
+ const k=el.dataset.ck;if(k&&c_isCol(el)){navCol[k]=0;localStorage.setItem(NAV_COL,JSON.stringify(navCol));el.classList.remove('col')}
  window.scrollTo({top:el.getBoundingClientRect().top+scrollY-navOff(),behavior:'smooth'})}
 function navCollapsibles(){document.querySelectorAll('#v>.card').forEach(c=>{const h=c.querySelector(':scope>h2'),t=c.dataset.sec;if(!h||!t||c.children.length<2)return;
- const k=tab+':'+c.id;c.dataset.ck=k;c.classList.add('colb');c.classList.toggle('col',!!navCol[k]);
+ const k=tab+':'+c.id;c.dataset.ck=k;c.classList.add('colb');c.classList.toggle('col',k in navCol?!!navCol[k]:c.classList.contains('defcol'));
  if(!h.querySelector('.cv')){const s=document.createElement('i');s.className='cv';s.textContent='▾';s.setAttribute('aria-hidden','true');h.prepend(s)}
  h.title=T('Plegar o desplegar');
  h.onclick=e=>{if(e.target.closest('button,input,select,a,label,textarea'))return;const on=!c.classList.contains('col');c.classList.toggle('col',on);
-  if(on)navCol[k]=1;else delete navCol[k];localStorage.setItem(NAV_COL,JSON.stringify(navCol))}})}
+  navCol[k]=on?1:0;localStorage.setItem(NAV_COL,JSON.stringify(navCol))}})}
 function navChips(secs){let cb=document.getElementById('chipbar');const v=document.getElementById('v');
  if(secs.length<3){if(cb)cb.remove();return}
  if(!cb){cb=document.createElement('div');cb.id='chipbar';v.parentNode.insertBefore(cb,v)}

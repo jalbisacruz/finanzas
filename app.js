@@ -138,7 +138,7 @@ function render(){if(!unlocked)return;if(pruneTips(S))save();
  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
  const v=document.getElementById('v');
  if(!M()){v.innerHTML='<div class="card">'+T('Crea un mes con “+ Mes”.')+'</div>';return}
- v.innerHTML=({ini,res,cue,com,rep,cfg})[tab]();if(tab==='cfg'&&typeof loadBk==='function')loadBk();
+ v.innerHTML=({ini,res,cue,com,rep,cfg,mov:window.mov})[tab]();if(tab==='cfg'&&typeof loadBk==='function')loadBk();
 }
 function ini(){const m=L(),c=calc(m),deb=+debE(m).amount||0,disp=sum(m.income,x=>x.amount);const ss=window.syncStatus?`<div class="muted" id="syncst" style="text-align:right;margin:-4px 4px 6px">${window.syncStatus()}</div>`:'';
  const pc=pendingCheck(),due=false;
@@ -163,7 +163,7 @@ function closeCard(m,k){const c=calc(m),tp=c.tonyDue>0.005,cp=c.carlosDue>0.005,
  ${tp?`<button id="tonybtn" style="width:100%;margin:4px 0 8px" onclick="payDlg('tony','${k}')">${T('Transferir a Tony')}</button>`:''}
  <div class="row"><span class="n">💰 ${T('Carlos te debe')}${c.recv&&cp?`<div class="muted">${T('Ya pagó {0}',f(c.recv))}</div>`:''}</span><b>${cp?f(c.carlosDue):'✅ '+f(c.recv)}</b></div>
  ${cp?`<button id="carlosbtn" class="sec" style="width:100%;margin-top:4px" onclick="payDlg('carlos','${k}')">${T('Cobrar a Carlos')}</button>`:''}</div>`}
-function pendCard(){const pp=prevPend();if(!pp.length)return'';return `<div class="card" id="pendcard" style="border:2px solid #f59e0b"><h2>⏳ ${T('Pendientes de meses anteriores')}</h2><div class="muted">${T('No se mezclan con el mes actual. Si llega un bill tarde, anótalo en su mes (Cuentas) y aquí se actualiza.')}</div>
+function pendCard(){const pp=prevPend();if(!pp.length)return'';return `<div class="card" id="pendcard" style="border:2px solid #f59e0b"><h2>⏳ ${T('Pendientes de meses anteriores')}</h2><div class="muted">${T('No se mezclan con el mes actual. Si llega un bill tarde, anótalo en su mes (Mes › Cuentas de Tony del mes) y aquí se actualiza.')}</div>
  ${pp.map(({k,c})=>(c.tonyDue>0.005?`<div class="row"><span class="n">Tony – ${lbl(k)}</span><b>${f(c.tonyDue)}</b><button class="pay" onclick="payDlg('tony','${k}')">${T('Transferir a Tony')}</button></div>`:'')+
   (c.carlosDue>0.005?`<div class="row"><span class="n">Carlos – ${lbl(k)}</span><b>${f(c.carlosDue)}</b><button class="pay dep" onclick="payDlg('carlos','${k}')">${T('Cobrar a Carlos')}</button></div>`:'')).join('')}</div>`}
 function res(){const c=calc(M());return `<div class="card"><div class="muted">${T('Mi balance {0} (modelo Excel)',lbl(S.cur))}</div><div class="big ${c.bal>=0?'pos':'neg'}">${f(c.bal)}</div>
