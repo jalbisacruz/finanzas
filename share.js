@@ -15,17 +15,27 @@ function carlosData(k){const m=S.months[k],c=calc(m);return {m,c,pur:m.purchases
 // v57: desglose solo si esa persona tiene ítems individuales (X>0); si no, solo "Tu parte"
 const hasI=x=>x.i>0.004,brk=x=>hasI(x)?T('solo tuyo {0} + parte {1} = {2}',f(x.i),f(x.s),f(x.t)):T('Tu parte: {0}',f(x.t));
 // ---------- mensajes ----------
-msgFor=function(who,k){const L2=[];
- if(who==='tony'){const{c,bills,pur}=tonyData(k);L2.push(T('Hola Tony, cuentas de {0}:',lbl(k)));
-  bills.forEach(b=>L2.push(`• ${DN(b.name)}: ${f(b.amount)}${billSt2(b)==='paid'?' ✅':' ⏳ '+T('pendiente')}`));
-  L2.push(`${T('Total cuentas')}: ${f(c.bills)}`);
-  if(pur.length){L2.push('',`− ${T('Tu parte de las compras')}: ${f(c.tony)}`);pur.forEach(x=>L2.push(`  • ${DN(x.p.store)} ${x.p.date?fdate(x.p.date):''} · ${brk(x)}`))}
-  L2.push('',`${T('= A transferir')}: ${f(c.toTony)}`);if(c.xfer)L2.push(`${T('Ya transferido')}: ${f(c.xfer)}`);
-  L2.push(c.tonyDue>0.005?`${T('Te transfiero')}: ${f(c.tonyDue)}`:T('Sin pendientes ✅'))}
- else{const{c,pur}=carlosData(k);L2.push(T('Hola Carlos, tus compras de {0}:',lbl(k)));
-  pur.forEach(x=>{L2.push(`• ${DN(x.p.store)} ${x.p.date?fdate(x.p.date):''} (${T('Total')} ${f(x.p.total)}) · ${brk(x)}`);if(hasI(x))L2.push(`   ${x.notes.join(', ')}`)});
-  L2.push('',`${T('Total')}: ${f(c.carlos)}`);if(c.recv)L2.push(`${T('Ya pagado')}: ${f(c.recv)}`);L2.push(c.carlosDue>0.005?`${T('Pendiente')}: ${f(c.carlosDue)}`:T('Sin pendientes ✅'))}
+// v58: mensaje legible en WhatsApp/Mail/Gmail: saludo corto, secciones con título, un ítem por línea, totales al final
+const mLine=(l,v)=>`${l}  ${v}`,mNeg=v=>'−'+f(v).replace(/^−/,'');
+const mSub=x=>hasI(x)?`   (${T('solo tuyo {0} + parte {1}',f(x.i),f(x.s))}${x.notes&&x.notes.length&&x.who==='Carlos'?' · '+x.notes.join(', '):''})`:null;
+msgFor=function(who,k){const L2=[],add=(...a)=>a.filter(x=>x!==null&&x!==undefined).forEach(x=>L2.push(x));
+ if(who==='tony'){const{c,bills,pur}=tonyData(k),pend=bills.filter(b=>billSt2(b)!=='paid'),all=pend.length===bills.length,none=!pend.length;
+  add(T('Hola Tony, estas son las cuentas de {0}:',lbl(k)),'',T('CUENTAS')+(bills.length&&all?' '+T('(todas pendientes)'):bills.length&&none?' '+T('(todas pagadas ✅)'):''));
+  bills.forEach(b=>add(mLine(DN(b.name),f(b.amount))+(!all&&!none&&billSt2(b)!=='paid'?' ⏳':'')));
+  add(mLine(T('Total cuentas'),f(c.bills)));if(!all&&!none)add(T('⏳ = pendiente'));
+  if(pur.length){add('',T('TU PARTE DE LAS COMPRAS'));pur.forEach(x=>add(mLine(DN(x.p.store)+(x.p.date?' · '+fdate(x.p.date):''),f(x.t)),mSub(x)));add(mLine(T('Total compras'),mNeg(c.tony)))}
+  if(c.xfer)add('',mLine(T('YA TRANSFERIDO'),mNeg(c.xfer)));
+  add('',c.tonyDue>0.005?mLine(T('A TRANSFERIRTE'),f(c.tonyDue)):T('Todo al día ✅'))}
+ else{const{c,pur}=carlosData(k);pur.forEach(x=>x.who='Carlos');
+  add(T('Hola Carlos, estas son tus compras de {0}:',lbl(k)),'',T('COMPRAS'));
+  pur.forEach(x=>add(mLine(DN(x.p.store)+(x.p.date?' · '+fdate(x.p.date):''),f(x.t)),mSub(x)));add(mLine(T('Total compras'),f(c.carlos)));
+  if(c.recv)add('',mLine(T('YA PAGASTE'),mNeg(c.recv)));
+  add('',c.carlosDue>0.005?mLine(T('PENDIENTE'),f(c.carlosDue)):T('Todo al día ✅'))}
  return L2.join('\n')};
+Object.assign(EN,{"Hola Tony, estas son las cuentas de {0}:":"Hi Tony, here are the bills for {0}:","CUENTAS":"BILLS","(todas pendientes)":"(all pending)","(todas pagadas ✅)":"(all paid ✅)","⏳ = pendiente":"⏳ = pending",
+ "TU PARTE DE LAS COMPRAS":"YOUR SHARE OF PURCHASES","Total compras":"Purchases total","YA TRANSFERIDO":"ALREADY TRANSFERRED","A TRANSFERIRTE":"TO TRANSFER YOU","Todo al día ✅":"All settled ✅",
+ "Hola Carlos, estas son tus compras de {0}:":"Hi Carlos, here are your purchases for {0}:","COMPRAS":"PURCHASES","YA PAGASTE":"ALREADY PAID","PENDIENTE":"PENDING",
+ "Cuentas de {0} – Joe":"{0} bills – Joe","Compras de {0} – Joe":"{0} purchases – Joe"});
 // ---------- correo por persona (campo nuevo opcional en el catálogo de Personas) ----------
 function pplItem(p){const it=Object.values((S.catalog||{}).items||{}).find(x=>x.t==='ppl'&&x.key===p);return it}
 function getMail(p){const it=pplItem(p);return (it&&it.email)||(S.pplEmail||{})[p]||''}
@@ -98,10 +108,12 @@ shareMsg=function(who,k){const P=who==='tony'?'Tony':'Carlos',t=msgFor(who,k);
  <div class="grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:6px"><button id="msgsh" onclick="msgShare('${who}','${k}')">${T('Compartir')}</button><button class="sec" id="msgml" onclick="msgMail('${who}','${k}')">✉️ ${T('Correo')}</button><button class="sec" id="msgcp" onclick="copyMsg()">${T('Copiar')}</button></div>
  <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close()">${T('Cerrar')}</button>`;
  document.getElementById('msgpdf').onchange=e=>{document.getElementById('msgnote').textContent=e.target.checked?T('El correo no adjunta archivos: usa Compartir para enviar el PDF.'):''};dlg().showModal()};
-async function msgShare(who,k){const t=document.getElementById('msgt').value,pdf=document.getElementById('msgpdf').checked,P=who==='tony'?'Tony':'Carlos';
+async function msgShare(who,k){const t=document.getElementById('msgt').value.replace(/\r\n?/g,'\n'),pdf=document.getElementById('msgpdf').checked,P=who==='tony'?'Tony':'Carlos';
  try{const file=pdf?await makePDF(who,k):null;await shareOut({text:t,file,title:T('Mensaje para {0}',P)})}catch(e){console.error(e);alert(T('No se pudo generar el PDF'))}}
-function mailURL(to,subj,body){return 'mailto:'+encodeURIComponent(to||'').replace(/%40/g,'@')+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body)}
+const crlf=t=>String(t||'').replace(/\r\n?/g,'\n').replace(/\n/g,'\r\n');
+function mailURL(to,subj,body){return 'mailto:'+encodeURIComponent((to||'').trim()).replace(/%40/g,'@')+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(crlf(body))}
+function mailSubj(who,k){return who==='tony'?T('Cuentas de {0} – Joe',lbl(k)):T('Compras de {0} – Joe',lbl(k))}
 function msgMail(who,k){const P=who==='tony'?'Tony':'Carlos',to=document.getElementById('msgmail').value.trim(),t=document.getElementById('msgt').value;setMail(P,to);
- const u=mailURL(to,who==='tony'?T('Cuentas de {0} – Tony',lbl(k)):T('Compras de {0} – Carlos',lbl(k)),t);window._lastMail=u;location.href=u}
+ const u=mailURL(to,mailSubj(who,k),t);window._lastMail=u;location.href=u}
 // ---------- entrada en Reportes ----------
 const _rep56=rep;rep=function(){return _rep56().replace('<div class="card" id="gpcard">',`<div style="display:flex;justify-content:flex-end;margin:0 2px 8px"><button class="sec" id="pdfbtn" style="min-height:36px;padding:2px 14px;font-size:14px" onclick="pdfMes()">${T('📄 PDF del mes')}</button></div><div class="card" id="gpcard">`)};
