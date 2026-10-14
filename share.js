@@ -41,9 +41,7 @@ function pplItem(p){const it=Object.values((S.catalog||{}).items||{}).find(x=>x.
 function getMail(p){const it=pplItem(p);return (it&&it.email)||(S.pplEmail||{})[p]||''}
 function setMail(p,v){v=(v||'').trim();if(v===getMail(p))return;const it=pplItem(p);
  if(it){if(v)it.email=v;else delete it.email}else{S.pplEmail=S.pplEmail||{};if(v)S.pplEmail[p]=v;else delete S.pplEmail[p]}save()}
-if(typeof CTL!=="undefined"&&CTL.people){const _pe=CTL.people.edit;CTL.people.edit=i=>{const p=S.people[i];_pe(i);const d=dlg(),ok=d.querySelector('#ndok')||[...d.querySelectorAll('button')].at(-1);
- const box=document.createElement('label');box.innerHTML=`${T('Correo de {0} (opcional)',esc(DN(p)))}<input id="npm" type="email" inputmode="email" autocomplete="off" value="${esc(getMail(p))}">`;
- ok&&ok.closest('.grid')?ok.closest('.grid').before(box):d.append(box);const o=window._ndOk;window._ndOk=a=>{const v=document.getElementById('npm')?.value;const r=o(a);if(r!==false)setMail(p,v);return r}}}
+// v59: el campo de correo ya no se muestra (Gmail iOS quita los saltos de línea en mailto). Los correos guardados no se tocan.
 // ---------- PDF ----------
 let _jsp=null;function loadPDF(){if(window.jspdf)return Promise.resolve();return _jsp=_jsp||new Promise((ok,ko)=>{const s=document.createElement('script');s.src='vendor/jspdf.umd.min.js';s.onload=ok;s.onerror=ko;document.head.append(s)})}
 const pt=s=>String(s??'').replace(/[−–—]/g,'-').replace(/[•·]/g,m=>m==='•'?'-':'·').replace(/[✅]/g,'').replace(/[^\x00-\xff]/g,'').replace(/\s+/g,' ').trim();
@@ -103,17 +101,11 @@ async function pdfMes(k){k=k||S.cur;toast(T('Generando PDF…'));try{const file=
 shareMsg=function(who,k){const P=who==='tony'?'Tony':'Carlos',t=msgFor(who,k);
  dlg().innerHTML=`<h2>📤 ${T('Mensaje para {0}',P)}</h2><textarea id="msgt" rows="11" style="width:100%;font-family:inherit;font-size:14px;border-radius:10px;border:1px solid #cbd5e1;padding:8px">${esc(t)}</textarea>
  <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="msgpdf" style="width:auto;min-height:0"> ${T('Adjuntar PDF')}</label>
- <label class="muted">${T('Correo de {0} (opcional)',P)}<input id="msgmail" type="email" inputmode="email" autocomplete="off" value="${esc(getMail(P))}"></label>
- <div class="muted" style="margin:6px 0">${T('Nada se envía solo: revisas y envías tú.')} <span id="msgnote"></span></div>
- <div class="grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:6px"><button id="msgsh" onclick="msgShare('${who}','${k}')">${T('Compartir')}</button><button class="sec" id="msgml" onclick="msgMail('${who}','${k}')">✉️ ${T('Correo')}</button><button class="sec" id="msgcp" onclick="copyMsg()">${T('Copiar')}</button></div>
- <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close()">${T('Cerrar')}</button>`;
- document.getElementById('msgpdf').onchange=e=>{document.getElementById('msgnote').textContent=e.target.checked?T('El correo no adjunta archivos: usa Compartir para enviar el PDF.'):''};dlg().showModal()};
+ <div class="muted" style="margin:6px 0">${T('Nada se envía solo: revisas y envías tú.')}</div>
+ <div class="grid" style="margin-top:6px"><button id="msgsh" onclick="msgShare('${who}','${k}')">${T('Compartir')}</button><button class="sec" id="msgcp" onclick="copyMsg()">${T('Copiar')}</button></div>
+ <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close()">${T('Cerrar')}</button>`;dlg().showModal()};
 async function msgShare(who,k){const t=document.getElementById('msgt').value.replace(/\r\n?/g,'\n'),pdf=document.getElementById('msgpdf').checked,P=who==='tony'?'Tony':'Carlos';
  try{const file=pdf?await makePDF(who,k):null;await shareOut({text:t,file,title:T('Mensaje para {0}',P)})}catch(e){console.error(e);alert(T('No se pudo generar el PDF'))}}
-const crlf=t=>String(t||'').replace(/\r\n?/g,'\n').replace(/\n/g,'\r\n');
-function mailURL(to,subj,body){return 'mailto:'+encodeURIComponent((to||'').trim()).replace(/%40/g,'@')+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(crlf(body))}
-function mailSubj(who,k){return who==='tony'?T('Cuentas de {0} – Joe',lbl(k)):T('Compras de {0} – Joe',lbl(k))}
-function msgMail(who,k){const P=who==='tony'?'Tony':'Carlos',to=document.getElementById('msgmail').value.trim(),t=document.getElementById('msgt').value;setMail(P,to);
- const u=mailURL(to,mailSubj(who,k),t);window._lastMail=u;location.href=u}
+
 // ---------- entrada en Reportes ----------
 const _rep56=rep;rep=function(){return _rep56().replace('<div class="card" id="gpcard">',`<div style="display:flex;justify-content:flex-end;margin:0 2px 8px"><button class="sec" id="pdfbtn" style="min-height:36px;padding:2px 14px;font-size:14px" onclick="pdfMes()">${T('📄 PDF del mes')}</button></div><div class="card" id="gpcard">`)};

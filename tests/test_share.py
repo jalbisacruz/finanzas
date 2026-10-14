@@ -44,7 +44,7 @@ for lang in ['es','en']:
     # dialog from existing 📤 button
     E("tab='res';render()");pg.wait_for_timeout(50)
     btn=pg.locator('button:has-text("📤 Carlos")').first;check(btn.count()==1,'📤 Carlos exists');btn.click();pg.wait_for_timeout(50)
-    check(E("dlg().open")and pg.locator('#msgpdf').count()==1 and pg.locator('#msgml').count()==1,'share dialog')
+    check(E("dlg().open")and pg.locator('#msgpdf').count()==1,'share dialog')
     if '--shots' in sys.argv and lang=='es':pg.locator('#dlg').screenshot(path=os.path.join(ROOT,'shots','123-compartir.png'))
     if '--shots' in sys.argv and lang=='en':pg.locator('#dlg').screenshot(path=os.path.join(ROOT,'shots','123-compartir-en.png'))
     pg.click('#msgsh');pg.wait_for_timeout(200);s=E("_sh.at(-1)");check(s and not s['files'] and '$42.50' in s['text'],s)
@@ -53,20 +53,10 @@ for lang in ['es','en']:
     check(s['files']==['Carlos-2026-10.pdf'] and s['size'][0]>1000,s)
     _,tx=pdftext(pg,'c.pdf');check(('only yours $30.00 + share $12.50' if lang=='en' else 'solo tuyo $30.00 + parte $12.50') in tx and f'{YS}:' in tx and '$0.00' not in tx,'carlos pdf rule: '+tx)
     check('Shampoo' in tx and '42.50' in tx and 'Tony' not in tx.replace('Tony',''),tx[:300])
-    # mailto, email remembered (additive)
-    pg.fill('#msgmail','carlos@example.com')
-    E("()=>{Object.defineProperty(window,'__nav',{value:1});const o=msgMail;window.msgMail=function(w,k){const P='Carlos',to=document.getElementById('msgmail').value.trim();setMail(P,to);window._lastMail=mailURL(to,mailSubj(w,k),document.getElementById('msgt').value)}}")
-    pg.click('#msgml');u=E("_lastMail")
-    check(u.startswith('mailto:carlos@example.com?subject=') and 'body=' in u and '42.50' in u,u)
-    from urllib.parse import unquote
-    subj=unquote(u.split('subject=')[1].split('&')[0]);body=u.split('&body=')[1]
-    check(subj==('Compras de Oct 2026 – Joe' if ES else 'Oct 2026 purchases – Joe'),subj)
-    check('%0D%0A%0D%0A' in body and body.count('%0D%0A')>=8 and '%0A' not in body.replace('%0D%0A','') and '\n' not in body and ' ' not in body,'CRLF body: '+body[:200])
-    check(unquote(body).replace('\r\n','\n')==pg.input_value('#msgt'),'textarea newlines survive')
-    tu=E("mailURL('',mailSubj('tony','2026-10'),msgFor('tony','2026-10'))")
-    check(unquote(tu.split('subject=')[1].split('&')[0])==('Cuentas de Oct 2026 – Joe' if ES else 'Oct 2026 bills – Joe') and 'Hola' not in unquote(tu.split('subject=')[1].split('&')[0]) and tu.startswith('mailto:?subject='),tu[:120])
-    check('%0D%0A' in tu.split('&body=')[1],'tony mailto CRLF')
-    check(E("getMail('Carlos')")=='carlos@example.com','email remembered')
+    # (v58 mailto checks removed in v59)
+    # v59: no email button / field in the dialog; stored emails untouched
+    check(pg.locator('#msgml').count()==0 and pg.locator('#msgmail').count()==0 and 'Correo' not in pg.locator('#dlg').inner_text() and 'Email' not in pg.locator('#dlg').inner_text(),'no email UI')
+    check(pg.locator('#msgsh').count()==1 and pg.locator('#msgcp').count()==1 and pg.locator('#msgpdf').count()==1,'Compartir + Copiar + PDF remain')
     E("dlg().close()")
     # Tony pdf
     E("shareMsg('tony','2026-10')");pg.check('#msgpdf');pg.click('#msgsh');pg.wait_for_function("_sh.length==3",timeout=10000)
@@ -91,6 +81,10 @@ for lang in ['es','en']:
     pg.click('.hrow[data-id="pi2"] .hexp');pg.wait_for_timeout(50);d=pg.locator('.hrow[data-id="pi2"] .hdet').inner_text()
     check('$10.00 + $5.00 =' in d and '$0.00 +' not in d and d.count(' + ')==1,'history expand rule: '+d)
     E("()=>{S.months['2026-10'].purchases.pop();render()}")
+    E("()=>{S.pplEmail={Carlos:'c@example.com'};const it=Object.values((S.catalog||{}).items||{}).find(x=>x.t==='ppl'&&x.key==='Tony');if(it)it.email='t@example.com'}");em=E("JSON.stringify([S.pplEmail,S.catalog])")
+    E("()=>{tab='cfg';render()}");E("()=>{const i=S.people.indexOf('Carlos');CTL.people.edit(i)}");pg.wait_for_timeout(50)
+    check(pg.locator('#npm').count()==0 and pg.locator('#dlg input[type=email]').count()==0,'no email field in Personas');pg.click('#ndok');pg.wait_for_timeout(50)
+    check(E("JSON.stringify([S.pplEmail,S.catalog])")==em,'stored emails untouched')
     after=E("JSON.stringify(S.months)");import json,difflib
     if after!=before:print('\n'.join(list(difflib.unified_diff(json.dumps(json.loads(before),indent=0).splitlines(),json.dumps(json.loads(after),indent=0).splitlines(),lineterm=''))[:40]))
     check(after==before,'months untouched')
