@@ -10,7 +10,7 @@ function hDetail(p){const it=p.items||{},sh=p.shares||{},ppl=[...new Set([...S.p
  return `<div class="hdet" style="margin-top:6px;padding:6px 8px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:14px">`+
  ppl.filter(w=>(it[w]||[]).length).map(w=>`<div style="font-weight:600;margin-top:2px">${T('Solo de {0}',esc(DN(w)))}</div>`+it[w].map(x=>`<div class="row" style="padding:2px 0"><span class="n muted">${esc(x.n||'—')}</span>${f(x.a)}</div>`).join('')).join('')+
  `<div class="row" style="padding:4px 0;border-top:1px solid #e2e8f0;margin-top:4px"><span class="n">${T('Compartido')}</span>${f(r2((+p.total||0)-all))}</div><div class="muted" style="margin-top:2px">${T('Reparto final')}</div>`+
- ppl.filter(w=>+sh[w]||iS(w)).map(w=>`<div class="row" style="padding:2px 0"><span class="n">${esc(DN(w))}</span><span class="muted">${f(iS(w))} + ${f(r2((+sh[w]||0)-iS(w)))} =</span>&nbsp;<b>${f(sh[w]||0)}</b></div>`).join('')+`</div>`}
+ ppl.filter(w=>+sh[w]||iS(w)).map(w=>`<div class="row" style="padding:2px 0"><span class="n">${esc(DN(w))}</span>${iS(w)>0.004?`<span class="muted">${f(iS(w))} + ${f(r2((+sh[w]||0)-iS(w)))} =</span>&nbsp;`:''}<b>${f(sh[w]||0)}</b></div>`).join('')+`</div>`}
 com=function(){const c=calc(M()),L=hList(),many=hRange!=='cur';
  const ch=(v,l)=>`<button class="chip ${hRange===v?'on':''}" data-hr="${v}" onclick="hRange='${v}';render()">${T(l)}</button>`;
  return `<div class="card"><button style="width:100%" onclick="editP()">${T('+ Nueva compra compartida')}</button>
