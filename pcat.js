@@ -6,7 +6,7 @@ const _movesV60=moves;moves=function(m){const P={};(m.purchases||[]).forEach(p=>
 // gasto de Joe: su parte compartida va a la categoría de la compra; sus ítems individuales, a la suya
 const _spentV60=spent;spent=function(m){const r=_spentV60(m),by=r.by;
  (m.purchases||[]).forEach(p=>{const Tn=+(p.shares||{}).Tony||0,Cc=+(p.shares||{}).Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v)),mine=r2(tot-Tn-Cc);if(mine<0.02)return;
-  const pc=pCat(p);((p.items||{}).Yo||[]).forEach(x=>{const c=itCat(x,p),a=Math.min(+x.a||0,by[pc]||0);if(c===pc||!(a>0))return;by[pc]=r2(by[pc]-a);by[c]=r2((by[c]||0)+a)})});
+  const pc=pCat(p);personItems(p,'Yo').forEach(({it:x,por})=>{const c=itCat(x,p),a=Math.min(por,by[pc]||0);if(c===pc||!(a>0))return;by[pc]=r2(by[pc]-a);by[c]=r2((by[c]||0)+a)})});
  Object.keys(by).forEach(c=>{if(Math.abs(by[c])<0.005)delete by[c]});return {by,total:r.total}};
 // diálogo: selector de categoría de la compra
 const _drawPV60=drawP;drawP=function(){_drawPV60();const g=dlg().querySelector('.grid');if(!g||document.getElementById('pcat'))return;const v=pCat(D);
@@ -16,4 +16,4 @@ const _editPV60=editP;editP=function(id){_editPV60(id);if(D&&D.isNew){const mm=R
 const _savePV60=saveP;saveP=function(){const st=D.store,c=pCat(D);if(c===SHARED_CAT){delete D.cat;delete D.catId}else{D.cat=c;D.catId=catIdOf(c)}
  _savePV60();if(!dlg().open&&st){const k=memK(st);RS()[k]={...(RS()[k]||{}),name:st,cat:c};save()}};
 // presupuesto: aviso con la categoría correcta
-const _savePV60b=saveP;saveP=function(){const cs=[pCat(D),...((D.items||{}).Yo||[]).map(x=>itCat(x,D))].filter(c=>c!==SHARED_CAT),b={...spent(L()).by};_savePV60b();if(!dlg().open&&cs.length)budToast(b,cs)};
+const _savePV60b=saveP;saveP=function(){const cs=[pCat(D),...(D.list||[]).filter(x=>ownOf(x).includes('Yo')).map(x=>itCat(x,D))].filter(c=>c!==SHARED_CAT),b={...spent(L()).by};_savePV60b();if(!dlg().open&&cs.length)budToast(b,cs)};

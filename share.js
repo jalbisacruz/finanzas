@@ -8,16 +8,16 @@ Object.assign(EN,{"📄 PDF del mes":"📄 Monthly PDF","Resumen mensual":"Month
 "Hola Carlos, tus compras de {0}:":"Hi Carlos, your purchases for {0}:","Tu parte":"Your share","Ya pagado":"Already paid","Pendiente":"Pending","Ya transferido":"Already transferred","Tu parte de las compras":"Your share of purchases","Sin pendientes ✅":"Nothing pending ✅","Correo":"Email","Email":"Email","Compras compartidas":"Shared purchases"});
 // ---------- datos (solo lectura) ----------
 const shI=(p,w)=>r2(((p.items||{})[w]||[]).reduce((s,x)=>s+(+x.a||0),0));
-function pShare(p,w){const t=r2(+(p.shares||{})[w]||0),i=shI(p,w);return {t,i,s:r2(t-i),notes:((p.items||{})[w]||[]).map(x=>[itLbl(x,p),f(x.a)].filter(Boolean).join(' '))}}
+function pShare(p,w){const t=r2(+(p.shares||{})[w]||0),pi=personItems(p,w),i=r2(pi.reduce((s,x)=>s+x.por,0));return {t,i,s:r2(t-i),notes:pi.map(x=>itLine(x.it,p,w,x.por))}}
 const billSt2=b=>{const a=+b.amount||0,p=+b.paid||0;return a>0&&p>=a-0.005?'paid':'pend'};
 function tonyData(k){const m=S.months[k],c=calc(m);return {m,c,bills:m.bills.filter(b=>+b.amount),pur:m.purchases.filter(p=>+(p.shares||{}).Tony).map(p=>({p,...pShare(p,'Tony')}))}}
 function carlosData(k){const m=S.months[k],c=calc(m);return {m,c,pur:m.purchases.filter(p=>+(p.shares||{}).Carlos).map(p=>({p,...pShare(p,'Carlos')}))}}
 // v57: desglose solo si esa persona tiene ítems individuales (X>0); si no, solo "Tu parte"
-const hasI=x=>x.i>0.004,brk=x=>hasI(x)?T('solo tuyo {0} + parte {1} = {2}',f(x.i),f(x.s),f(x.t)):T('Tu parte: {0}',f(x.t));
+const hasI=x=>x.i>0.004,brk=x=>hasI(x)?`${T('ítems {0}',f(x.i))} + ${T('parte {0}',f(x.s))} = ${f(x.t)}`:T('Tu parte: {0}',f(x.t));
 // ---------- mensajes ----------
 // v58: mensaje legible en WhatsApp/Mail/Gmail: saludo corto, secciones con título, un ítem por línea, totales al final
 const mLine=(l,v)=>`${l}  ${v}`,mNeg=v=>'−'+f(v).replace(/^−/,'');
-const mSub=x=>hasI(x)?`   (${T('solo tuyo {0} + parte {1}',f(x.i),f(x.s))}${x.notes&&x.notes.length?' · '+x.notes.join(', '):''})`:null;
+const mSub=x=>hasI(x)?[...x.notes.map(n=>'   '+n),...(x.s>0.004?['   '+T('+ parte compartida {0}',f(x.s))]:[])].join('\n'):null;
 msgFor=function(who,k){const L2=[],add=(...a)=>a.filter(x=>x!==null&&x!==undefined).forEach(x=>L2.push(x));
  if(who==='tony'){const{c,bills,pur}=tonyData(k),pend=bills.filter(b=>billSt2(b)!=='paid'),all=pend.length===bills.length,none=!pend.length;
   add(T('Hola Tony, estas son las cuentas de {0}:',lbl(k)),'',T('CUENTAS')+(bills.length&&all?' '+T('(todas pendientes)'):bills.length&&none?' '+T('(todas pagadas ✅)'):''));
@@ -75,19 +75,19 @@ function pdfMonth(k){const m=S.months[k],c=calc(m),D2=Doc(T('Resumen mensual')+'
  D2.row(T('Total cuentas'),f(c.bills),{b:1});D2.row('− '+T('Tu parte de las compras'),f(c.tony));D2.row(T('= A transferir'),f(c.toTony),{b:1});if(c.xfer)D2.row(T('Ya transferido'),f(c.xfer));D2.row(T('Pendiente'),f(c.tonyDue),{b:1});
  D2.h(T('Carlos (por cobrar)'));D2.row(T('Total compras'),f(c.carlos));D2.row(T('Ya cobrado'),f(c.recv));D2.row(T('Pendiente'),f(c.carlosDue),{b:1});
  D2.h(T('Compras compartidas'));const P=[...m.purchases].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
- if(P.length)D2.table([T('Tienda'),T('Fecha'),T('Total'),'Tony','Carlos',DN('Yo')],P.map(p=>[DN(p.store)+(p.items&&Object.keys(p.items).length?' *':''),p.date?fdate(p.date):'',f(p.total),f((p.shares||{}).Tony||0),f((p.shares||{}).Carlos||0),f((p.shares||{}).Yo||0)]),
+ if(P.length)D2.table([T('Tienda'),T('Fecha'),T('Total'),'Tony','Carlos',DN('Yo')],P.map(p=>[DN(p.store)+(pList(p).length?' *':''),p.date?fdate(p.date):'',f(p.total),f((p.shares||{}).Tony||0),f((p.shares||{}).Carlos||0),f((p.shares||{}).Yo||0)]),
   {ws:[146,74,74,74,74,74],tot:[T('Total'),'',f(sum(P,p=>p.total)),f(c.tony),f(c.carlos),f(sum(P,p=>(p.shares||{}).Yo))]});else D2.note(T('Sin compras este mes.'));
- if(P.some(p=>p.items&&Object.keys(p.items).length))D2.note('* '+T('Ítems individuales').replace(/^[+−] /,''));
+ if(P.some(p=>pList(p).length))D2.note('* '+T('Ítems individuales').replace(/^[+−] /,''));
  D2.h(T('Saldos de tarjetas'));if(m.cards.length)D2.table([T('Tarjeta'),T('Saldo')],m.cards.map(x=>[DN(x.name),f(x.amount)]),{ws:[366,150],tot:[T('Total'),f(c.credit)]});else D2.note('—');
  return D2.out()}
 function pdfTony(k){const{c,bills,pur}=tonyData(k),D2=Doc(T('Cuentas de {0} – Tony',lbl(k)),'Finanzas · '+lbl(k));
  D2.h(T('Cuentas'));D2.table([T('Cuentas'),T('Monto'),''],bills.map(b=>[DN(b.name),f(b.amount),T(billSt2(b)==='paid'?'pagada':'pendiente')]),{ws:[316,100,100],tot:[T('Total cuentas'),f(c.bills),'']});
  D2.h(T('Tu parte de las compras'));if(pur.length)D2.table([T('Tienda'),T('Fecha'),T('Total'),T('Ítems individuales').replace(/^[+−] /,''),T('Compartido'),T('Tu parte')],pur.map(x=>[DN(x.p.store),x.p.date?fdate(x.p.date):'',f(x.p.total),hasI(x)?f(x.i):'',hasI(x)?f(x.s):'',f(x.t)]),{ws:[136,66,76,82,76,80],tot:[T('Total'),'','','','',f(c.tony)]});else D2.note('—');
- {const its=pur.filter(hasI);if(its.length){D2.h(T('Ítems individuales').replace(/^[+−] /,''));its.forEach(x=>((x.p.items||{}).Tony||[]).forEach(it=>D2.row(DN(x.p.store)+' · '+itLbl(it,x.p),f(it.a),{ind:8})))}}
+ {const its=pur.filter(hasI);if(its.length){D2.h(T('Ítems individuales').replace(/^[+−] /,''));its.forEach(x=>x.notes.forEach(n=>D2.row(DN(x.p.store)+' · '+n,undefined,{ind:8})))}}
  D2.h(T('Balance'));D2.row(T('Total cuentas'),f(c.bills));D2.row('− '+T('Tu parte de las compras'),f(c.tony));D2.row(T('= A transferir'),f(c.toTony),{b:1});if(c.xfer)D2.row(T('Ya transferido'),f(c.xfer));D2.row(T('Pendiente'),f(c.tonyDue),{b:1});return D2.out()}
 function pdfCarlos(k){const{c,pur}=carlosData(k),D2=Doc(T('Compras de {0} – Carlos',lbl(k)),'Finanzas · '+lbl(k));
  D2.h(T('Compras compartidas'));pur.forEach(x=>{D2.row(DN(x.p.store)+' · '+(x.p.date?fdate(x.p.date):'')+' · '+T('Total')+' '+f(x.p.total),undefined,{b:1});
-  if(hasI(x)){((x.p.items||{}).Carlos||[]).forEach(it=>D2.row(T('Solo de {0}','Carlos')+': '+itLbl(it,x.p),f(it.a),{ind:12,muted:1}));D2.row(T('solo tuyo {0} + parte {1}',f(x.i),f(x.s)),'= '+f(x.t),{ind:12,b:1})}
+  if(hasI(x)){x.notes.forEach(n=>D2.row(n,undefined,{ind:12,muted:1}));D2.row(`${T('ítems {0}',f(x.i))} + ${T('parte {0}',f(x.s))}`,'= '+f(x.t),{ind:12,b:1})}
   else D2.row(T('Tu parte: {0}','').replace(/\s*$/,''),f(x.t),{ind:12,b:1});D2.sep()});
  if(!pur.length)D2.note('—');D2.h(T('Balance'));D2.row(T('Total'),f(c.carlos));D2.row(T('Ya pagado'),f(c.recv));D2.row(T('Pendiente'),f(c.carlosDue),{b:1});return D2.out()}
 async function makePDF(kind,k){await loadPDF();const doc=kind==='tony'?pdfTony(k):kind==='carlos'?pdfCarlos(k):pdfMonth(k);

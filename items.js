@@ -1,9 +1,9 @@
 // v54: ítems individuales en compras compartidas. Campo nuevo opcional p.items={persona:[{a,n}]}; p.shares sigue siendo el total de cada persona.
 Object.assign(EN,{"+ Ítems individuales":"+ Individual items","− Ítems individuales":"− Individual items","Solo de {0}":"Only {0}'s","Nota":"Note","Compartido":"Shared",
  "Compartido {0} = total − ítems individuales":"Shared {0} = total − individual items","Los ítems individuales superan el total.":"Individual items exceed the total.","Añadir ítem":"Add item","individual":"individual","parte":"share"});
-const itemsSum=w=>r2(((D.items||{})[w]||[]).reduce((s,x)=>s+(+x.a||0),0));
-const allItems=()=>r2(Object.keys(D.items||{}).reduce((s,w)=>s+itemsSum(w),0));
-const pplP=()=>[...new Set([...S.people,...Object.keys(D.shares||{}),...Object.keys(D.items||{})])];
+var itemsSum=w=>r2(((D.items||{})[w]||[]).reduce((s,x)=>s+(+x.a||0),0));
+var allItems=()=>r2(Object.keys(D.items||{}).reduce((s,w)=>s+itemsSum(w),0));
+var pplP=()=>[...new Set([...S.people,...Object.keys(D.shares||{}),...Object.keys(D.items||{})])];
 // reparto con centavos exactos: el redondeo va a Yo (o al último)
 function splitShared(t){const o={};if(D.mode==='fam'){const tn=r2(t*.5),c=r2(t*.25);o.Tony=tn;o.Carlos=c;o.Yo=r2(t-tn-c);return o}
  const who=D.who&&D.who.length?D.who:['Yo'],each=r2(t/who.length);who.forEach(w=>o[w]=each);const rest=r2(t-each*who.length),k=who.includes('Yo')?'Yo':who.at(-1);o[k]=r2(o[k]+rest);return o}

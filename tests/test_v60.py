@@ -64,12 +64,9 @@ for lang in ['es','en']:
     E("()=>{tab='mov';render();editP()}");pg.wait_for_timeout(80)
     check(pg.input_value('#pcat')==FOOD,'default category')
     pg.select_option('#pcat',HOG);pg.wait_for_timeout(30);pg.fill('#tot','100');pg.click('#itog');pg.wait_for_timeout(50)
-    check(pg.input_value('#itbox select[data-iw="Yo"][data-ii="0"]')==HOG,'item defaults to purchase category')
-    def it(w,i,a,n='',c=None):
-        pg.fill(f'#itbox input[data-iw="{w}"][data-ii="{i}"][data-k="a"]',str(a))
-        if n:pg.fill(f'#itbox input[data-iw="{w}"][data-ii="{i}"][data-k="n"]',n)
-        if c:pg.select_option(f'#itbox select[data-iw="{w}"][data-ii="{i}"]',c)
-    it('Yo',0,10,'Vitaminas',SAL);it('Yo',1,5,'',ROP);it('Carlos',0,10,'Shampoo',SAL);it('Tony',0,6)
+    check(pg.input_value('#itbox select[data-li="0"]')==HOG,'item defaults to purchase category')
+    from itemhelp import item
+    item(pg,0,10,('Yo',),'Vitaminas',SAL);item(pg,1,5,('Yo',),'',ROP);item(pg,2,10,('Carlos',),'Shampoo',SAL);item(pg,3,6,('Tony',))
     sh=E("D.shares");check(sh=={'Tony':40.5,'Carlos':27.25,'Yo':32.25},sh)
     if '--shots' in sys.argv:pg.locator('#dlg').screenshot(path=os.path.join(ROOT,'shots','126-compartida-categoria'+('' if ES else '-en')+'.png'))
     pg.click('#psave');pg.wait_for_timeout(80)

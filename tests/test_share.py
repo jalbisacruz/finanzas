@@ -17,7 +17,7 @@ for lang in ['es','en']:
   with app(ROOT,lang=lang) as pg:
     E=pg.evaluate;E(ADD);pg.wait_for_timeout(80);before=E("JSON.stringify(S.months)")
     t=E("msgFor('tony','2026-10')")
-    check(('Walmart' in t and '$35.00' in t and ('solo tuyo $10.00 + parte $25.00' in t or 'only yours $10.00 + share $25.00' in t)),t)
+    check(('Walmart' in t and '$35.00' in t and ('+ parte compartida $25.00' in t or '+ shared part $25.00' in t)),t)
     ES=lang=='es'
     check(t.split('\n')[0]==('Hola Tony, estas son las cuentas de Oct 2026:' if ES else 'Hi Tony, here are the bills for Oct 2026:') and t.split('\n')[1]=='','tony greeting+blank: '+t)
     for h in (['CUENTAS','TU PARTE DE LAS COMPRAS','A TRANSFERIRTE  $820.40'] if ES else ['BILLS','YOUR SHARE OF PURCHASES','TO TRANSFER YOU  $820.40']):check(h in t,h+' in '+t)
@@ -26,7 +26,7 @@ for lang in ['es','en']:
     check('ingreso' not in t.lower() and 'income' not in t.lower(),'no income word tony')
     # v57 rule: no items -> "Tu parte: $Y" only; items -> "solo tuyo X + parte Y = Z"
     YS='Your share' if lang=='en' else 'Tu parte'
-    W=('Walmart · 12 oct  $35.00\n   (solo tuyo $10.00 + parte $25.00 · Snacks $10.00)' if ES else 'Walmart · Oct 12  $35.00\n   (only yours $10.00 + share $25.00 · Snacks $10.00)')
+    W=('Walmart · 12 oct  $35.00\n   Snacks $10.00\n   + parte compartida $25.00' if ES else 'Walmart · Oct 12  $35.00\n   Snacks $10.00\n   + shared part $25.00')
     check(W in t,'tony breakdown with items: '+t)
     PL=('Publix · 5 oct  $100.00\n' if ES else 'Publix · Oct 5  $100.00\n');check(PL in t and t.split(PL)[1].split('\n')[0].startswith('Aldi') or PL in t and not t.split(PL)[1].startswith('   ('),'tony no-items line: '+t)
     # mixed paid/pending: only pending marked
@@ -37,7 +37,7 @@ for lang in ['es','en']:
     c=E("msgFor('carlos','2026-10')")
     check('$42.50' in c and 'Shampoo' in c and ('PENDIENTE' in c or 'PENDING' in c),c)
     check(c.split('\n')[1]=='' and (('COMPRAS' if ES else 'PURCHASES') in c),'carlos sections: '+c)
-    check(('(solo tuyo $30.00 + parte $12.50 · Shampoo $10.00, $20.00)' if ES else '(only yours $30.00 + share $12.50 · Shampoo $10.00, $20.00)') in c,'carlos breakdown: '+c)
+    check(('   Shampoo $10.00\n   🛒 Comida/Supermercado $20.00\n   + parte compartida $12.50' if ES else '   Shampoo $10.00\n   🛒 Food/Groceries $20.00\n   + shared part $12.50') in c,'carlos breakdown: '+c)
     check(('Publix · 5 oct  $50.00\nAldi' if ES else 'Publix · Oct 5  $50.00\nAldi') in c and '$0.00' not in c,'carlos no-items lines: '+c)
     check(c.rstrip().endswith(('PENDIENTE  $92.50' if ES else 'PENDING  $92.50')) and ('YA PAGASTE  −$20.00' if ES else 'ALREADY PAID  −$20.00') in c,'carlos totals: '+c)
     check('ingreso' not in c.lower() and 'income' not in c.lower(),'no income word carlos')
@@ -51,7 +51,7 @@ for lang in ['es','en']:
     check(s['text'].count('\n')>=8 and '\n\n' in s['text'] and s['text']==E("msgFor('carlos','2026-10')"),'share text keeps line breaks')
     pg.check('#msgpdf');pg.click('#msgsh');pg.wait_for_function("_sh.length==2",timeout=10000);s=E("_sh.at(-1)")
     check(s['files']==['Carlos-2026-10.pdf'] and s['size'][0]>1000,s)
-    _,tx=pdftext(pg,'c.pdf');check(('only yours $30.00 + share $12.50' if lang=='en' else 'solo tuyo $30.00 + parte $12.50') in tx and f'{YS}:' in tx and '$0.00' not in tx,'carlos pdf rule: '+tx)
+    _,tx=pdftext(pg,'c.pdf');check(('items $30.00 + share $12.50' if lang=='en' else 'ítems $30.00 + parte $12.50') in tx and f'{YS}:' in tx and '$0.00' not in tx,'carlos pdf rule: '+tx)
     check('Shampoo' in tx and '42.50' in tx and 'Tony' not in tx.replace('Tony',''),tx[:300])
     # (v58 mailto checks removed in v59)
     # v59: no email button / field in the dialog; stored emails untouched
