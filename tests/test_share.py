@@ -26,7 +26,7 @@ for lang in ['es','en']:
     check('ingreso' not in t.lower() and 'income' not in t.lower(),'no income word tony')
     # v57 rule: no items -> "Tu parte: $Y" only; items -> "solo tuyo X + parte Y = Z"
     YS='Your share' if lang=='en' else 'Tu parte'
-    W=('Walmart · 12 oct  $35.00\n   (solo tuyo $10.00 + parte $25.00)' if ES else 'Walmart · Oct 12  $35.00\n   (only yours $10.00 + share $25.00)')
+    W=('Walmart · 12 oct  $35.00\n   (solo tuyo $10.00 + parte $25.00 · Snacks $10.00)' if ES else 'Walmart · Oct 12  $35.00\n   (only yours $10.00 + share $25.00 · Snacks $10.00)')
     check(W in t,'tony breakdown with items: '+t)
     PL=('Publix · 5 oct  $100.00\n' if ES else 'Publix · Oct 5  $100.00\n');check(PL in t and t.split(PL)[1].split('\n')[0].startswith('Aldi') or PL in t and not t.split(PL)[1].startswith('   ('),'tony no-items line: '+t)
     # mixed paid/pending: only pending marked

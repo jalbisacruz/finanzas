@@ -12,7 +12,7 @@ recomputeEq=function(){if(D.mode==='manual')return;const sh=r2(r2(D.total)-allIt
 function itemsHtml(){const open=D._io||allItems()>0;if(D.mode==='manual')return'';const ppl=pplP();
  return `<button class="sec" id="itog" style="width:100%;margin:8px 0 4px;min-height:38px;font-size:14px" onclick="D._io=!(${open});drawP()">${open?T('− Ítems individuales'):T('+ Ítems individuales')}</button>
  ${open?`<div id="itbox" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 10px">${ppl.map(w=>{const L=(D.items||{})[w]||[];while(L.length<2)L.push({a:'',n:''});(D.items=D.items||{})[w]=L;
-  return `<div style="margin:6px 0 2px;font-weight:600;font-size:14px">${T('Solo de {0}',esc(DN(w)))}</div>${L.map((x,i)=>`<div style="display:grid;grid-template-columns:96px 1fr;gap:6px;margin-bottom:4px"><input type="number" inputmode="decimal" step="0.01" placeholder="$0" data-iw="${esc(w)}" data-ii="${i}" data-k="a" style="min-width:0;width:100%" value="${x.a===''?'':x.a}" oninput="liveItems()"><input placeholder="${T('Nota')}" maxlength="40" data-iw="${esc(w)}" data-ii="${i}" data-k="n" style="min-width:0;width:100%" value="${esc(x.n||'')}" oninput="liveItems()"></div>`).join('')}
+  return `<div style="margin:6px 0 2px;font-weight:600;font-size:14px">${T('Solo de {0}',esc(DN(w)))}</div>${L.map((x,i)=>`<div style="display:grid;grid-template-columns:84px 1fr 44px;gap:6px;margin-bottom:4px"><input type="number" inputmode="decimal" step="0.01" placeholder="$0" data-iw="${esc(w)}" data-ii="${i}" data-k="a" style="min-width:0;width:100%" value="${x.a===''?'':x.a}" oninput="liveItems()"><input placeholder="${T('Nota')}" maxlength="40" data-iw="${esc(w)}" data-ii="${i}" data-k="n" style="min-width:0;width:100%" value="${esc(x.n||'')}" oninput="liveItems()">${itCatSel(w,i,x)}</div>`).join('')}
   <button class="sec" aria-label="${T('Añadir ítem')}" title="${T('Añadir ítem')}" style="min-height:30px;padding:0 12px;font-size:16px" onclick="liveItems();D.items['${esc(w)}'].push({a:'',n:''});D._io=true;drawP()">+</button>`}).join('')}</div>`:''}
  <div id="ibrk" style="margin-top:8px">${brkHtml()}</div>`}
 function brkHtml(){const it=allItems(),sh=r2(r2(D.total)-it);if(!(it>0))return'';const b=splitShared(sh);
@@ -27,5 +27,13 @@ function liveItems(){document.querySelectorAll('#itbox input[data-iw]').forEach(
 const _drawP3=drawP;drawP=function(){_drawP3();if(D.mode==='manual')return;const ch=document.getElementById('mman')?.parentElement;if(ch)ch.insertAdjacentHTML('afterend',itemsHtml());
  const t=document.getElementById('tot');if(t){t.addEventListener('input',liveItems);t.onchange=()=>{D.total=r2(t.value);liveItems()}}liveItems()};
 const _saveP3=saveP;saveP=function(){if(D.mode!=='manual'){liveItems();if(allItems()>r2(D.total)+0.004)return alert(T('Los ítems individuales superan el total.'))}
- const it={};if(D.mode!=='manual')Object.entries(D.items||{}).forEach(([w,L])=>{const k=L.filter(x=>+x.a>0).map(x=>({a:r2(x.a),...(x.n?{n:x.n.trim()}:{})}));if(k.length)it[w]=k});
+ const it={};if(D.mode!=='manual')Object.entries(D.items||{}).forEach(([w,L])=>{const k=L.filter(x=>+x.a>0).map(x=>({a:r2(x.a),...(x.n?{n:x.n.trim()}:{}),...(x.c&&x.c!==pCat(D)?{c:x.c,catId:catIdOf(x.c)}:{})}));if(k.length)it[w]=k});
  delete D._io;if(Object.keys(it).length)D.items=it;else delete D.items;_saveP3()};
+
+// v60: categoría por ítem (opcional; por defecto la de la compra)
+const pCat=p=>(p&&p.cat)||SHARED_CAT;
+const itCat=(x,p)=>(x&&x.c)||pCat(p);
+const catIdOf=c=>{const e=Object.entries(((S.catalog||{}).items)||{}).find(([,v])=>v.t==='cat'&&v.key===c);return e?e[0]:(typeof idFor==='function'?idFor('cat',c):undefined)};
+const pCats=()=>S.cats.filter(c=>c!=='🤝 Tony');
+function itCatSel(w,i,x){const v=itCat(x,D);return `<select class="itcat" data-iw="${esc(w)}" data-ii="${i}" title="${T('Categoría')}" aria-label="${T('Categoría')}" style="min-width:0;width:100%;padding:0 0 0 9px;font-size:20px;-webkit-appearance:none;appearance:none;background:#fff;overflow:hidden;white-space:nowrap;text-overflow:clip" onchange="D.items['${esc(w)}'][${i}].c=this.value">${[...new Set([...pCats(),v])].map(c=>`<option value="${esc(c)}"${c===v?' selected':''}>${esc(DN(c))}</option>`).join('')}</select>`}
+const itLbl=(x,p)=>[x.n,itCat(x,p)!==pCat(p)?DN(itCat(x,p)):''].filter(Boolean).join(' · ');
