@@ -11,8 +11,8 @@ function msgShort(who,k){const L=[];
   bills.forEach(b=>L.push(mLine(DN(b.name),f(b.amount))+(!all&&!none&&billSt2(b)!=='paid'?' ⏳':'')));L.push(mLine(T('Total cuentas'),f(c.bills)));if(!all&&!none)L.push(T('⏳ = pendiente'));
   if(pur.length){L.push('',T('TU PARTE DE LAS COMPRAS'));pur.forEach(x=>L.push(pLineS(x)));L.push(mLine(T('Total compras'),mNeg(c.tony)))}
   if(c.xfer)L.push('',mLine(T('YA TRANSFERIDO'),mNeg(c.xfer)));L.push('',c.tonyDue>0.005?mLine(T('A TRANSFERIRTE'),f(c.tonyDue)):T('Todo al día ✅'))}
- else{const{c,pur}=carlosData(k);L.push(T('Hola Carlos, estas son tus compras de {0}:',lbl(k)),'',T('COMPRAS'));pur.forEach(x=>L.push(pLineS(x)));L.push(mLine(T('Total compras'),f(c.carlos)));
-  if(c.recv)L.push('',mLine(T('YA PAGASTE'),mNeg(c.recv)));L.push('',c.carlosDue>0.005?mLine(T('PENDIENTE'),f(c.carlosDue)):T('Todo al día ✅'))}
+ else{const{c,pur}=carlosData(k);L.push(T('Hola Carlos, estas son tus compras de {0}:',lbl(k)),'',T('COMPRAS'));pur.forEach(x=>L.push(pLineS(x)));L.push(mLine(T('Total compras'),f(c.carlos)));if(c.joeCS>0.004)L.push(mLine(T('− Mi parte de tus compras'),mNeg(c.joeCS)));
+  if(c.recv)L.push('',mLine(T('YA PAGASTE'),mNeg(c.recv)));L.push('',c.carlosDue>0.005?mLine(T('PENDIENTE'),f(c.carlosDue)):c.joeOwesCarlos>0.004?mLine(T('Te debo'),f(c.joeOwesCarlos)):T('Todo al día ✅'))}
  return L.join('\n')}
 function msgPdfText(who,k){if(who==='tony'){const{c}=tonyData(k);return [T('Hola Tony, te envío las cuentas de {0}.',lbl(k)),c.tonyDue>0.005?mLine(T('Te transfiero')+':',f(c.tonyDue)):T('Todo al día ✅'),T('El detalle está en el PDF.')].join('\n')}
  const{c}=carlosData(k);return [T('Hola Carlos, te envío tus compras de {0}.',lbl(k)),c.carlosDue>0.005?mLine(T('PENDIENTE')+':',f(c.carlosDue)):T('Todo al día ✅'),T('El detalle está en el PDF.')].join('\n')}

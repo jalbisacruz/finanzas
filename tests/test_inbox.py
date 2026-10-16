@@ -61,8 +61,8 @@ with app(ROOT,routes=R,init=init) as pg:
     E("()=>{tab='ini';render()}");pg.wait_for_timeout(100);ow=pg.inner_text('#owecard');check('Carlos le debe a Tony' in ow and '$58.85' in ow,ow)
     # Carlos buys
     E("()=>inboxOpen('c1')");pg.wait_for_timeout(50);E("saveP()");pg.wait_for_timeout(100)
-    c2=E("calc(M())");check(abs(c2['carlos']-c1['carlos'])<1e-9 and E("debE(M()).amount")==deb0,'carlos buy: no por cobrar, debit untouched')
-    E("()=>{tab='ini';render()}");pg.wait_for_timeout(100);ow=pg.inner_text('#owecard');check('Le debes a Carlos' in ow and '$20.00' in ow and 'Tony le debe a Carlos' in ow and '$40.00' in ow,ow)
+    c2=E("calc(M())");check(abs(c2['carlos']-c1['carlos'])<1e-9 and abs(c2['carlosOwes']-c1['carlosOwes']+20)<1e-9 and E("debE(M()).amount")==deb0,'carlos buy: v73 netting -20, debit untouched')
+    E("()=>{tab='ini';render()}");pg.wait_for_timeout(100);ow=pg.inner_text('#owecard');check('Carlos le debe a Tony' in ow and '$18.85' in ow,ow)  # v73: net between them
     if '--shots' in sys.argv:pg.locator('#owecard').screenshot(path=os.path.join(ROOT,'shots','136-deudas.png'))
     # reject
     E("()=>{window.confirm=()=>true;inboxOpen('r1')}");pg.wait_for_timeout(50);pg.click('#inbrej');pg.wait_for_timeout(100)

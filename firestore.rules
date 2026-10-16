@@ -18,6 +18,16 @@ service cloud.firestore {
       // v72: buzón de compras enviadas desde el enlace. Cualquiera con el token puede CREAR (no leer, no listar, no editar).
       // Solo Joe (dueño del enlace) puede leer y borrar.
       match /inbox/{id} {
+        // v73: confirmación "Ya pagué" entre Tony y Carlos
+        allow create: if exists(/databases/$(database)/documents/shares/$(token))
+          && request.resource.data.keys().hasOnly(['kind','by','month','amount','at'])
+          && request.resource.data.keys().hasAll(['kind','by','month','amount','at'])
+          && request.resource.data.kind == 'settle'
+          && request.resource.data.by in ['Tony','Carlos']
+          && request.resource.data.by in get(/databases/$(database)/documents/shares/$(token)).data.buyers
+          && request.resource.data.month is string && request.resource.data.month.matches('^[0-9]{4}-[0-9]{2}$')
+          && request.resource.data.amount is number && request.resource.data.amount > 0 && request.resource.data.amount <= 20000
+          && request.resource.data.at == request.time;
         allow create: if exists(/databases/$(database)/documents/shares/$(token))
           && request.resource.data.keys().hasOnly(['by','store','date','total','tax','items','at','scan'])
           && request.resource.data.keys().hasAll(['by','store','date','total','at'])
