@@ -11,7 +11,7 @@ RESP={"isReceipt":True,"store":"Publix","date":"2026-10-12","total":23.54,"uncer
           {"name":"Pan","amount":3.50,"category":"Comida/Supermercado","confident":True},
           {"name":"Shampoo","amount":7.99,"category":"🧴 Cuidado personal","confident":False},
           {"name":"Bombillos","amount":6.49,"category":"🏠 Hogar","confident":True}]}
-MOCK="()=>{window.__resp=%s;window.__calls=[];window.fbUser=()=>true;window.fbScan=async(b,p)=>{window.__calls.push([b.length,p]);if(window.__err)throw window.__err;return window.__resp}}"
+MOCK="()=>{window.__resp=%s;window.__calls=[];window.fbUser=()=>true;window.fbScan=async(b,p,m)=>{window.__calls.push([b.length,p]);window.__mime=m;window.__b64=b.slice(0,10);if(window.__err)throw window.__err;return window.__resp}}"
 IMG="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
 with app(ROOT) as pg:
     E=pg.evaluate
@@ -47,3 +47,21 @@ with app(ROOT) as pg:
     check(E("M().purchases.length")==n0+1,'only the reviewed one saved')
     errs=[e for e in pg.errors if 'scan' not in e and 'DIALOG' not in e];check(not errs,errs)
 print('test_scan OK',ok)
+# v62b: PDFs, tall screenshots, size limit
+with app(ROOT) as pg:
+    E=pg.evaluate
+    E(MOCK%json.dumps(json.dumps(RESP)))
+    E("()=>new Promise(r=>{const s=document.createElement('script');s.src='vendor/jspdf.umd.min.js';s.onload=r;document.head.appendChild(s)})")
+    acc=E("()=>{let a;const o=HTMLInputElement.prototype.click;HTMLInputElement.prototype.click=function(){a=[this.accept,this.hasAttribute('capture')]};scanReceipt();HTMLInputElement.prototype.click=o;return a}")
+    check(acc==['image/*,application/pdf',False],'camera OR photos/files %s'%acc)
+    E("async()=>{const d=new jspdf.jsPDF();d.text('SUNNY MARKET  TOTAL 23.54',10,10);d.addPage();d.text('page 2',10,10);await scanFile(new File([d.output('blob')],'r.pdf',{type:'application/pdf'}))}");pg.wait_for_timeout(150)
+    c=E("window.__calls.at(-1)");check(E("window.__mime")=='application/pdf' and E("window.__b64").startswith('JVBERi'),'pdf sent as pdf');check(E("D.total")==23.54,'pdf prefilled');E("dlg().close()")
+    E("async()=>{await scanFile(new File([new Uint8Array(16*1024*1024)],'big.pdf',{type:'application/pdf'}))}");pg.wait_for_timeout(100)
+    check('15 MB' in pg.inner_text('#scanerr'),'pdf size');E("dlg().close()")
+    dims=E("""async()=>{const c=document.createElement('canvas');c.width=1170;c.height=6000;c.getContext('2d').fillRect(0,0,10,10);const b=await new Promise(r=>c.toBlob(r,'image/png'));
+      const s=await scanResize(new File([b],'s.png',{type:'image/png'}));const im=new Image();im.src='data:image/jpeg;base64,'+s;await im.decode();return [im.width,im.height]}""")
+    check(dims[1]==3000,'tall screenshot cap 3000 %s'%dims)
+    dims=E("""async()=>{const c=document.createElement('canvas');c.width=4000;c.height=3000;const b=await new Promise(r=>c.toBlob(r,'image/png'));
+      const s=await scanResize(new File([b],'s.png',{type:'image/png'}));const im=new Image();im.src='data:image/jpeg;base64,'+s;await im.decode();return [im.width,im.height]}""")
+    check(dims[0]==1600,'photo cap 1600 %s'%dims)
+print('test_scan PDF OK',ok)

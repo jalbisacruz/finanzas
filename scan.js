@@ -1,6 +1,6 @@
-// v62: 📷 Escanear recibo. La foto se reduce en el teléfono (~1600px JPEG), se envía a Gemini (Firebase AI Logic) y se descarta:
+// v62: 📷 Escanear recibo (cámara, fotos/capturas o PDF; iPhone ofrece las tres opciones). La foto se reduce en el teléfono (~1600px JPEG), se envía a Gemini (Firebase AI Logic) y se descarta:
 // no se guarda en ningún sitio. Se abre la compra compartida ya llena para revisar; nada se guarda solo.
-Object.assign(EN,{"📷 Escanear recibo":"📷 Scan receipt","Leyendo el recibo…":"Reading the receipt…","Esto tarda unos segundos. La foto no se guarda.":"This takes a few seconds. The photo is not saved.",
+Object.assign(EN,{"📷 Escanear recibo":"📷 Scan receipt","Leyendo el recibo…":"Reading the receipt…","Esto tarda unos segundos. La foto no se guarda.":"This takes a few seconds. The photo is not saved.","El PDF es muy grande (máximo 15 MB). Toma una captura del recibo y escanéala.":"The PDF is too big (15 MB max). Take a screenshot of the receipt and scan that.",
  "Para escanear recibos inicia sesión con Google (☰ › Configuración › Nube).":"To scan receipts, sign in with Google (☰ › Settings › Cloud).",
  "Sin conexión. Conéctate a internet para escanear, o anota la compra a mano.":"No connection. Connect to the internet to scan, or enter the purchase by hand.",
  "No pude leer el recibo. Prueba otra foto con buena luz y el recibo completo, o anótala a mano.":"I couldn't read the receipt. Try another photo with good light and the full receipt, or enter it by hand.",
@@ -11,8 +11,8 @@ Object.assign(EN,{"📷 Escanear recibo":"📷 Scan receipt","Leyendo el recibo�
  "tienda":"store","fecha":"date","total":"total","ítem {0}":"item {0}","Los ítems suman {0}; la diferencia {1} (impuestos, etc.) se reparte 50/25/25.":"Items add up to {0}; the difference {1} (tax, etc.) is split 50/25/25.",
  "Cada ítem empieza compartido entre los tres; toca los nombres para cambiar los dueños.":"Each item starts shared by all three; tap the names to change the owners.",
  "No encontré artículos; revisa el total.":"No items found; check the total.","No parece un recibo. Prueba otra foto o anótala a mano.":"It doesn't look like a receipt. Try another photo or enter it by hand."});
-const SCAN_MAX=1600;
-function scanPrompt(){const cats=pCats();return `Eres un lector de recibos de compra (tiendas de EE.UU., en inglés o español). Lee la foto y responde SOLO con JSON con esta forma exacta:
+const SCAN_MAX=1600,SCAN_TALL=3000,PDF_MAX=15*1024*1024;
+function scanPrompt(){const cats=pCats();return `Eres un lector de recibos de compra (tiendas de EE.UU., en inglés o español). Lee la foto, captura de pantalla (p. ej. app de Sam's Club o Walmart) o PDF (puede tener varias páginas; usa todas) y responde SOLO con JSON con esta forma exacta:
 {"isReceipt":true,"store":"nombre corto de la tienda","date":"AAAA-MM-DD o null","total":0.00,"items":[{"name":"nombre corto y claro en español","amount":0.00,"category":"una de la lista","confident":true}],"uncertain":["store"|"date"|"total"]}
 Reglas: "total" es el total pagado (con impuestos). "amount" es el precio final de la línea (cantidad × precio, menos descuentos de esa línea). No incluyas subtotal, impuestos, total, cambio ni pagos como ítems. Si no se lee algo, ponlo en "uncertain" (y en el ítem "confident":false). Si la foto no es un recibo, "isReceipt":false.
 Categorías permitidas (copia el texto exacto, con emoji): ${JSON.stringify(cats)}. Si dudas, usa ${JSON.stringify(SHARED_CAT)}.`}
@@ -20,12 +20,13 @@ function scanErr(e){const c=String((e&&(e.code||''))+' '+(e&&e.message||e)).toLo
  if(c.includes('signin'))return T('Para escanear recibos inicia sesión con Google (☰ › Configuración › Nube).');
  if(!navigator.onLine||/network|failed to fetch|fetch-error/.test(c))return T('Sin conexión. Conéctate a internet para escanear, o anota la compra a mano.');
  if(/429|quota|resource.?exhausted|rate/.test(c))return T('Hay muchas solicitudes ahora mismo. Espera un minuto y vuelve a intentarlo.');
+ if(/pdfsize/.test(c))return T('El PDF es muy grande (máximo 15 MB). Toma una captura del recibo y escanéala.');
  if(/notreceipt/.test(c))return T('No parece un recibo. Prueba otra foto o anótala a mano.');
  if(/parse|json|empty/.test(c))return T('No pude leer el recibo. Prueba otra foto con buena luz y el recibo completo, o anótala a mano.');
  if(/image/.test(c))return T('No pude abrir la foto. Prueba otra vez.');
  return T('El escaneo no está disponible ahora mismo. Anota la compra a mano.')}
 function scanResize(file){return new Promise((ok,ko)=>{const u=URL.createObjectURL(file),im=new Image();
- im.onload=()=>{URL.revokeObjectURL(u);const k=Math.min(1,SCAN_MAX/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');
+ im.onload=()=>{URL.revokeObjectURL(u);const W=im.naturalWidth,H=im.naturalHeight,cap=Math.max(W,H)>2*Math.min(W,H)?SCAN_TALL:SCAN_MAX,k=Math.min(1,cap/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');
   c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
   const d=c.toDataURL('image/jpeg',0.8);c.width=c.height=0;ok(d.slice(d.indexOf(',')+1))};
  im.onerror=()=>{URL.revokeObjectURL(u);const e=new Error('image');ko(e)};im.src=u})}
@@ -59,12 +60,15 @@ const _savePV62=saveP;saveP=function(){const sc=D&&D._scan;if(D){delete D._scan;
 function scanBusy(){dlg().innerHTML=`<div style="text-align:center;padding:24px 8px"><div style="font-size:44px">📷</div><h2 style="justify-content:center">${T('Leyendo el recibo…')}</h2><div class="muted" style="font-size:14px">${T('Esto tarda unos segundos. La foto no se guarda.')}</div></div>`;if(!dlg().open)dlg().showModal()}
 function scanFail(msg){dlg().innerHTML=`<h2>${T('📷 Escanear recibo')}</h2><div id="scanerr" style="font-size:15px;margin:6px 0 14px">${esc(msg)}</div>
  <div class="grid"><button class="sec" onclick="dlg().close();editP()">${T('Anotar a mano')}</button><button onclick="scanReceipt()">${T('Probar otra foto')}</button></div>`;if(!dlg().open)dlg().showModal()}
+function scanPdf(file){return new Promise((ok,ko)=>{if(file.size>PDF_MAX)return ko(new Error('pdfsize'));const r=new FileReader();
+ r.onload=()=>{const d=String(r.result);ok(d.slice(d.indexOf(',')+1))};r.onerror=()=>ko(new Error('image'));r.readAsDataURL(file)})}
+const isPdf=f=>/pdf$/i.test(f.type||'')||/\.pdf$/i.test(f.name||'');
 async function scanFile(file){if(!file)return;scanBusy();let b64=null;
- try{b64=await scanResize(file);const txt=await window.fbScan(b64,scanPrompt());b64=null;scanApply(scanParse(txt))}
+ try{const pdf=isPdf(file);b64=pdf?await scanPdf(file):await scanResize(file);const txt=await window.fbScan(b64,scanPrompt(),pdf?'application/pdf':'image/jpeg');b64=null;scanApply(scanParse(txt))}
  catch(e){console.warn('scan',e);scanFail(scanErr(e))}finally{b64=null}}
 function scanReceipt(){if(!window.fbScan||!(window.fbUser&&fbUser()))return scanFail(T('Para escanear recibos inicia sesión con Google (☰ › Configuración › Nube).'));
  if(!navigator.onLine)return scanFail(scanErr({message:'network'}));
- const i=document.createElement('input');i.type='file';i.accept='image/*';i.setAttribute('capture','environment');i.style.display='none';
+ const i=document.createElement('input');i.type='file';i.accept='image/*,application/pdf';i.style.display='none';
  i.onchange=()=>{const f=i.files&&i.files[0];i.remove();scanFile(f)};document.body.appendChild(i);i.click()}
 // entradas: diálogo ➕, junto a "+ Nueva compra compartida", y en Hoy
 const scanBtn=id=>`<button class="sec" id="${id}" style="width:100%;margin-top:8px" onclick="dlg().open&&dlg().close();scanReceipt()">${T('📷 Escanear recibo')}</button>`;

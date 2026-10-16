@@ -19,10 +19,10 @@ if(cfg){
  const RECAPTCHA_KEY='6LczjvEtAAAAAEaAHmwLEj2DUiWYY--kne8BH3ei';
  try{const AC=await import(B+'firebase-app-check.js');AC.initializeAppCheck(app,{provider:new AC.ReCaptchaEnterpriseProvider(RECAPTCHA_KEY),isTokenAutoRefreshEnabled:true})}catch(e){console.warn('appcheck',e)}
  let AI=null;const MODELS=['gemini-3.5-flash','gemini-3.8-flash'];
- window.fbScan=async(b64,prompt)=>{if(!user){const e=new Error('signin');e.code='signin';throw e}
+ window.fbScan=async(b64,prompt,mime='image/jpeg')=>{if(!user){const e=new Error('signin');e.code='signin';throw e}
   AI=AI||await import(B+'firebase-ai.js');const ai=AI.getAI(app,{backend:new AI.GoogleAIBackend()});let last;
   for(const name of MODELS){try{const m=AI.getGenerativeModel(ai,{model:name,generationConfig:{responseMimeType:'application/json',temperature:0}});
-    const r=await m.generateContent([prompt,{inlineData:{mimeType:'image/jpeg',data:b64}}]);return r.response.text()}
+    const r=await m.generateContent([prompt,{inlineData:{mimeType:mime,data:b64}}]);return r.response.text()}
    catch(e){last=e;if(!/404|not found|not supported/i.test(String(e&&e.message)))throw e}}
   throw last};
  await A.setPersistence(auth,A.browserLocalPersistence).catch(()=>{});
