@@ -2,7 +2,7 @@
 Object.assign(EN,{"📄 PDF del mes":"📄 Monthly PDF","Resumen mensual":"Monthly summary","Generado":"Generated","Gasto por categoría vs presupuesto":"Spending by category vs budget","Categoría":"Category","Gastado":"Spent","Presupuesto":"Budget",
 "Ingresos por concepto":"Income by concept","Concepto":"Concept","Monto":"Amount","Tony: transferencia":"Tony: transfer","Carlos (por cobrar)":"Carlos (to collect)","Total compras":"Purchases total","Ya cobrado":"Already collected",
 "Saldos de tarjetas":"Card balances","Tarjeta":"Card","Saldo":"Balance","Fecha":"Date","Tienda":"Store","pagada":"paid","pendiente":"pending","Compartir":"Share","Correo":"Email","Adjuntar PDF":"Attach PDF",
-"Correo de {0} (opcional)":"{0}'s email (optional)","El correo no adjunta archivos: usa Compartir para enviar el PDF.":"Email can't attach files: use Share to send the PDF.","Generando PDF…":"Generating PDF…","PDF descargado":"PDF downloaded","Generado el {0}":"Generated {0}","Todos":"All","Toda la compra":"Whole purchase","Resto de la compra":"Rest of the purchase","Ítem":"Item","Monto":"Amount","Dueños":"Owners","Total de la compra":"Purchase total","Total del mes":"Month total","⬇️ Descargar PDF":"⬇️ Download PDF",
+"Correo de {0} (opcional)":"{0}'s email (optional)","El correo no adjunta archivos: usa Compartir para enviar el PDF.":"Email can't attach files: use Share to send the PDF.","Generando PDF…":"Generating PDF…","PDF descargado":"PDF downloaded","Generado el {0}":"Generated {0}","Todos":"All","Toda la compra":"Whole purchase","Resto de la compra":"Rest of the purchase","Ítem":"Item","Monto":"Amount","Compartida":"Shared","No":"No","Total de la compra":"Purchase total","Total del mes":"Month total","⬇️ Descargar PDF":"⬇️ Download PDF",
 "No se pudo generar el PDF":"Couldn't generate the PDF","Nada se envía solo: revisas y envías tú.":"Nothing is sent automatically: you review and send.","Cuentas":"Bills","= A transferir":"= To transfer","Te transfiero":"I'll transfer you",
 "Hola Tony, cuentas de {0}:":"Hi Tony, bills for {0}:","solo tuyo {0} + parte {1} = {2}":"only yours {0} + share {1} = {2}","Tu parte: {0}":"Your share: {0}","solo tuyo {0} + parte {1}":"only yours {0} + share {1}","Cuentas de {0} – Tony":"{0} bills – Tony","Compras de {0} – Carlos":"{0} purchases – Carlos",
 "Hola Carlos, tus compras de {0}:":"Hi Carlos, your purchases for {0}:","Tu parte":"Your share","Ya pagado":"Already paid","Pendiente":"Pending","Ya transferido":"Already transferred","Tu parte de las compras":"Your share of purchases","Sin pendientes ✅":"Nothing pending ✅","Correo":"Email","Email":"Email","Compras compartidas":"Shared purchases"});
@@ -66,7 +66,8 @@ const pdfSub=()=>pdfWho()+' · '+T('Generado el {0}',new Date().toLocaleDateStri
 
 // v66: detalle de compras compartidas por persona. cols = personas a mostrar (todas en el PDF del mes; solo una en Tony/Carlos)
 const PPL3=['Yo','Tony','Carlos'];
-function ownTxt(o){return o.length===3&&PPL3.every(w=>o.includes(w))?T('Todos'):o.map(DN).join('+')}
+const pdfNm=w=>w==='Yo'?'Joe':DN(w);
+function ownTxt(o){o=[...new Set(o)];return o.length>=3?T('Todos'):o.length===2?o.map(pdfNm).join(T(' y ')):T('No')}
 function pdfPurch(D2,P,cols){const one=cols.length===1,W1=one?[176,118,68,84,70]:[128,96,58,74,54,54,52],tot={};cols.forEach(w=>tot[w]=0);
  P=[...P].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
  P.forEach(p=>{const sh=p.shares||{},L=pList(p).filter(it=>+it.a>0),mine=one?L.filter(it=>ownOf(it).includes(cols[0])):L,fam=(p.mode||'fam')==='fam';
@@ -74,12 +75,12 @@ function pdfPurch(D2,P,cols){const one=cols.length===1,W1=one?[176,118,68,84,70]
   const rest=r2((+p.total||0)-L.reduce((s,it)=>s+(+it.a||0),0));
   D2.d&&D2.row((p.date?fdate(p.date)+' · ':'')+DN(p.store)+' · '+DN(pCat(p)),T('Total')+' '+f(p.total),{b:1,keep:1});
   const rows=mine.map(it=>{const po=itPort(it);return [it.n||DN(itCat(it,p)),DN(itCat(it,p)),f(it.a),ownTxt(ownOf(it)),...cols.map(w=>po[w]?f(po[w]):'—')]});
-  if(!L.length)rows.push([T('Toda la compra'),'',f(p.total),fam?'50/25/25':ownTxt(Object.keys(sh).filter(w=>+sh[w])),...cols.map(w=>f(+sh[w]||0))]);
-  else if(rest>0.004)rows.push([T('Resto de la compra'),'',f(rest),fam?'50/25/25':ownTxt(Object.keys(sh).filter(w=>+sh[w])),...cols.map(w=>f(r2((+sh[w]||0)-isum[w])))]);
+  if(!L.length)rows.push([T('Toda la compra'),'',f(p.total),ownTxt(fam?PPL3:Object.keys(sh).filter(w=>+sh[w])),...cols.map(w=>f(+sh[w]||0))]);
+  else if(rest>0.004)rows.push([T('Resto de la compra'),'',f(rest),ownTxt(fam?PPL3:Object.keys(sh).filter(w=>+sh[w])),...cols.map(w=>f(r2((+sh[w]||0)-isum[w])))]);
   cols.forEach(w=>tot[w]=r2(tot[w]+(+sh[w]||0)));
-  D2.table([T('Ítem'),T('Categoría'),T('Monto'),T('Dueños'),...cols.map(DN)],rows,{ws:W1,left:[1,3],keep:1,tot:[one?T('Tu parte'):T('Total de la compra'),'','','',...cols.map(w=>f(+sh[w]||0))]})});
+  D2.table([T('Ítem'),T('Categoría'),T('Monto'),T('Compartida'),...cols.map(pdfNm)],rows,{ws:W1,left:[1,3],keep:1,tot:[one?T('Tu parte'):T('Total de la compra'),'','','',...cols.map(w=>f(+sh[w]||0))]})});
  if(!P.length){D2.note(T('Sin compras este mes.'));return}
- D2.table([T('Total del mes'),...cols.map(DN)],[],{ws:one?[446,70]:[354,54,54,54],tot:['',...cols.map(w=>f(tot[w]))].map((v,i)=>i?v:T('Total del mes'))});return tot}
+ D2.table([T('Total del mes'),...cols.map(pdfNm)],[],{ws:one?[446,70]:[354,54,54,54],tot:['',...cols.map(w=>f(tot[w]))].map((v,i)=>i?v:T('Total del mes'))});return tot}
 function pdfMonth(k){const m=S.months[k],c=calc(m),D2=Doc(T('Resumen mensual')+' · '+lblL(k),pdfSub());
  D2.h(T('Lo que tengo'));D2.row(T('Débito, efectivo y cheques'),f(c.inc));D2.row(T('Por cobrar Tony'),f(c.tony));D2.row(T('Por cobrar Carlos'),f(c.carlosDue));D2.row(T('Total a mi favor'),f(c.money),{b:1});
  D2.h(T('Lo que debo'));D2.row(T('Tarjetas de crédito'),f(c.credit));D2.row(T('Cuentas de Tony'),f(c.bills));if(c.xfer)D2.row(T('− Ya transferido a Tony'),f(c.xfer));D2.row(T('Total que debo'),f(c.debt),{b:1});
