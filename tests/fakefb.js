@@ -22,3 +22,7 @@ export const onSnapshot=(r,o,cb)=>{setTimeout(()=>cb(snap(r.path)),30);return()=
 export const initializeAppCheck=()=>({});export class ReCaptchaEnterpriseProvider{constructor(k){W.__ackey=k}}
 export const getAI=()=>({});export class GoogleAIBackend{}
 export const getGenerativeModel=(ai,o)=>({generateContent:async()=>{W.__aiCalls=(W.__aiCalls||0)+1;const f=(W.__aiFail||[]).shift();if(f)throw Object.assign(new Error(f.m),{code:f.c});return{response:{text:()=>W.__aiText||'{"isReceipt":true,"store":"Publix","date":"2026-10-12","total":5,"items":[]}'}}}});
+// v72 (public page: firestore-lite addDoc)
+export const getApps=()=>W.__apps||[];export const getApp=()=>(W.__apps||[{}])[0];
+export const getFirestore=()=>({});export const serverTimestamp=()=>'__now__';
+export const addDoc=async(c,d)=>{const id='i'+Math.random().toString(36).slice(2,10);W.__fs.docs[c.path+'/'+id]=JSON.parse(JSON.stringify(d));W.__fs.log.push(c.path+'/'+id);return {id}};

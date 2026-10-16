@@ -62,7 +62,9 @@ if(cfg){
   if(last&&Date.now()-(last.data().createdAt||0)<7*864e5)return;await writeB()}catch(e){console.warn('backup',e)}}
  window.fbUser=()=>!!user;
  window.fbShareSet=(t,d)=>F.setDoc(F.doc(fs,'shares',t),{...d,owner:user.uid});
- window.fbShareDel=t=>F.deleteDoc(F.doc(fs,'shares',t));window.fbName=()=>(user&&user.displayName)||'';
+ window.fbShareDel=t=>F.deleteDoc(F.doc(fs,'shares',t));
+ window.fbInbox=async t=>(await F.getDocs(F.collection(fs,'shares',t,'inbox'))).docs.map(d=>({t,id:d.id,...d.data()}));
+ window.fbInboxDel=(t,id)=>F.deleteDoc(F.doc(fs,'shares',t,'inbox',id));window.fbName=()=>(user&&user.displayName)||'';
  window.fbBackups=async()=>user?listB():[];
  window.fbBackupNow=async()=>{if(user)await writeB()};
  window.fbRestore=async id=>{const sn=await F.getDoc(F.doc(bcol(),id));if(!sn.exists())throw new Error('missing');const st=JSON.parse(sn.data().state);st.updatedAt=Date.now();

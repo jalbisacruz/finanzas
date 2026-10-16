@@ -19,7 +19,7 @@ com=function(){const c=calc(M()),L=hList(),many=hRange!=='cur';
  <div class="muted">${T('{0} compras · {1}',L.length,f(sum(L,o=>+o.p.total||0)))} · ${T('Toca una compra para editarla o borrarla.')}</div></div>
  ${L.map(({k,p},j)=>{const hasI=pList(p).length,op=hOpen.has(p.id),mh=many&&(j===0||L[j-1].k!==k);
   return `${mh?`<div class="muted" style="margin:10px 2px 0;font-weight:600">${lbl(k)}</div>`:''}<div class="card p hrow" data-id="${p.id}" onclick="hEdit('${k}','${p.id}')"><div class="tot" style="padding:0"><span>${esc(DN(p.store))}</span><span>${f(p.total)}</span></div>
-  <div class="muted">${fdate(p.date)} · ${methName(p.method)}${pCat(p)!==SHARED_CAT?' · '+esc(DN(pCat(p))):''}</div>
+  <div class="muted">${fdate(p.date)} · ${p.paidBy?T('Compró: {0}',esc(p.paidBy)):methName(p.method)}${pCat(p)!==SHARED_CAT?' · '+esc(DN(pCat(p))):''}</div>
   <div style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:14px;margin-top:2px;align-items:center">${Object.entries(p.shares||{}).filter(([w,v])=>+v).map(([w,v])=>`<span>${esc(DN(w))} <b>${f(v)}</b></span>`).join('')}
   ${hasI?`<button class="chip hexp" style="margin-left:auto;min-height:28px;padding:0 10px;font-size:13px" aria-label="${T(op?'Ocultar detalle':'Ver detalle')}" onclick="hTog(event,'${p.id}')">🧾 ${T('ítems')} ${op?'▴':'▾'}</button>`:''}</div>
   ${hasI&&op?hDetail(p):''}</div>`}).join('')||'<div class="card muted">'+T(hRange==='cur'?'Sin compras este mes.':'Sin compras compartidas.')+'</div>'}`};

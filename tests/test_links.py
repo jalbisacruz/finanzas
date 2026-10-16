@@ -19,7 +19,7 @@ with app(ROOT,init="localStorage.setItem('finanzas-sync-uid','u1');",routes=R) a
     for d in (dt,dc):
         s=json.dumps(d,ensure_ascii=False)
         for k in FORBID: check('"%s"'%k not in s,'forbidden key %s'%k)
-        check(set(d.keys())=={'v','who','lang','names','from','months','updatedAt','owner'},d.keys())
+        check(set(d.keys())=={'v','who','lang','names','from','months','updatedAt','owner','buyers','cats'},d.keys())
     # nothing from accounts/cards (names) leaks
     m=E("M()");s=json.dumps(dc,ensure_ascii=False)
     for x in m['cards']+m['income']:

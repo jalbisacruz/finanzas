@@ -17,14 +17,14 @@ function snapPurch(p){const sh=p.shares||{},L=pList(p).filter(it=>+it.a>0),fam=(
  if(!L.length)rows.push({n:T('Toda la compra'),c:'',a:r2(p.total-txT),sh:ownTxt(shr),v:pp(Object.fromEntries(PPL3.map(w=>[w,(+sh[w]||0)-(ptx?ptx[w]||0:0)])))});
  else if(rest>0.004)rows.push({n:T('Resto de la compra'),c:'',a:rest,sh:ownTxt(shr),v:pp(Object.fromEntries(PPL3.map(w=>[w,(+sh[w]||0)-isum[w]-(ptx?ptx[w]||0:0)])))});
  if(ptx)rows.push({n:T('Impuesto'),c:'',a:txT,sh:T('Proporcional'),v:pp(ptx)});
- return {d:p.date||'',s:DN(p.store),c:DN(pCat(p)),t:r2(p.total),rows,tot:pp(sh)}}
+ return {...(p.paidBy?{by:p.paidBy}:{}),d:p.date||'',s:DN(p.store),c:DN(pCat(p)),t:r2(p.total),rows,tot:pp(sh)}}
 function snapMonth(k,who){const m=S.months[k];if(!m)return null;const c=calc(m),P=[...m.purchases].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(snapPurch);
- const o={k,label:lbl(k),purchases:P};
+ const o={k,label:lbl(k),purchases:P,joeOwes:r2(m.purchases.filter(p=>p.paidBy&&who==='Carlos'&&p.paidBy==='Carlos').reduce((s,p)=>s+(+(p.shares||{}).Yo||0),0))};
  if(who==='Tony'){o.bills=m.bills.filter(b=>+b.amount).map(b=>({n:DN(b.name),a:r2(b.amount),paid:billSt2(b)==='paid'}));
   Object.assign(o,{billsTotal:r2(c.bills),share:r2(c.tony),toTransfer:r2(c.toTony),paid:r2(c.xfer||0),pending:r2(c.tonyDue)})}
  else Object.assign(o,{share:r2(c.carlos),paid:r2(c.recv||0),pending:r2(c.carlosDue)});return o}
 function snapFor(who){const ks=keys(),i=ks.indexOf(S.cur),cur=S.cur,prev=i>0?ks[i-1]:null;
- return {v:1,who,lang:LANG,names:{Yo:'Joe',Tony:DN('Tony'),Carlos:DN('Carlos')},from:(window.fbName&&fbName())||'Joe Albisa Cruz',months:[snapMonth(cur,who),prev&&snapMonth(prev,who)].filter(Boolean)}}
+ return {v:1,who,lang:LANG,buyers:who==='Tony'?['Tony','Arianna']:['Carlos'],cats:pCats().map(c=>({v:c,l:DN(c)})),names:{Yo:'Joe',Tony:DN('Tony'),Carlos:DN('Carlos')},from:(window.fbName&&fbName())||'Joe Albisa Cruz',months:[snapMonth(cur,who),prev&&snapMonth(prev,who)].filter(Boolean)}}
 // escritura automática (solo si cambió)
 let lnT=null;
 window.linksSync=function(force){clearTimeout(lnT);lnT=setTimeout(()=>linksWrite(force),force?0:800)};
