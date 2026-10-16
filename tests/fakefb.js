@@ -18,3 +18,7 @@ export const setDoc=async(r,d)=>{W.__fs.docs[r.path]=JSON.parse(JSON.stringify(d
 export const deleteDoc=async r=>{delete W.__fs.docs[r.path];W.__fs.log.push('DEL '+r.path)};
 export const getDocs=async c=>({docs:Object.keys(W.__fs.docs).filter(k=>k.startsWith(c.path+'/')&&!k.slice(c.path.length+1).includes('/')).map(snap)});
 export const onSnapshot=(r,o,cb)=>{setTimeout(()=>cb(snap(r.path)),30);return()=>{}};
+// App Check + AI Logic stand-ins (v63). window.__aiFail = list of errors to throw on successive calls.
+export const initializeAppCheck=()=>({});export class ReCaptchaEnterpriseProvider{constructor(k){W.__ackey=k}}
+export const getAI=()=>({});export class GoogleAIBackend{}
+export const getGenerativeModel=(ai,o)=>({generateContent:async()=>{W.__aiCalls=(W.__aiCalls||0)+1;const f=(W.__aiFail||[]).shift();if(f)throw Object.assign(new Error(f.m),{code:f.c});return{response:{text:()=>W.__aiText||'{"isReceipt":true,"store":"Publix","date":"2026-10-12","total":5,"items":[]}'}}}});

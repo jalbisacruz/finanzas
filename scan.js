@@ -18,13 +18,14 @@ Reglas: "total" es el total pagado (con impuestos). "amount" es el precio final 
 Categorías permitidas (copia el texto exacto, con emoji): ${JSON.stringify(cats)}. Si dudas, usa ${JSON.stringify(SHARED_CAT)}.`}
 function scanErr(e){const c=String((e&&(e.code||''))+' '+(e&&e.message||e)).toLowerCase();
  if(c.includes('signin'))return T('Para escanear recibos inicia sesión con Google (☰ › Configuración › Nube).');
- if(!navigator.onLine||/network|failed to fetch|fetch-error/.test(c))return T('Sin conexión. Conéctate a internet para escanear, o anota la compra a mano.');
+ if(!navigator.onLine)return T('Sin conexión. Conéctate a internet para escanear, o anota la compra a mano.');
  if(/429|quota|resource.?exhausted|rate/.test(c))return T('Hay muchas solicitudes ahora mismo. Espera un minuto y vuelve a intentarlo.');
  if(/pdfsize/.test(c))return T('El PDF es muy grande (máximo 15 MB). Toma una captura del recibo y escanéala.');
  if(/notreceipt/.test(c))return T('No parece un recibo. Prueba otra foto o anótala a mano.');
  if(/parse|json|empty/.test(c))return T('No pude leer el recibo. Prueba otra foto con buena luz y el recibo completo, o anótala a mano.');
- if(/image/.test(c))return T('No pude abrir la foto. Prueba otra vez.');
- return T('El escaneo no está disponible ahora mismo. Anota la compra a mano.')}
+ if((e&&e.message)==='image')return T('No pude abrir la foto. Prueba otra vez.');
+ return T('El escaneo no está disponible ahora mismo. Anota la compra a mano.')+' ('+scanCode(e)+')'}
+function scanCode(e){const c=String((e&&e.code)||'').replace(/^AI\//,'')||String(e&&e.message||'').match(/\b[45]\d\d\b/)?.[0]||String(e&&e.name||'error');return c.slice(0,30)}
 function scanResize(file){return new Promise((ok,ko)=>{const u=URL.createObjectURL(file),im=new Image();
  im.onload=()=>{URL.revokeObjectURL(u);const W=im.naturalWidth,H=im.naturalHeight,cap=Math.max(W,H)>2*Math.min(W,H)?SCAN_TALL:SCAN_MAX,k=Math.min(1,cap/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');
   c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
@@ -65,7 +66,7 @@ function scanPdf(file){return new Promise((ok,ko)=>{if(file.size>PDF_MAX)return 
 const isPdf=f=>/pdf$/i.test(f.type||'')||/\.pdf$/i.test(f.name||'');
 async function scanFile(file){if(!file)return;scanBusy();let b64=null;
  try{const pdf=isPdf(file);b64=pdf?await scanPdf(file):await scanResize(file);const txt=await window.fbScan(b64,scanPrompt(),pdf?'application/pdf':'image/jpeg');b64=null;scanApply(scanParse(txt))}
- catch(e){console.warn('scan',e);scanFail(scanErr(e))}finally{b64=null}}
+ catch(e){console.error('scan error',e&&e.code,e&&e.message,e);scanFail(scanErr(e))}finally{b64=null}}
 function scanReceipt(){if(!window.fbScan||!(window.fbUser&&fbUser()))return scanFail(T('Para escanear recibos inicia sesión con Google (☰ › Configuración › Nube).'));
  if(!navigator.onLine)return scanFail(scanErr({message:'network'}));
  const i=document.createElement('input');i.type='file';i.accept='image/*,application/pdf';i.style.display='none';

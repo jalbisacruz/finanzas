@@ -18,12 +18,18 @@ if(cfg){
  // v62: App Check (reCAPTCHA Enterprise, sin enforce todavía) + escaneo de recibos con Gemini (Firebase AI Logic, Gemini Developer API)
  const RECAPTCHA_KEY='6LczjvEtAAAAAEaAHmwLEj2DUiWYY--kne8BH3ei';
  try{const AC=await import(B+'firebase-app-check.js');AC.initializeAppCheck(app,{provider:new AC.ReCaptchaEnterpriseProvider(RECAPTCHA_KEY),isTokenAutoRefreshEnabled:true})}catch(e){console.warn('appcheck',e)}
- let AI=null;const MODELS=['gemini-3.5-flash','gemini-3.8-flash'];
+ let AI=null,aiP=null;const MODELS=['gemini-3.5-flash','gemini-3.8-flash'];
+ const loadAI=()=>aiP=aiP||import(B+'firebase-ai.js').then(m=>AI=m).catch(e=>{aiP=null;throw e});
+ window.fbScanWarm=()=>loadAI().catch(e=>console.warn('ai warm',e));
+ const transient=e=>!/\[?4\d\d\b/.test(String(e&&e.message))&&/fetch|network|load failed|dynamically imported|timeout|503|500|unavailable|app.?check/i.test(String((e&&e.code)||'')+' '+String(e&&e.message));
  window.fbScan=async(b64,prompt,mime='image/jpeg')=>{if(!user){const e=new Error('signin');e.code='signin';throw e}
-  AI=AI||await import(B+'firebase-ai.js');const ai=AI.getAI(app,{backend:new AI.GoogleAIBackend()});let last;
-  for(const name of MODELS){try{const m=AI.getGenerativeModel(ai,{model:name,generationConfig:{responseMimeType:'application/json',temperature:0}});
-    const r=await m.generateContent([prompt,{inlineData:{mimeType:mime,data:b64}}]);return r.response.text()}
-   catch(e){last=e;if(!/404|not found|not supported/i.test(String(e&&e.message)))throw e}}
+  let last;for(let t=0;t<3;t++){if(t)await new Promise(r=>setTimeout(r,800*t));
+   try{await loadAI();const ai=AI.getAI(app,{backend:new AI.GoogleAIBackend()});
+    for(const name of MODELS){try{const m=AI.getGenerativeModel(ai,{model:name,generationConfig:{responseMimeType:'application/json',temperature:0}});
+      const r=await m.generateContent([prompt,{inlineData:{mimeType:mime,data:b64}}]);return r.response.text()}
+     catch(e){last=e;if(!/404|not found|not supported/i.test(String(e&&e.message)))throw e}}
+    throw last}
+   catch(e){last=e;console.warn('scan attempt',t+1,e&&e.code,e&&e.message,e);if(!transient(e)||!navigator.onLine)break}}
   throw last};
  await A.setPersistence(auth,A.browserLocalPersistence).catch(()=>{});
  fs=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})});
@@ -80,7 +86,7 @@ if(cfg){
   unsub=F.onSnapshot(ref(),{includeMetadataChanges:true},sn=>{if(!sn.exists())return;
    if(!sn.metadata.hasPendingWrites)applyRemote(sn.data());
    setS(sn.metadata.hasPendingWrites?'pend':sn.metadata.fromCache&&!navigator.onLine?'offline':'ok')},e=>{console.warn(e);setS('err')});
-  rerender();setTimeout(autoBackup,5000)});
+  rerender();setTimeout(autoBackup,5000);setTimeout(()=>window.fbScanWarm&&fbScanWarm(),1500)});
  addEventListener('focus',()=>pull());document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
  addEventListener('online',()=>{if(status==='offline'||status==='pend')push()});addEventListener('offline',()=>user&&setS('offline'));
  // Primera vez después del PIN: ofrecer iniciar sesión
