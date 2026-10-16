@@ -45,7 +45,7 @@ if(cfg){
  async function push(){if(!user||blocked)return;clearTimeout(pushT);try{await migBackup()}catch(e){console.warn('migBackup',e);setS('err');return}const S=getState();
   try{const cur=await F.getDoc(ref()).catch(()=>null);if(cur&&cur.exists()&&tooNew(cur.data()))return block();
    if(cur&&cur.exists()&&(+S.version||1)>=2&&!(+cur.data().ver>=2)&&localStorage.getItem('finanzas-cloud-v1-saved')!==user.uid){await bkId(cur.data().state);localStorage.setItem('finanzas-cloud-v1-saved',user.uid)}
-   await F.setDoc(ref(),{state:JSON.stringify(S),updatedAt:S.updatedAt||Date.now(),ver:+S.version||1,device:navigator.userAgent.slice(0,80)});setS(navigator.onLine?'ok':'offline')}
+   await F.setDoc(ref(),{state:JSON.stringify(S),updatedAt:S.updatedAt||Date.now(),ver:+S.version||1,device:navigator.userAgent.slice(0,80)});setS(navigator.onLine?'ok':'offline');window.linksSync&&linksSync()}
   catch(e){console.warn(e);setS('err')}}
  // Respaldos: users/{uid}/backups/{YYYY-MM-DD_HH-MM-SS} (hora local; los antiguos YYYY-MM-DD siguen válidos), se conservan los 20 últimos
  const bcol=()=>F.collection(fs,'users',user.uid,'backups');
@@ -60,7 +60,9 @@ if(cfg){
   const all=await listB();for(const b of all.filter(b=>!/antes-de-v2/.test(b.id)).slice(20))await F.deleteDoc(F.doc(bcol(),b.id))}
  async function autoBackup(){if(!user||!navigator.onLine)return;try{const l=await F.getDocs(F.query(bcol(),F.orderBy('createdAt','desc'),F.limit(1)),);const last=l.docs[0];
   if(last&&Date.now()-(last.data().createdAt||0)<7*864e5)return;await writeB()}catch(e){console.warn('backup',e)}}
- window.fbUser=()=>!!user;window.fbName=()=>(user&&user.displayName)||'';
+ window.fbUser=()=>!!user;
+ window.fbShareSet=(t,d)=>F.setDoc(F.doc(fs,'shares',t),{...d,owner:user.uid});
+ window.fbShareDel=t=>F.deleteDoc(F.doc(fs,'shares',t));window.fbName=()=>(user&&user.displayName)||'';
  window.fbBackups=async()=>user?listB():[];
  window.fbBackupNow=async()=>{if(user)await writeB()};
  window.fbRestore=async id=>{const sn=await F.getDoc(F.doc(bcol(),id));if(!sn.exists())throw new Error('missing');const st=JSON.parse(sn.data().state);st.updatedAt=Date.now();
