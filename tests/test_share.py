@@ -51,7 +51,7 @@ for lang in ['es','en']:
     check(s['text'].count('\n')>=8 and '\n\n' in s['text'] and s['text']==E("msgFor('carlos','2026-10')"),'share text keeps line breaks')
     pg.check('#msgpdf');pg.click('#msgsh');pg.wait_for_function("_sh.length==2",timeout=10000);s=E("_sh.at(-1)")
     check(s['files']==['Carlos-2026-10.pdf'] and s['size'][0]>1000,s)
-    _,tx=pdftext(pg,'c.pdf');check(('items $30.00 + share $12.50' if lang=='en' else 'ítems $30.00 + parte $12.50') in tx and f'{YS}:' in tx and '$0.00' not in tx,'carlos pdf rule: '+tx)
+    _,tx=pdftext(pg,'c.pdf');check(('Rest of the purchase' if lang=='en' else 'Resto de la compra') in tx and '$12.50' in tx and 'Snacks' not in tx and '$0.00' not in tx,'carlos pdf v66: '+tx)  # v66 per-item table
     check('Shampoo' in tx and '42.50' in tx and 'Tony' not in tx.replace('Tony',''),tx[:300])
     # (v58 mailto checks removed in v59)
     # v59: no email button / field in the dialog; stored emails untouched
