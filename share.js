@@ -13,11 +13,11 @@ const billSt2=b=>{const a=+b.amount||0,p=+b.paid||0;return a>0&&p>=a-0.005?'paid
 function tonyData(k){const m=S.months[k],c=calc(m);return {m,c,bills:m.bills.filter(b=>+b.amount),pur:m.purchases.filter(p=>+(p.shares||{}).Tony).map(p=>({p,...pShare(p,'Tony')}))}}
 function carlosData(k){const m=S.months[k],c=calc(m);return {m,c,pur:m.purchases.filter(p=>+(p.shares||{}).Carlos).map(p=>({p,...pShare(p,'Carlos')}))}}
 // v57: desglose solo si esa persona tiene ítems individuales (X>0); si no, solo "Tu parte"
-const hasI=x=>x.i>0.004,brk=x=>hasI(x)?`${T('ítems {0}',f(x.i))} + ${T('parte {0}',f(x.s))} = ${f(x.t)}`:T('Tu parte: {0}',f(x.t));
+const hasI=x=>x.i>0.004,brk=x=>hasI(x)?`${T('ítems {0}',f(x.i))} + ${T('parte {0}',f(x.s))}${x.tx>0.004?' + '+T('impuesto {0}',f(x.tx)):''} = ${f(x.t)}`:T('Tu parte: {0}',f(x.t));
 // ---------- mensajes ----------
 // v58: mensaje legible en WhatsApp/Mail/Gmail: saludo corto, secciones con título, un ítem por línea, totales al final
 const mLine=(l,v)=>`${l}  ${v}`,mNeg=v=>'−'+f(v).replace(/^−/,'');
-const mSub=x=>hasI(x)?[...x.notes.map(n=>'   '+n),...(x.s>0.004?['   '+T('+ parte compartida {0}',f(x.s))]:[])].join('\n'):null;
+const mSub=x=>hasI(x)||x.tx>0.004?[...x.notes.map(n=>'   '+n),...(x.s>0.004?['   '+T('+ parte compartida {0}',f(x.s))]:[]),...(x.tx>0.004?['   '+T('+ impuesto {0}',f(x.tx))]:[])].join('\n'):null;
 msgFor=function(who,k){const L2=[],add=(...a)=>a.filter(x=>x!==null&&x!==undefined).forEach(x=>L2.push(x));
  if(who==='tony'){const{c,bills,pur}=tonyData(k),pend=bills.filter(b=>billSt2(b)!=='paid'),all=pend.length===bills.length,none=!pend.length;
   add(T('Hola Tony, estas son las cuentas de {0}:',lbl(k)),'',T('CUENTAS')+(bills.length&&all?' '+T('(todas pendientes)'):bills.length&&none?' '+T('(todas pagadas ✅)'):''));
@@ -72,11 +72,12 @@ function pdfPurch(D2,P,cols,hl){const hi=hl?4+cols.indexOf(hl):undefined,one=col
  P=[...P].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
  P.forEach(p=>{const sh=p.shares||{},L=pList(p).filter(it=>+it.a>0),mine=one?L.filter(it=>ownOf(it).includes(cols[0])):L,fam=(p.mode||'fam')==='fam';
   const isum={};cols.forEach(w=>isum[w]=r2(L.reduce((s,it)=>s+(itPort(it)[w]||0),0)));
-  const rest=r2((+p.total||0)-L.reduce((s,it)=>s+(+it.a||0),0));
+  const ptx=(typeof pTaxOf==='function'&&pTaxOf(p))||null,txT=ptx?r2(+p.tax):0,rest=r2((+p.total||0)-txT-L.reduce((s,it)=>s+(+it.a||0),0));
   D2.d&&D2.row((p.date?fdate(p.date)+' · ':'')+DN(p.store)+' · '+DN(pCat(p)),T('Total')+' '+f(p.total),{b:1,keep:1});
   const rows=mine.map(it=>{const po=itPort(it);return [it.n||DN(itCat(it,p)),DN(itCat(it,p)),f(it.a),ownTxt(ownOf(it)),...cols.map(w=>po[w]?f(po[w]):'—')]});
-  if(!L.length)rows.push([T('Toda la compra'),'',f(p.total),ownTxt(fam?PPL3:Object.keys(sh).filter(w=>+sh[w])),...cols.map(w=>f(+sh[w]||0))]);
-  else if(rest>0.004)rows.push([T('Resto de la compra'),'',f(rest),ownTxt(fam?PPL3:Object.keys(sh).filter(w=>+sh[w])),...cols.map(w=>f(r2((+sh[w]||0)-isum[w])))]);
+  if(!L.length)rows.push([T('Toda la compra'),'',f(r2(p.total-txT)),ownTxt(fam?PPL3:Object.keys(sh).filter(w=>+sh[w])),...cols.map(w=>f(r2((+sh[w]||0)-(ptx?ptx[w]||0:0))))]);
+  else if(rest>0.004)rows.push([T('Resto de la compra'),'',f(rest),ownTxt(fam?PPL3:Object.keys(sh).filter(w=>+sh[w])),...cols.map(w=>f(r2((+sh[w]||0)-isum[w]-(ptx?ptx[w]||0:0))))]);
+  if(ptx)rows.push([T('Impuesto'),'',f(txT),T('Proporcional'),...cols.map(w=>ptx[w]?f(ptx[w]):'—')]);
   cols.forEach(w=>tot[w]=r2(tot[w]+(+sh[w]||0)));
   D2.table([T('Ítem'),T('Categoría'),T('Monto'),T('Compartida'),...cols.map(pdfNm)],rows,{ws:W1,left:[1,3],keep:1,hi,tot:[one?T('Tu parte'):T('Total de la compra'),'','','',...cols.map(w=>f(+sh[w]||0))]})});
  if(!P.length){D2.note(T('Sin compras este mes.'));return}

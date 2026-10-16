@@ -8,13 +8,13 @@ Object.assign(EN,{"📷 Escanear recibo":"📷 Scan receipt","Leyendo el recibo�
  "El escaneo no está disponible ahora mismo. Anota la compra a mano.":"Scanning isn't available right now. Enter the purchase by hand.",
  "No pude abrir la foto. Prueba otra vez.":"I couldn't open the photo. Try again.","Anotar a mano":"Enter by hand","Probar otra foto":"Try another photo",
  "📷 Leído del recibo. Revisa antes de guardar.":"📷 Read from the receipt. Review before saving.","⚠️ Revisa: {0}":"⚠️ Check: {0}",
- "tienda":"store","fecha":"date","total":"total","ítem {0}":"item {0}","Los ítems suman {0}; la diferencia {1} (impuestos, etc.) se reparte 50/25/25.":"Items add up to {0}; the difference {1} (tax, etc.) is split 50/25/25.",
+ "tienda":"store","fecha":"date","total":"total","ítem {0}":"item {0}","Los ítems suman {0}; la diferencia {1} (impuestos, etc.) se reparte 50/25/25.":"Items add up to {0}; the difference {1} (tax, etc.) is split 50/25/25.","Los ítems suman {0}; la diferencia {1} se reparte 50/25/25. El impuesto se reparte en proporción.":"Items add up to {0}; the difference {1} is split 50/25/25. Tax is split proportionally.",
  "Cada ítem empieza compartido entre los tres; toca los nombres para cambiar los dueños.":"Each item starts shared by all three; tap the names to change the owners.",
  "No encontré artículos; revisa el total.":"No items found; check the total.","No parece un recibo. Prueba otra foto o anótala a mano.":"It doesn't look like a receipt. Try another photo or enter it by hand."});
 const SCAN_MAX=1600,SCAN_TALL=3000,PDF_MAX=15*1024*1024;
 function scanPrompt(){const cats=pCats();return `Eres un lector de recibos de compra (tiendas de EE.UU., en inglés o español). Lee la foto, captura de pantalla (p. ej. app de Sam's Club o Walmart) o PDF (puede tener varias páginas; usa todas) y responde SOLO con JSON con esta forma exacta:
-{"isReceipt":true,"store":"nombre corto de la tienda","date":"AAAA-MM-DD o null","total":0.00,"items":[{"name":"nombre corto y claro en español","amount":0.00,"category":"una de la lista","confident":true}],"uncertain":["store"|"date"|"total"]}
-Reglas: "total" es el total pagado (con impuestos). "amount" es el precio final de la línea (cantidad × precio, menos descuentos de esa línea). No incluyas subtotal, impuestos, total, cambio ni pagos como ítems. Si no se lee algo, ponlo en "uncertain" (y en el ítem "confident":false). Si la foto no es un recibo, "isReceipt":false.
+{"isReceipt":true,"store":"nombre corto de la tienda","date":"AAAA-MM-DD o null","total":0.00,"tax":0.00,"items":[{"name":"nombre corto y claro en español","amount":0.00,"category":"una de la lista","confident":true}],"uncertain":["store"|"date"|"total"]}
+Reglas: "total" es el total pagado (con impuestos). "tax" es la suma de los impuestos de venta (sales tax) del recibo, o 0 si no hay. Los "amount" de los ítems son ANTES de impuesto. "amount" es el precio final de la línea (cantidad × precio, menos descuentos de esa línea). No incluyas subtotal, impuestos, total, cambio ni pagos como ítems. Si no se lee algo, ponlo en "uncertain" (y en el ítem "confident":false). Si la foto no es un recibo, "isReceipt":false.
 Categorías permitidas (copia el texto exacto, con emoji): ${JSON.stringify(cats)}. Si dudas, usa ${JSON.stringify(SHARED_CAT)}.`}
 function scanErr(e){const c=String((e&&(e.code||''))+' '+(e&&e.message||e)).toLowerCase();
  if(c.includes('signin'))return T('Para escanear recibos inicia sesión con Google (☰ › Configuración › Nube).');
@@ -43,17 +43,17 @@ function scanApply(o){editP();const U=new Set((o.uncertain||[]).map(String));con
  if(/^\d{4}-\d{2}-\d{2}$/.test(o.date||'')&&!isNaN(new Date(o.date)))D.date=o.date;else U.add('date');
  const L=(Array.isArray(o.items)?o.items:[]).map((x,i)=>({a:scanNum(x.amount),n:String(x.name||'').trim().slice(0,40),c:scanCat(x.category),own:['Yo','Tony','Carlos'],bad:x.confident===false||!(scanNum(x.amount)>0)})).filter(x=>x.a>0||x.n);
  let t=scanNum(o.total);const isum=r2(L.reduce((s,x)=>s+(x.a>0?x.a:0),0));if(!(t>0)){t=isum;U.add('total')}
- if(isum>t+0.004)U.add('total');D.total=t;
+ let tx=scanNum(o.tax);if(!(tx>0)||tx>=t)tx=0;if(r2(isum+tx)>t+0.004)U.add('total');D.total=t;if(tx)D.tax=tx;else delete D.tax;
  const pc=L.length?(()=>{const by={};L.forEach(x=>by[x.c]=(by[x.c]||0)+(x.a||0));return Object.keys(by).sort((a,b)=>by[b]-by[a])[0]})():SHARED_CAT;D.cat=pc;
  D.list=L.map(x=>({a:x.a>0?x.a:'',n:x.n,own:x.own,...(x.c!==pc?{c:x.c}:{})}));D._io=L.length>0;
  D._scan={u:[...U].filter(k=>['store','date','total'].includes(k)),bad:L.map((x,i)=>x.bad?i:-1).filter(i=>i>=0),isum,none:!L.length};
  recomputeEq();drawP();return D}
 const _drawPV62=drawP;drawP=function(){_drawPV62();if(!D||!D._scan)return;const s=D._scan,w=[...s.u.map(k=>T({store:'tienda',date:'fecha',total:'total'}[k])),...s.bad.map(i=>T('ítem {0}',i+1))];
- const dif=r2(r2(D.total)-allItems());
+ const dif=r2(r2(D.total)-allItems()-(+D.tax>0?+D.tax:0));
  dlg().querySelector('h2').insertAdjacentHTML('afterend',`<div id="scanbox" style="background:#eff6ff;border:1px solid #93c5fd;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:14px">
   <div style="font-weight:700">${T('📷 Leído del recibo. Revisa antes de guardar.')}</div>${w.length?`<div id="scanwarn" style="color:#b45309;font-weight:700;margin-top:4px">${T('⚠️ Revisa: {0}',w.join(', '))}</div>`:''}
   ${s.none?`<div class="muted">${T('No encontré artículos; revisa el total.')}</div>`:`<div class="muted">${T('Cada ítem empieza compartido entre los tres; toca los nombres para cambiar los dueños.')}</div>`}
-  ${dif>0.004&&allItems()>0?`<div class="muted">${T('Los ítems suman {0}; la diferencia {1} (impuestos, etc.) se reparte 50/25/25.',f(allItems()),f(dif))}</div>`:''}</div>`);
+  ${dif>0.004&&allItems()>0?`<div class="muted">${T(+D.tax>0?'Los ítems suman {0}; la diferencia {1} se reparte 50/25/25. El impuesto se reparte en proporción.':'Los ítems suman {0}; la diferencia {1} (impuestos, etc.) se reparte 50/25/25.',f(allItems()),f(dif))}</div>`:''}</div>`);
  const mark=el=>el&&(el.style.outline='2px solid #f59e0b');const g=dlg().querySelector('.grid');
  if(s.u.includes('store'))mark(g&&g.querySelector('select'));if(s.u.includes('date'))mark(g&&g.querySelector('input[type=date]'));if(s.u.includes('total'))mark(document.getElementById('tot'));
  s.bad.forEach(i=>mark(dlg().querySelector(`.itrow[data-li="${i}"] input[data-k="a"]`)))};
