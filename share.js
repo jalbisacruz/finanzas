@@ -2,7 +2,7 @@
 Object.assign(EN,{"📄 PDF del mes":"📄 Monthly PDF","Resumen mensual":"Monthly summary","Generado":"Generated","Gasto por categoría vs presupuesto":"Spending by category vs budget","Categoría":"Category","Gastado":"Spent","Presupuesto":"Budget",
 "Ingresos por concepto":"Income by concept","Concepto":"Concept","Monto":"Amount","Tony: transferencia":"Tony: transfer","Carlos (por cobrar)":"Carlos (to collect)","Total compras":"Purchases total","Ya cobrado":"Already collected",
 "Saldos de tarjetas":"Card balances","Tarjeta":"Card","Saldo":"Balance","Fecha":"Date","Tienda":"Store","pagada":"paid","pendiente":"pending","Compartir":"Share","Correo":"Email","Adjuntar PDF":"Attach PDF",
-"Correo de {0} (opcional)":"{0}'s email (optional)","El correo no adjunta archivos: usa Compartir para enviar el PDF.":"Email can't attach files: use Share to send the PDF.","Generando PDF…":"Generating PDF…","PDF descargado":"PDF downloaded",
+"Correo de {0} (opcional)":"{0}'s email (optional)","El correo no adjunta archivos: usa Compartir para enviar el PDF.":"Email can't attach files: use Share to send the PDF.","Generando PDF…":"Generating PDF…","PDF descargado":"PDF downloaded","⬇️ Descargar PDF":"⬇️ Download PDF",
 "No se pudo generar el PDF":"Couldn't generate the PDF","Nada se envía solo: revisas y envías tú.":"Nothing is sent automatically: you review and send.","Cuentas":"Bills","= A transferir":"= To transfer","Te transfiero":"I'll transfer you",
 "Hola Tony, cuentas de {0}:":"Hi Tony, bills for {0}:","solo tuyo {0} + parte {1} = {2}":"only yours {0} + share {1} = {2}","Tu parte: {0}":"Your share: {0}","solo tuyo {0} + parte {1}":"only yours {0} + share {1}","Cuentas de {0} – Tony":"{0} bills – Tony","Compras de {0} – Carlos":"{0} purchases – Carlos",
 "Hola Carlos, tus compras de {0}:":"Hi Carlos, your purchases for {0}:","Tu parte":"Your share","Ya pagado":"Already paid","Pendiente":"Pending","Ya transferido":"Already transferred","Tu parte de las compras":"Your share of purchases","Sin pendientes ✅":"Nothing pending ✅","Correo":"Email","Email":"Email","Compras compartidas":"Shared purchases"});
@@ -98,15 +98,17 @@ async function shareOut({text,file,title}){const d={title};if(text)d.text=text;
  if(file)dl(file);if(text&&navigator.share&&!file){try{await navigator.share(d);return 'shared'}catch(e){if(e&&e.name==='AbortError')return 'abort'}}
  if(text){try{await navigator.clipboard.writeText(text);toast(T('Copiado'))}catch(e){}}return 'fallback'}
 async function pdfMes(k){k=k||S.cur;toast(T('Generando PDF…'));try{const file=await makePDF('mes',k);await shareOut({file,title:T('Resumen mensual')+' '+lbl(k)})}catch(e){console.error(e);alert(T('No se pudo generar el PDF'))}}
+async function pdfDl(kind,k){k=k||S.cur;try{dl(await makePDF(kind||'mes',k))}catch(e){console.error(e);alert(T('No se pudo generar el PDF'))}}
 // ---------- diálogo Tony / Carlos ----------
 shareMsg=function(who,k){const P=who==='tony'?'Tony':'Carlos',t=msgFor(who,k);
  dlg().innerHTML=`<h2>📤 ${T('Mensaje para {0}',P)}</h2><textarea id="msgt" rows="11" style="width:100%;font-family:inherit;font-size:14px;border-radius:10px;border:1px solid #cbd5e1;padding:8px">${esc(t)}</textarea>
  <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="msgpdf" style="width:auto;min-height:0"> ${T('Adjuntar PDF')}</label>
  <div class="muted" style="margin:6px 0">${T('Nada se envía solo: revisas y envías tú.')}</div>
  <div class="grid" style="margin-top:6px"><button id="msgsh" onclick="msgShare('${who}','${k}')">${T('Compartir')}</button><button class="sec" id="msgcp" onclick="copyMsg()">${T('Copiar')}</button></div>
+ <button class="sec" id="msgdl" style="width:100%;margin-top:8px" onclick="pdfDl('${who}','${k}')">${T('⬇️ Descargar PDF')}</button>
  <button class="sec" style="width:100%;margin-top:8px" onclick="dlg().close()">${T('Cerrar')}</button>`;dlg().showModal()};
 async function msgShare(who,k){const t=document.getElementById('msgt').value.replace(/\r\n?/g,'\n'),pdf=document.getElementById('msgpdf').checked,P=who==='tony'?'Tony':'Carlos';
  try{const file=pdf?await makePDF(who,k):null;await shareOut({text:t,file,title:T('Mensaje para {0}',P)})}catch(e){console.error(e);alert(T('No se pudo generar el PDF'))}}
 
 // ---------- entrada en Reportes ----------
-const _rep56=rep;rep=function(){return _rep56().replace('<div class="card" id="gpcard">',`<div style="display:flex;justify-content:flex-end;margin:0 2px 8px"><button class="sec" id="pdfbtn" style="min-height:36px;padding:2px 14px;font-size:14px" onclick="pdfMes()">${T('📄 PDF del mes')}</button></div><div class="card" id="gpcard">`)};
+const _rep56=rep;rep=function(){return _rep56().replace('<div class="card" id="gpcard">',`<div style="display:flex;justify-content:flex-end;margin:0 2px 8px"><button class="sec" id="pdfbtn" style="min-height:36px;padding:2px 14px;font-size:14px" onclick="pdfMes()">${T('📄 PDF del mes')}</button><button class="sec" id="pdfdl" style="min-height:36px;padding:2px 14px;font-size:14px;margin-left:6px" onclick="pdfDl('mes')">${T('⬇️ Descargar PDF')}</button></div><div class="card" id="gpcard">`)};
