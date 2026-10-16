@@ -60,7 +60,7 @@ if(cfg){
   const all=await listB();for(const b of all.filter(b=>!/antes-de-v2/.test(b.id)).slice(20))await F.deleteDoc(F.doc(bcol(),b.id))}
  async function autoBackup(){if(!user||!navigator.onLine)return;try{const l=await F.getDocs(F.query(bcol(),F.orderBy('createdAt','desc'),F.limit(1)),);const last=l.docs[0];
   if(last&&Date.now()-(last.data().createdAt||0)<7*864e5)return;await writeB()}catch(e){console.warn('backup',e)}}
- window.fbUser=()=>!!user;
+ window.fbUser=()=>!!user;window.fbName=()=>(user&&user.displayName)||'';
  window.fbBackups=async()=>user?listB():[];
  window.fbBackupNow=async()=>{if(user)await writeB()};
  window.fbRestore=async id=>{const sn=await F.getDoc(F.doc(bcol(),id));if(!sn.exists())throw new Error('missing');const st=JSON.parse(sn.data().state);st.updatedAt=Date.now();

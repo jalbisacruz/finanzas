@@ -2,7 +2,7 @@
 Object.assign(EN,{"📄 PDF del mes":"📄 Monthly PDF","Resumen mensual":"Monthly summary","Generado":"Generated","Gasto por categoría vs presupuesto":"Spending by category vs budget","Categoría":"Category","Gastado":"Spent","Presupuesto":"Budget",
 "Ingresos por concepto":"Income by concept","Concepto":"Concept","Monto":"Amount","Tony: transferencia":"Tony: transfer","Carlos (por cobrar)":"Carlos (to collect)","Total compras":"Purchases total","Ya cobrado":"Already collected",
 "Saldos de tarjetas":"Card balances","Tarjeta":"Card","Saldo":"Balance","Fecha":"Date","Tienda":"Store","pagada":"paid","pendiente":"pending","Compartir":"Share","Correo":"Email","Adjuntar PDF":"Attach PDF",
-"Correo de {0} (opcional)":"{0}'s email (optional)","El correo no adjunta archivos: usa Compartir para enviar el PDF.":"Email can't attach files: use Share to send the PDF.","Generando PDF…":"Generating PDF…","PDF descargado":"PDF downloaded","⬇️ Descargar PDF":"⬇️ Download PDF",
+"Correo de {0} (opcional)":"{0}'s email (optional)","El correo no adjunta archivos: usa Compartir para enviar el PDF.":"Email can't attach files: use Share to send the PDF.","Generando PDF…":"Generating PDF…","PDF descargado":"PDF downloaded","Generado el {0}":"Generated {0}","⬇️ Descargar PDF":"⬇️ Download PDF",
 "No se pudo generar el PDF":"Couldn't generate the PDF","Nada se envía solo: revisas y envías tú.":"Nothing is sent automatically: you review and send.","Cuentas":"Bills","= A transferir":"= To transfer","Te transfiero":"I'll transfer you",
 "Hola Tony, cuentas de {0}:":"Hi Tony, bills for {0}:","solo tuyo {0} + parte {1} = {2}":"only yours {0} + share {1} = {2}","Tu parte: {0}":"Your share: {0}","solo tuyo {0} + parte {1}":"only yours {0} + share {1}","Cuentas de {0} – Tony":"{0} bills – Tony","Compras de {0} – Carlos":"{0} purchases – Carlos",
 "Hola Carlos, tus compras de {0}:":"Hi Carlos, your purchases for {0}:","Tu parte":"Your share","Ya pagado":"Already paid","Pendiente":"Pending","Ya transferido":"Already transferred","Tu parte de las compras":"Your share of purchases","Sin pendientes ✅":"Nothing pending ✅","Correo":"Email","Email":"Email","Compras compartidas":"Shared purchases"});
@@ -60,7 +60,10 @@ function Doc(title,sub){const d=new jspdf.jsPDF({unit:'pt',format:'letter'}),W=6
    line(cols,true,[241,245,249]);rows.forEach((r,j)=>line(r,false,j%2?[248,250,252]:null));if(tot)line(tot,true,[226,232,240]);y+=4},
   out(){const p=d.getNumberOfPages();for(let i=1;i<=p;i++){d.setPage(i);d.setFont('helvetica','normal');d.setFontSize(8);d.setTextColor(148,163,184);d.text(pt('Finanzas · '+T('Generado')+' '+new Date().toLocaleString(LOC())+'   '+i+'/'+p),X,770)}return d}};
  return o}
-function pdfMonth(k){const m=S.months[k],c=calc(m),D2=Doc(T('Resumen mensual')+' – '+lbl(k),'Finanzas · '+lbl(k));
+const lblL=k=>{const[y,m]=k.split('-');const s=new Date(+y,m-1,15).toLocaleDateString(LOC(),{month:'long'});return s[0].toUpperCase()+s.slice(1)+' '+y};
+const pdfWho=()=>(window.fbName&&fbName())||'Joe Albisa Cruz';
+const pdfSub=()=>pdfWho()+' · '+T('Generado el {0}',new Date().toLocaleDateString(LOC(),{day:'numeric',month:'short',year:'numeric'}).replace('.',''));
+function pdfMonth(k){const m=S.months[k],c=calc(m),D2=Doc(T('Resumen mensual')+' · '+lblL(k),pdfSub());
  D2.h(T('Lo que tengo'));D2.row(T('Débito, efectivo y cheques'),f(c.inc));D2.row(T('Por cobrar Tony'),f(c.tony));D2.row(T('Por cobrar Carlos'),f(c.carlosDue));D2.row(T('Total a mi favor'),f(c.money),{b:1});
  D2.h(T('Lo que debo'));D2.row(T('Tarjetas de crédito'),f(c.credit));D2.row(T('Cuentas de Tony'),f(c.bills));if(c.xfer)D2.row(T('− Ya transferido a Tony'),f(c.xfer));D2.row(T('Total que debo'),f(c.debt),{b:1});
  D2.h(T('Balance'));D2.row(T('Lo que tengo − lo que debo'),f(c.bal),{b:1});
@@ -80,12 +83,12 @@ function pdfMonth(k){const m=S.months[k],c=calc(m),D2=Doc(T('Resumen mensual')+'
  if(P.some(p=>pList(p).length))D2.note('* '+T('Ítems individuales').replace(/^[+−] /,''));
  D2.h(T('Saldos de tarjetas'));if(m.cards.length)D2.table([T('Tarjeta'),T('Saldo')],m.cards.map(x=>[DN(x.name),f(x.amount)]),{ws:[366,150],tot:[T('Total'),f(c.credit)]});else D2.note('—');
  return D2.out()}
-function pdfTony(k){const{c,bills,pur}=tonyData(k),D2=Doc(T('Cuentas de {0} – Tony',lbl(k)),'Finanzas · '+lbl(k));
+function pdfTony(k){const{c,bills,pur}=tonyData(k),D2=Doc(T('Cuentas de {0} – Tony',lblL(k)),pdfSub());
  D2.h(T('Cuentas'));D2.table([T('Cuentas'),T('Monto'),''],bills.map(b=>[DN(b.name),f(b.amount),T(billSt2(b)==='paid'?'pagada':'pendiente')]),{ws:[316,100,100],tot:[T('Total cuentas'),f(c.bills),'']});
  D2.h(T('Tu parte de las compras'));if(pur.length)D2.table([T('Tienda'),T('Fecha'),T('Total'),T('Ítems individuales').replace(/^[+−] /,''),T('Compartido'),T('Tu parte')],pur.map(x=>[DN(x.p.store),x.p.date?fdate(x.p.date):'',f(x.p.total),hasI(x)?f(x.i):'',hasI(x)?f(x.s):'',f(x.t)]),{ws:[136,66,76,82,76,80],tot:[T('Total'),'','','','',f(c.tony)]});else D2.note('—');
  {const its=pur.filter(hasI);if(its.length){D2.h(T('Ítems individuales').replace(/^[+−] /,''));its.forEach(x=>x.notes.forEach(n=>D2.row(DN(x.p.store)+' · '+n,undefined,{ind:8})))}}
  D2.h(T('Balance'));D2.row(T('Total cuentas'),f(c.bills));D2.row('− '+T('Tu parte de las compras'),f(c.tony));D2.row(T('= A transferir'),f(c.toTony),{b:1});if(c.xfer)D2.row(T('Ya transferido'),f(c.xfer));D2.row(T('Pendiente'),f(c.tonyDue),{b:1});return D2.out()}
-function pdfCarlos(k){const{c,pur}=carlosData(k),D2=Doc(T('Compras de {0} – Carlos',lbl(k)),'Finanzas · '+lbl(k));
+function pdfCarlos(k){const{c,pur}=carlosData(k),D2=Doc(T('Compras de {0} – Carlos',lblL(k)),pdfSub());
  D2.h(T('Compras compartidas'));pur.forEach(x=>{D2.row(DN(x.p.store)+' · '+(x.p.date?fdate(x.p.date):'')+' · '+T('Total')+' '+f(x.p.total),undefined,{b:1});
   if(hasI(x)){x.notes.forEach(n=>D2.row(n,undefined,{ind:12,muted:1}));D2.row(`${T('ítems {0}',f(x.i))} + ${T('parte {0}',f(x.s))}`,'= '+f(x.t),{ind:12,b:1})}
   else D2.row(T('Tu parte: {0}','').replace(/\s*$/,''),f(x.t),{ind:12,b:1});D2.sep()});
