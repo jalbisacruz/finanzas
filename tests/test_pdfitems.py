@@ -27,8 +27,11 @@ with app(ROOT,now='2026-10-16T09:00:00') as pg:
     check('Generado' not in m.split('Resumen mensual')[-1].split('Lo que tengo')[-1] and 'Finanzas ·' not in m,'footer only page')
     check(subprocess.run(['pdfinfo','/tmp/v66m.pdf'],capture_output=True,text=True).stdout.count('Pages:')==1,'pdf ok')
     # Tony: only items where Tony is owner (+resto); not Carlos's Shampoo, not Yo's articles
-    check('Vino Tinto' in t and 'Shampoo' not in t and 'Articulo largo' not in t and 'Resto de la compra' in t,'tony private items hidden')
-    check('Shampoo' in c and 'Vino Tinto' not in c and 'Articulo largo' not in c,'carlos private items hidden')
+    check('Vino Tinto' in t and 'Shampoo' in t and 'Articulo largo' in t and 'Resto de la compra' in t and 'Costco' in t,'tony sees full table')
+    check('Shampoo' in c and 'Vino Tinto' in c and 'Articulo largo' in c,'carlos sees full table')
+    tp=[x for x in t.splitlines() if 'Tu parte del mes' in x];cp=[x for x in c.splitlines() if 'Tu parte del mes' in x];mt=[x for x in m.splitlines() if 'Total del mes' in x][-1];print(mt,tp,cp)
+    import re;nums=re.findall(r'\$[\d,.]+',mt);check(tp and nums[1] in tp[-1] and cp and nums[2] in cp[-1],'tu parte = month column %s %s %s'%(mt,tp,cp))
+    check('Pendiente' in t and 'Pendiente' in c and 'Balance' in t,'balance kept')
     tl=[x for x in t.splitlines() if 'Total del mes' in x];check(tl,'tony month total')
     check(' 1/' in m or '1/' in m,'page numbers')
     if '--shots' in sys.argv:
@@ -37,6 +40,8 @@ with app(ROOT,now='2026-10-16T09:00:00') as pg:
         pgs=sorted(glob.glob('/tmp/v66p*.png'));
         from shutil import copy
         txt=[subprocess.run(['pdftotext','-f',str(i+1),'-l',str(i+1),'/tmp/v66m.pdf','-'],capture_output=True,text=True).stdout for i in range(len(pgs))]
-        i=[j for j,x in enumerate(txt) if 'Resto de la compra' in x][0];copy(pgs[i],os.path.join(ROOT,'shots','131-pdf-compartida.png'))
-        subprocess.run(['pdftoppm','-png','-r','90','-f','1','-l','2','/tmp/v66t.pdf','/tmp/v66t'],check=True);copy(sorted(glob.glob('/tmp/v66t*.png'))[-1],os.path.join(ROOT,'shots','131-pdf-tony-compartida.png'))
+        i=[j for j,x in enumerate(txt) if 'Resto de la compra' in x][0];copy(pgs[i],os.path.join(ROOT,'shots','132-pdf-mes.png'))
+        subprocess.run(['pdftoppm','-png','-r','90','-f','1','-l','2','/tmp/v66t.pdf','/tmp/v66t'],check=True);copy(sorted(glob.glob('/tmp/v66t*.png'))[0],os.path.join(ROOT,'shots','132-pdf-tony.png'))
+        for f_ in glob.glob('/tmp/v66c*.png'):os.remove(f_)
+        subprocess.run(['pdftoppm','-png','-r','90','-f','1','-l','1','/tmp/v66c.pdf','/tmp/v66c'],check=True);copy(sorted(glob.glob('/tmp/v66c*.png'))[0],os.path.join(ROOT,'shots','132-pdf-carlos.png'))
 print('test_pdfitems OK',ok)

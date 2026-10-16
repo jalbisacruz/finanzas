@@ -51,7 +51,7 @@ for lang in ['es','en']:
     check(s['text'].count('\n')>=8 and '\n\n' in s['text'] and s['text']==E("msgFor('carlos','2026-10')"),'share text keeps line breaks')
     pg.check('#msgpdf');pg.click('#msgsh');pg.wait_for_function("_sh.length==2",timeout=10000);s=E("_sh.at(-1)")
     check(s['files']==['Carlos-2026-10.pdf'] and s['size'][0]>1000,s)
-    _,tx=pdftext(pg,'c.pdf');check(('Rest of the purchase' if lang=='en' else 'Resto de la compra') in tx and '$12.50' in tx and 'Snacks' not in tx and '$0.00' not in tx,'carlos pdf v66: '+tx)  # v66 per-item table
+    _,tx=pdftext(pg,'c.pdf');check(('Rest of the purchase' if lang=='en' else 'Resto de la compra') in tx and '$12.50' in tx and 'Snacks' in tx and '$0.00' not in tx,'carlos pdf v68 full table: '+tx)
     check('Shampoo' in tx and '42.50' in tx and 'Tony' not in tx.replace('Tony',''),tx[:300])
     # (v58 mailto checks removed in v59)
     # v59: no email button / field in the dialog; stored emails untouched
@@ -61,7 +61,7 @@ for lang in ['es','en']:
     # Tony pdf
     E("shareMsg('tony','2026-10')");pg.check('#msgpdf');pg.click('#msgsh');pg.wait_for_function("_sh.length==3",timeout=10000)
     _,tx=pdftext(pg,'t.pdf');check('$0.00' not in tx,'tony pdf no zero items: '+tx)
-    check('Walmart' in tx and '35.00' in tx and 'Carlos' not in tx,tx[:400]);E("dlg().close()")
+    check('Walmart' in tx and '35.00' in tx and 'Carlos' in tx and ('Tu parte del mes' in tx or 'Your share this month' in tx),tx[:400]);E("dlg().close()")  # v68: full table
     # month PDF from Reportes
     E("tab='rep';render()");pg.wait_for_timeout(50);check(pg.locator('#pdfbtn').count()==1,'pdf button in Reportes')
     pg.click('#pdfbtn');pg.wait_for_function("_sh.length==4",timeout=10000);s=E("_sh.at(-1)");check(s['files'][0].endswith('-2026-10.pdf'),s)
