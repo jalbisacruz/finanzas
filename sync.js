@@ -15,6 +15,16 @@ window.syncCard=()=>!cfg?'':`<div class="card"><h2>${T('Nube')}</h2>${user?`<div
 if(cfg){
  const [{initializeApp},A,F]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-auth.js'),import(B+'firebase-firestore.js')]);
  api={A,F};const app=initializeApp(cfg);const auth=A.getAuth(app);
+ // v62: App Check (reCAPTCHA Enterprise, sin enforce todavía) + escaneo de recibos con Gemini (Firebase AI Logic, Gemini Developer API)
+ const RECAPTCHA_KEY='6LczjvEtAAAAAEaAHmwLEj2DUiWYY--kne8BH3ei';
+ try{const AC=await import(B+'firebase-app-check.js');AC.initializeAppCheck(app,{provider:new AC.ReCaptchaEnterpriseProvider(RECAPTCHA_KEY),isTokenAutoRefreshEnabled:true})}catch(e){console.warn('appcheck',e)}
+ let AI=null;const MODELS=['gemini-3.5-flash','gemini-3.8-flash'];
+ window.fbScan=async(b64,prompt)=>{if(!user){const e=new Error('signin');e.code='signin';throw e}
+  AI=AI||await import(B+'firebase-ai.js');const ai=AI.getAI(app,{backend:new AI.GoogleAIBackend()});let last;
+  for(const name of MODELS){try{const m=AI.getGenerativeModel(ai,{model:name,generationConfig:{responseMimeType:'application/json',temperature:0}});
+    const r=await m.generateContent([prompt,{inlineData:{mimeType:'image/jpeg',data:b64}}]);return r.response.text()}
+   catch(e){last=e;if(!/404|not found|not supported/i.test(String(e&&e.message)))throw e}}
+  throw last};
  await A.setPersistence(auth,A.browserLocalPersistence).catch(()=>{});
  fs=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})});
  const ref=()=>F.doc(fs,'users',user.uid,'data','state');
