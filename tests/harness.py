@@ -13,13 +13,13 @@ METRICS_JS=r"""()=>{const o={};for(const k of keys()){const m=S.months[k],c=calc
 def free_port():
     s=socket.socket();s.bind(('',0));p=s.getsockname()[1];s.close();return p
 @contextlib.contextmanager
-def app(root, lang='es', now=NOW, state=None, width=390, height=900, init='', routes=None, expand=True):
+def app(root, lang='es', now=NOW, state=None, width=390, height=900, init='', routes=None, expand=True, browser='chromium', ctx_opts=None):
     port=free_port()
     srv=subprocess.Popen([sys.executable,'-m','http.server',str(port)],cwd=root,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     time.sleep(0.7)
     try:
         with sync_playwright() as p:
-            b=p.chromium.launch();ctx=b.new_context(viewport={'width':width,'height':height},service_workers='block')
+            b=getattr(p,browser).launch();ctx=b.new_context(viewport={'width':width,'height':height},service_workers='block',**(ctx_opts or {}))
             pg=ctx.new_page();pg.errors=[]
             pg.clock.install(time=now)
             pg.on('pageerror',lambda e:pg.errors.append('PE:'+str(e)))

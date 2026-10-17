@@ -67,6 +67,9 @@ if(cfg){
  window.fbInboxDel=(t,id)=>F.deleteDoc(F.doc(fs,'shares',t,'inbox',id));window.fbName=()=>(user&&user.displayName)||'';
  window.fbBackups=async()=>user?listB():[];
  window.fbBackupNow=async()=>{if(user)await writeB()};
+ // v86: copia antes de restaurar (en la nube, sin descargar nada; en iPhone una descarga saca de la app)
+ window.fbSafetyBackup=async()=>{if(!user)throw new Error('no user');const S=getState();const d=new Date(),p=n=>String(n).padStart(2,'0'),id=d.toLocaleDateString('en-CA')+'_'+p(d.getHours())+'-'+p(d.getMinutes())+'-'+p(d.getSeconds())+'_antes-de-restaurar';
+  await F.setDoc(F.doc(bcol(),id),{state:JSON.stringify(S),createdAt:Date.now(),updatedAt:S.updatedAt||0,label:'Antes de restaurar · '+d.toLocaleString('es-US')});return id};
  window.fbRestore=async id=>{const sn=await F.getDoc(F.doc(bcol(),id));if(!sn.exists())throw new Error('missing');const st=JSON.parse(sn.data().state);st.updatedAt=Date.now();
   applying=true;try{setState(st)}finally{applying=false}await push()};
  window.onLocalSave=()=>{if(!user||applying)return;setS('pend');clearTimeout(pushT);pushT=setTimeout(push,1500)};
