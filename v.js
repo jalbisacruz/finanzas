@@ -16,6 +16,9 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const fd=d=>{if(!d)return'';const[y,m,dd]=d.split('-');return new Date(+y,m-1,+dd).toLocaleDateString(ES?'es':'en-US',{day:'numeric',month:'short'}).replace('.','')};
 const P3=['Yo','Tony','Carlos'];window.DOC=null;let MI=0;
 // v79: compras de la más nueva a la más vieja (enlaces publicados antes venían de la más vieja a la más nueva)
+// v80: nombre del PDF con mes y hora, p. ej. Tony-Octubre-2026-17oct-1-05pm.pdf
+function vPdfName(who,k,d=new Date()){const L=(DOC.lang==='en'?'en-US':'es-US'),na=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,''),[y,m]=k.split('-'),ml=new Date(+y,m-1,15).toLocaleDateString(L,{month:'long'}),p=n=>String(n).padStart(2,'0'),h=d.getHours();
+ return na(who).replace(/\s+/g,'-')+'-'+na(ml[0].toUpperCase()+ml.slice(1))+'-'+y+'-'+d.getDate()+na(d.toLocaleDateString(L,{month:'short'})).replace('.','').toLowerCase()+'-'+(h%12||12)+'-'+p(d.getMinutes())+(h<12?'am':'pm')+'.pdf'}
 function nfDoc(){(DOC.months||[]).forEach(mo=>{if(mo&&!mo.nf&&Array.isArray(mo.purchases)){mo.purchases=[...mo.purchases].reverse().sort((a,b)=>String(b.d||'').localeCompare(String(a.d||'')));mo.nf=1}})}
 const $=id=>document.getElementById(id);
 function fail(msg){$('h1').textContent='Finanzas';if($('hact'))$('hact').innerHTML='';$('sub').textContent='';$('m').innerHTML=`<div class="card err">${esc(msg)}</div>`}
@@ -111,7 +114,7 @@ window.pdf=()=>{const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,J=new jsp
   line([t('ptot'),'','','',...P3.map(x=>f(p.tot[x]))],true,[226,232,240]);P3.forEach(x=>mt[x]+=p.tot[x]||0);y=Math.max(y+4,end+24)});
  if(mo.purchases.length)line([t('mtot'),'','','',...P3.map(x=>f(mt[x]))],true,[226,232,240]);
  const n=J.getNumberOfPages();for(let i=1;i<=n;i++){J.setPage(i);J.setFontSize(8);J.setTextColor(148,163,184);J.text(i+'/'+n,R,770,{align:'right'})}
- const b=J.output('blob'),u=URL.createObjectURL(b),el=document.createElement('a');el.href=u;el.download=(N(w)+'-'+mo.k+'.pdf');document.body.append(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};
+ const b=J.output('blob'),u=URL.createObjectURL(b),el=document.createElement('a');el.href=u;el.download=vPdfName(N(w),mo.k);document.body.append(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};
 var tok;tok=new URLSearchParams(location.search).get('t')||'';
 if(!/^[A-Za-z0-9_-]{20,}$/.test(tok))fail(TX.bad);
 else if(window.__SHARE_DOC){DOC=window.__SHARE_DOC;nfDoc();draw()}

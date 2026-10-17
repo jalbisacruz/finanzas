@@ -1,3 +1,4 @@
+import re
 """Report sharing (made-up data): python tests/test_share.py [--shots]"""
 import os,sys,base64,subprocess,tempfile
 from harness import app,HERE
@@ -50,7 +51,7 @@ for lang in ['es','en']:
     pg.click('#mmtxt');pg.wait_for_timeout(50);pg.click('#msgsh');pg.wait_for_timeout(200);s=E("_sh.at(-1)");check(s and not s['files'] and '$42.50' in s['text'],s)
     check(s['text'].count('\n')>=6 and '\n\n' in s['text'] and s['text']==E("msgShort('carlos','2026-10')"),'share text keeps line breaks')
     pg.click('#mmpdf');pg.wait_for_timeout(50);pg.click('#msgsh');pg.wait_for_function("_sh.length==2",timeout=10000);s=E("_sh.at(-1)")
-    check(s['files']==['Carlos-2026-10.pdf'] and s['size'][0]>1000,s)
+    check(re.match(r'Carlos-(Octubre|October)-2026-\d{1,2}[a-z]+-\d{1,2}-\d\d(am|pm)\.pdf$',s['files'][0]) and s['size'][0]>1000,s)
     _,tx=pdftext(pg,'c.pdf');check(('Rest of the purchase' if lang=='en' else 'Resto de la compra') in tx and '$12.50' in tx and 'Snacks' in tx and '$0.00' not in tx,'carlos pdf v68 full table: '+tx)
     check('Shampoo' in tx and '42.50' in tx and 'Tony' not in tx.replace('Tony',''),tx[:300])
     # (v58 mailto checks removed in v59)
@@ -64,7 +65,7 @@ for lang in ['es','en']:
     check('Walmart' in tx and '35.00' in tx and 'Carlos' in tx and ('Tu parte del mes' in tx or 'Your share this month' in tx),tx[:400]);E("dlg().close()")  # v68: full table
     # month PDF from Reportes
     E("tab='rep';render()");pg.wait_for_timeout(50);check(pg.locator('#pdfbtn').count()==1,'pdf button in Reportes')
-    pg.click('#pdfbtn');pg.wait_for_function("_sh.length==4",timeout=10000);s=E("_sh.at(-1)");check(s['files'][0].endswith('-2026-10.pdf'),s)
+    pg.click('#pdfbtn');pg.wait_for_function("_sh.length==4",timeout=10000);s=E("_sh.at(-1)");check(re.search(r'-(Octubre|October)-2026-Joe-\d{1,2}[a-z]+-\d{1,2}-\d\d(am|pm)\.pdf$',s['files'][0]),s)
     p,tx=pdftext(pg,f'm-{lang}.pdf')
     for w in (['Lo que tengo','Lo que debo','Balance','Gasto por categor','Ingresos por concepto','Tony','Carlos (por cobrar)','Compras compartidas','Saldos de tarjetas','Walmart'] if lang=='es' else
               ['What I','Balance','Spending by category','Income by concept','Carlos (to collect)','Shared purchases','Card balances','Walmart']):check(w in tx,f'{lang} pdf has {w}')

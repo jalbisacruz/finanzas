@@ -1,3 +1,4 @@
+import re
 """v71: private read-only links for Tony/Carlos (fake Firebase, made-up data): python tests/test_links.py [--shots]"""
 import json,os,sys
 from harness import app,HERE,FIX
@@ -65,7 +66,7 @@ for who,doc in [('tony',DOCT),('carlos',DOCC)]:
     pg.click('#vreg');pg.wait_for_timeout(50);check(pg.locator('#regform').count()==1 and pg.locator('#vdetb').is_visible(),'register opens, details stay')
     pg.click('#vdet');pg.wait_for_timeout(50);check(pg.locator('#regform').count()==1 and pg.locator('#vdetb').is_hidden(),'collapse keeps form')
     with pg.expect_download(timeout=15000) as d: pg.click('#vdl')
-    check(d.value.suggested_filename.endswith('-2026-10.pdf'),d.value.suggested_filename)
+    check(re.search(r'-(Octubre|October)-2026-\d{1,2}[a-z]+-\d{1,2}-\d\d(am|pm)\.pdf$',d.value.suggested_filename),d.value.suggested_filename)
   if who=='carlos':
     with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps({**doc,'lang':'en'}),width=390,height=844) as pg:
       pg.goto(pg.url.split('/')[0]+'//'+pg.url.split('/')[2]+'/v.html?t=AAAAAAAAAAAAAAAAAAAAAA');pg.wait_for_timeout(500)

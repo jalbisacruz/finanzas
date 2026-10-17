@@ -1,3 +1,4 @@
+import re
 """v70: Tony/Carlos dialog: 📎 Enviar con PDF / 💬 Solo texto (made-up data): python tests/test_msg2.py [--shots]"""
 import os,sys
 from harness import app,HERE
@@ -15,7 +16,7 @@ for lang in ['es','en']:
     E("()=>shareMsg('carlos','2026-10','pdf')");pg.wait_for_timeout(50)
     t=pg.input_value('#msgt');check(('Aldi — $58.85' in t) and 'Vitaminas' not in t and t==E("msgShort('carlos','2026-10')")+'\n\n'+('El detalle está en el PDF.' if ES else 'The details are in the PDF.') and ('El detalle está en el PDF.' if ES else 'The details are in the PDF.') in t and E("f(calc(M()).carlosDue)") in t,t)
     if '--shots' in sys.argv:pg.locator('#dlg').screenshot(path=os.path.join(ROOT,'shots','134-enviar-con-pdf'+('' if ES else '-en')+'.png'))
-    pg.click('#msgsh');pg.wait_for_function("_sh.length==1",timeout=15000);s=E("_sh[0]");check(s['files']==['Carlos-2026-10.pdf'] and s['text']==t,s)
+    pg.click('#msgsh');pg.wait_for_function("_sh.length==1",timeout=15000);s=E("_sh[0]");check(re.match(r'Carlos-(Octubre|October)-2026-\d{1,2}[a-z]+-\d{1,2}-\d\d(am|pm)\.pdf$',s['files'][0]) and s['text']==t,s)
     pg.click('#mmtxt');pg.wait_for_timeout(50);t=pg.input_value('#msgt')
     ln=[x for x in t.splitlines() if 'Aldi' in x];check(('14 oct · Aldi — $58.85' if ES else 'Oct 14 · Aldi — $58.85') in ln,ln)
     check('Vitaminas' not in t and ('PENDIENTE' if ES else 'PENDING') in t,'short, total por cobrar: '+t)
@@ -32,7 +33,7 @@ for lang in ['es','en']:
     E("()=>{navigator.canShare=()=>false;window._cp=null;navigator.clipboard.writeText=async x=>{window._cp=x}}")
     E("()=>shareMsg('carlos','2026-10','pdf')")
     with pg.expect_download(timeout=15000) as d: pg.click('#msgsh')
-    check(d.value.suggested_filename=='Carlos-2026-10.pdf','downloaded');pg.wait_for_timeout(100)
+    check(re.match(r'Carlos-(Octubre|October)-2026-\d{1,2}[a-z]+-\d{1,2}-\d\d(am|pm)\.pdf$',d.value.suggested_filename),'downloaded '+d.value.suggested_filename);pg.wait_for_timeout(100)
     check(E("window._cp")==pg.input_value('#msgt') and len(pg.inner_text('#msgnote'))>20,'copied + note: '+pg.inner_text('#msgnote'))
     errs=[e for e in pg.errors if 'DIALOG' not in e];check(not errs,errs)
 print('test_msg2 OK',ok)

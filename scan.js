@@ -72,7 +72,7 @@ function scanReceipt(){if(!window.fbScan||!(window.fbUser&&fbUser()))return scan
  const i=document.createElement('input');i.type='file';i.accept='image/*,application/pdf';i.style.display='none';
  i.onchange=()=>{const f=i.files&&i.files[0];i.remove();scanFile(f)};document.body.appendChild(i);i.click()}
 // entradas: diálogo ➕, junto a "+ Nueva compra compartida", y en Hoy
-const scanBtn=id=>`<button class="sec" id="${id}" style="width:100%;margin-top:8px" onclick="dlg().open&&dlg().close();scanReceipt()">${T('📷 Escanear recibo')}</button>`;
+const scanBtn=id=>`<button class="sec" id="${id}" style="width:100%;margin-top:8px" onclick="dlg().open&&dlg().close();scanReceipt()">${T('📷 Cargar recibo')}</button>`;
 const _quickV62=quick;quick=function(){_quickV62();const b=[...dlg().querySelectorAll('button')].find(x=>/editP\(\)/.test(x.getAttribute('onclick')||''));if(b&&!document.getElementById('scanq'))b.insertAdjacentHTML('afterend',scanBtn('scanq'))};
 const _renderV62=render;render=function(){_renderV62();const v=document.getElementById('v');if(!v)return;
  v.querySelectorAll('button[onclick="editP()"]').forEach((b,k)=>{if(!b.nextElementSibling||!/^scan/.test(b.nextElementSibling.id||''))b.insertAdjacentHTML('afterend',scanBtn('scanc'+k))});
