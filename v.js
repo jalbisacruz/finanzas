@@ -31,10 +31,10 @@ function draw(){setLangV(DOC.lang);const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.na
  h+=`<button class="det" id="vdet" aria-expanded="${DET}" onclick="togDet()">${t(DET?'detH':'det')}</button><div id="vdetb"${DET?'':' hidden'}>`;
  if(T&&mo.bills&&mo.bills.length)h+=`<div class="card"><h2>${t('bills')}</h2>${mo.bills.map(b=>`<div class="row"><span>${esc(b.n)}${b.x?` <span class="muted">(${t('inclTF').replace('{0}',f(b.x))})</span>`:''} <span class="muted">${b.paid?t('paidB'):t('pendB')}</span></span><span>${f(b.a)}</span></div>`).join('')}<div class="row"><b>${t('billsT')}</b><b>${f(mo.billsTotal)}</b></div><div class="row"><span>${t('minus')}</span><span>−${f(mo.share)}</span></div><div class="row"><span>${t('toT')}</span><b>${f(mo.toTransfer)}</b></div></div>`;
  const hc=c=>c===w?' class="hl"':'';const mt={Yo:0,Tony:0,Carlos:0};
- h+=`<div class="card"><h2>${t('purch')}</h2>`+(mo.purchases.length?mo.purchases.map(p=>{if(!p.by)P3.forEach(x=>mt[x]+=p.tot[x]||0);return `<div class="ph"><span>${esc(fd(p.d))} · ${esc(p.s)} <span class="muted">${esc(p.c)}</span>${p.by?` <span class="muted">· ${esc(TX.buyer)}: ${esc(p.by)} *</span>`:''}</span><span>${f(p.t)}</span></div>
+ h+=`<div class="card"><h2>${t('purch')}</h2>`+(mo.purchases.length?mo.purchases.map(p=>{if(!p.by)P3.forEach(x=>mt[x]+=p.tot[x]||0);return `<div class="pc"><div class="ph"><span class="pt"><b>${esc(fd(p.d))} · ${esc(p.s)}</b> <span class="pchip">${esc(p.c)}</span>${p.by?` <span class="muted">· ${esc(TX.buyer)}: ${esc(p.by)} *</span>`:''}</span><span class="pamt">${f(p.t)}</span></div>
   <div class="wrap"><table><tr><th>${t('item')}</th><th class="l cat">${t('cat')}</th><th>${t('amt')}</th><th class="l">${t('shared')}</th>${P3.map(x=>`<th${hc(x)}>${esc(N(x))}</th>`).join('')}</tr>
   ${p.rows.map(r=>`<tr><td>${esc(r.n)}</td><td class="l cat">${esc(r.c)}</td><td>${f(r.a)}</td><td class="l">${esc(r.sh)}</td>${P3.map(x=>`<td${hc(x)}>${r.v[x]?f(r.v[x]):'—'}</td>`).join('')}</tr>`).join('')}
-  <tr class="tot"><td colspan="2" class="l">${t('ptot')}</td><td class="cat"></td><td></td>${P3.map(x=>`<td${hc(x)}>${f(p.tot[x])}</td>`).join('')}</tr></table></div>`}).join('')+
+  <tr class="tot"><td colspan="2" class="l">${t('ptot')}</td><td class="cat"></td><td></td>${P3.map(x=>`<td${hc(x)}>${f(p.tot[x])}</td>`).join('')}</tr></table></div></div>`}).join('')+
   `<div class="wrap"><table style="margin-top:12px"><tr class="tot"><td>${t('mtot')}</td>${P3.map(x=>`<td${hc(x)}>${f(mt[x])}</td>`).join('')}</tr></table></div>`:`<div class="muted">${t('none')}</div>`)+`</div>`;
  h+=`${mo.purchases.some(p=>p.by)?`<div class="muted" style="margin:-6px 4px 12px">* ${esc(t('byNote'))}</div>`:''}</div><div class="muted" style="text-align:center;margin:12px 0 30px">Finanzas · ${esc(d.from)}</div>`;$('m').innerHTML=h;if(REG)regDraw()}
 window.pick=i=>{MI=i;draw()};let DET=false;window.togDet=()=>{DET=!DET;draw()};
@@ -97,9 +97,16 @@ window.pdf=()=>{const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,J=new jsp
   if(mo.bills&&mo.bills.length){h2(t('bills'));mo.bills.forEach(b=>row(b.n+(b.x?' ('+t('inclTF').replace('{0}',f(b.x))+')':'')+' ('+(b.paid?t('paidB'):t('pendB'))+')',f(b.a)))}}
  else{row(t('share'),f(mo.share));row(t('paid'),f(mo.paid));row(t('pend'),f(mo.pending),1)}
  h2(t('purch'));const mt={Yo:0,Tony:0,Carlos:0};
- mo.purchases.forEach(p=>{need(60);J.setFont('helvetica','bold');J.setFontSize(10.5);J.text(pt(fd(p.d)+' · '+p.s+' · '+p.c),X,y);J.text(pt(f(p.t)),R,y,{align:'right'});y+=14;
+ // v77: cada compra en su bloque (igual que los PDF de la app)
+ const pcard=(N,left,chip,extra,right)=>{const h=37+16*N;if(h<640)need(h+6);const top=y-8,hd=Math.min(h,752-top);
+  J.setFillColor(248,250,252);J.setDrawColor(203,213,225);J.setLineWidth(0.7);J.roundedRect(X-8,top,R-X+16,hd,6,6,'FD');J.setFillColor(37,99,235);J.roundedRect(X-8,top,4,hd,2,2,'F');
+  const yy=top+19;J.setFont('helvetica','bold');J.setFontSize(12.5);J.setTextColor(15,23,42);const L=J.splitTextToSize(pt(left),250)[0]||'';J.text(L,X+2,yy);let cx=X+2+J.getTextWidth(L)+8;
+  if(pt(chip)){J.setFontSize(8.5);const c=J.splitTextToSize(pt(chip),140)[0]||'',cw=J.getTextWidth(c)+12;J.setFillColor(219,234,254);J.roundedRect(cx,yy-9.5,cw,13,6.5,6.5,'F');J.setTextColor(30,64,175);J.text(c,cx+6,yy);cx+=cw+6}
+  if(extra){J.setFont('helvetica','italic');J.setFontSize(8.5);J.setTextColor(100,116,139);J.text(J.splitTextToSize(pt(extra),Math.max(20,R-90-cx))[0]||'',cx,yy)}
+  J.setFont('helvetica','bold');J.setFontSize(14);J.setTextColor(15,23,42);J.text(pt(right),R,yy+0.5,{align:'right'});J.setLineWidth(1);y=top+40;return h<640?top+h:0};
+ mo.purchases.forEach(p=>{const end=pcard(p.rows.length+2,fd(p.d)+' · '+p.s,p.c,p.by?TX.buyer+': '+p.by+' *':'',f(p.t));
   line([t('item'),t('cat'),t('amt'),t('shared'),...P3.map(N)],true,[241,245,249]);p.rows.forEach((r,j)=>line([r.n,r.c,f(r.a),r.sh,...P3.map(x=>r.v[x]?f(r.v[x]):'-')],false,j%2?[248,250,252]:null));
-  line([t('ptot'),'','','',...P3.map(x=>f(p.tot[x]))],true,[226,232,240]);P3.forEach(x=>mt[x]+=p.tot[x]||0);y+=4});
+  line([t('ptot'),'','','',...P3.map(x=>f(p.tot[x]))],true,[226,232,240]);P3.forEach(x=>mt[x]+=p.tot[x]||0);y=Math.max(y+4,end+24)});
  if(mo.purchases.length)line([t('mtot'),'','','',...P3.map(x=>f(mt[x]))],true,[226,232,240]);
  const n=J.getNumberOfPages();for(let i=1;i<=n;i++){J.setPage(i);J.setFontSize(8);J.setTextColor(148,163,184);J.text(i+'/'+n,R,770,{align:'right'})}
  const b=J.output('blob'),u=URL.createObjectURL(b),el=document.createElement('a');el.href=u;el.download=(N(w)+'-'+mo.k+'.pdf');document.body.append(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};

@@ -58,6 +58,14 @@ function Doc(title,sub){const d=new jspdf.jsPDF({unit:'pt',format:'letter'}),W=6
    const line=(cells,bold,fill)=>{need(18);if(fill){d.setFillColor(...fill);d.rect(X,y-11,R-X,16,'F')}if(hi!=null){d.setFillColor(...(bold?[147,197,253]:[219,234,254]));d.rect(xs[hi],y-11,w[hi],16,'F')}d.setFontSize(9.5);
     cells.forEach((c,i)=>{d.setFont('helvetica',bold||i===hi?'bold':'normal');const s=d.splitTextToSize(pt(c),w[i]-6)[0]||'';if(i===0||(left||[]).includes(i))d.text(s,xs[i]+3,y);else d.text(s,xs[i]+w[i]-3,y,{align:'right'})});y+=16};
    line(cols,true,[241,245,249]);rows.forEach((r,j)=>line(r,false,j%2?[248,250,252]:null));if(tot)line(tot,true,[226,232,240]);y+=4},
+  // v77: cada compra en su propio bloque (fondo suave, borde, barra azul a la izquierda, encabezado grande); no se parte entre páginas si cabe
+  pcard(N,left,chip,extra,right){const h=37+16*N;if(h<640)need(h+6);const top=y-8;
+   d.setFillColor(248,250,252);d.setDrawColor(203,213,225);d.setLineWidth(0.7);const hd=Math.min(h,752-top);d.roundedRect(X-8,top,R-X+16,hd,6,6,'FD');d.setFillColor(37,99,235);d.roundedRect(X-8,top,4,hd,2,2,'F');
+   const yy=top+19;d.setFont('helvetica','bold');d.setFontSize(12.5);d.setTextColor(15,23,42);const L=d.splitTextToSize(pt(left),250)[0]||'';d.text(L,X+2,yy);let cx=X+2+d.getTextWidth(L)+8;
+   if(pt(chip)){d.setFontSize(8.5);const c=d.splitTextToSize(pt(chip),140)[0]||'',cw=d.getTextWidth(c)+12;d.setFillColor(219,234,254);d.roundedRect(cx,yy-9.5,cw,13,6.5,6.5,'F');d.setTextColor(30,64,175);d.text(c,cx+6,yy);cx+=cw+6}
+   if(extra){d.setFont('helvetica','italic');d.setFontSize(8.5);d.setTextColor(100,116,139);d.text(d.splitTextToSize(pt(extra),Math.max(20,R-90-cx))[0]||'',cx,yy)}
+   d.setFont('helvetica','bold');d.setFontSize(14);d.setTextColor(15,23,42);d.text(pt(right),R,yy+0.5,{align:'right'});d.setLineWidth(1);y=top+40;return h<640?top+h:0},
+  at(v){y=Math.max(y,v)},
   out(){const p=d.getNumberOfPages();for(let i=1;i<=p;i++){d.setPage(i);d.setFont('helvetica','normal');d.setFontSize(8);d.setTextColor(148,163,184);d.text(i+'/'+p,R,770,{align:'right'})}return d}};
  return o}
 const lblL=k=>{const[y,m]=k.split('-');const s=new Date(+y,m-1,15).toLocaleDateString(LOC(),{month:'long'});return s[0].toUpperCase()+s.slice(1)+' '+y};
@@ -73,13 +81,13 @@ function pdfPurch(D2,P,cols,hl){const hi=hl?4+cols.indexOf(hl):undefined,one=col
  P.forEach(p=>{const sh=p.shares||{},L=pList(p).filter(it=>+it.a>0),mine=one?L.filter(it=>ownOf(it).includes(cols[0])):L,fam=(p.mode||'fam')==='fam';
   const isum={};cols.forEach(w=>isum[w]=r2(L.reduce((s,it)=>s+(itPort(it)[w]||0),0)));
   const ptx=(typeof pTaxOf==='function'&&pTaxOf(p))||null,txT=ptx?r2(+p.tax):0,rest=r2((+p.total||0)-txT-L.reduce((s,it)=>s+(+it.a||0),0));
-  D2.d&&D2.row((p.date?fdate(p.date)+' · ':'')+DN(p.store)+' · '+DN(pCat(p))+(p.paidBy?' · '+T('Compró: {0}',p.paidBy)+' *':''),T('Total')+' '+f(p.total),{b:1,keep:1});
   const rows=mine.map(it=>{const po=itPort(it);return [it.n||DN(itCat(it,p)),DN(itCat(it,p)),f(it.a),ownTxt(ownOf(it)),...cols.map(w=>po[w]?f(po[w]):'—')]});
   if(!L.length)rows.push([T('Toda la compra'),'',f(r2(p.total-txT)),ownTxt(fam?PPL3:Object.keys(sh).filter(w=>+sh[w])),...cols.map(w=>f(r2((+sh[w]||0)-(ptx?ptx[w]||0:0))))]);
   else if(rest>0.004)rows.push([T('Resto de la compra'),'',f(rest),ownTxt(fam?PPL3:Object.keys(sh).filter(w=>+sh[w])),...cols.map(w=>f(r2((+sh[w]||0)-isum[w]-(ptx?ptx[w]||0:0))))]);
   if(ptx)rows.push([T('Impuesto'),'',f(txT),T('Proporcional'),...cols.map(w=>ptx[w]?f(ptx[w]):'—')]);
   if(!p.paidBy)cols.forEach(w=>tot[w]=r2(tot[w]+(+sh[w]||0)));
-  D2.table([T('Ítem'),T('Categoría'),T('Monto'),T('Compartida'),...cols.map(pdfNm)],rows,{ws:W1,left:[1,3],keep:1,hi,tot:[one?T('Tu parte'):T('Total de la compra'),'','','',...cols.map(w=>f(+sh[w]||0))]})});
+  const end=D2.pcard(rows.length+2,(p.date?fdate(p.date)+' · ':'')+DN(p.store),DN(pCat(p)),p.paidBy?T('Compró: {0}',p.paidBy)+' *':'',f(p.total));
+  D2.table([T('Ítem'),T('Categoría'),T('Monto'),T('Compartida'),...cols.map(pdfNm)],rows,{ws:W1,left:[1,3],hi,tot:[one?T('Tu parte'):T('Total de la compra'),'','','',...cols.map(w=>f(+sh[w]||0))]});D2.at(end+24)});
  if(!P.length){D2.note(T('Sin compras este mes.'));return}
  if(P.some(p=>p.paidBy))D2.note('* '+T('Pagada por otra persona: no entra en el Total del mes. Si compró Tony o Arianna, la parte de Joe va a las Cuentas de Tony (Comida).'));
  D2.table([T('Total del mes'),...cols.map(pdfNm)],[],{ws:one?[446,70]:[354,54,54,52],hi:hl?1+cols.indexOf(hl):undefined,tot:['',...cols.map(w=>f(tot[w]))].map((v,i)=>i?v:T('Total del mes'))});
