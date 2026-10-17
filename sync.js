@@ -54,12 +54,29 @@ if(cfg){
  async function migBackup(){if(!user)return;let L;try{L=JSON.parse(localStorage.getItem('finanzas-mig-pending')||'[]')}catch(e){L=[]}
   for(const st of L){await bkId(st);await new Promise(r=>setTimeout(r,1100))}
   if(L.length)localStorage.removeItem('finanzas-mig-pending')}
- async function listB(){const q=await F.getDocs(bcol());return q.docs.map(d=>({id:d.id,createdAt:d.data().createdAt||0})).sort((a,b)=>(b.createdAt-a.createdAt)||(a.id<b.id?1:-1))}
+ async function listB(){const q=await F.getDocs(bcol());const r=q.docs.map(d=>({id:d.id,createdAt:d.data().createdAt||0})).sort((a,b)=>(b.createdAt-a.createdAt)||(a.id<b.id?1:-1));if(r.length)abSet({last:Math.max(abGet().last||0,r[0].createdAt||0)});return r}
+ // v89: estado del respaldo automático en este dispositivo (último respaldo conocido, intentos fallidos)
+ const AB_K='finanzas-autobk',abGet=()=>{try{return JSON.parse(localStorage.getItem(AB_K)||'{}')||{}}catch(e){return {}}},abSet=o=>{try{localStorage.setItem(AB_K,JSON.stringify({...abGet(),...o}))}catch(e){}};
+ const bkTs=d=>{const p=n=>String(n).padStart(2,'0');return d.toLocaleDateString('en-CA')+'_'+p(d.getHours())+'-'+p(d.getMinutes())+'-'+p(d.getSeconds())};
  async function writeB(){const S=getState();if(!S||!S.months)return;const d=new Date(),p=n=>String(n).padStart(2,'0'),id=d.toLocaleDateString('en-CA')+'_'+p(d.getHours())+'-'+p(d.getMinutes())+'-'+p(d.getSeconds());
-  await F.setDoc(F.doc(bcol(),id),{state:JSON.stringify(S),createdAt:Date.now(),updatedAt:S.updatedAt||0});
-  const all=await listB();for(const b of all.filter(b=>!/antes-de-v2/.test(b.id)).slice(20))await F.deleteDoc(F.doc(bcol(),b.id))}
- async function autoBackup(){if(!user||!navigator.onLine)return;try{const l=await F.getDocs(F.query(bcol(),F.orderBy('createdAt','desc'),F.limit(1)),);const last=l.docs[0];
-  if(last&&Date.now()-(last.data().createdAt||0)<7*864e5)return;await writeB()}catch(e){console.warn('backup',e)}}
+  await F.setDoc(F.doc(bcol(),id),{state:JSON.stringify(S),createdAt:Date.now(),updatedAt:S.updatedAt||0});abSet({last:Date.now(),fails:0});
+  // v89: la poda de los manuales (20) nunca toca los automáticos ni los «antes de …»
+  const all=await listB();for(const b of all.filter(b=>!/antes-de-|_auto$/.test(b.id)).slice(20))await F.deleteDoc(F.doc(bcol(),b.id))}
+ // v89: respaldo automático al abrir la app (no hay servidor). Semanal (7 días) o diario, según Configuración › Respaldo.
+ // Cuenta cualquier respaldo en la nube (manual o automático). Si falla (sin conexión), se reintenta la próxima vez, sin avisos.
+ async function autoBackup(){if(!user)return 'nouser';const st=getState()||{},cfg={on:true,freq:'w',...(st.autoBk||{})};if(!cfg.on)return 'off';
+  const fail=()=>{abSet({fails:(abGet().fails||0)+1,lastTry:Date.now()});return 'fail'};
+  if(!navigator.onLine)return fail();
+  try{const l=await F.getDocs(F.query(bcol(),F.orderBy('createdAt','desc'),F.limit(1)));const last=Math.max(0,...l.docs.map(d=>+d.data().createdAt||0));
+   const now=new Date(),due=!last||(cfg.freq==='d'?new Date(last).toLocaleDateString('en-CA')<now.toLocaleDateString('en-CA'):Date.now()-last>=7*864e5);
+   if(!due){abSet({last:Math.max(abGet().last||0,last),fails:0,lastTry:Date.now()});return 'fresh'}
+   if(!st.months)return 'empty';const id=bkTs(now)+'_auto';
+   await F.setDoc(F.doc(bcol(),id),{state:JSON.stringify(st),createdAt:Date.now(),updatedAt:st.updatedAt||0,auto:true,label:'Automático · '+now.toLocaleString('es-US')});
+   abSet({last:Date.now(),lastAuto:Date.now(),fails:0,lastTry:Date.now()});
+   try{const all=await listB();for(const b of all.filter(b=>/_auto$/.test(b.id)).slice(8))await F.deleteDoc(F.doc(bcol(),b.id))}catch(e){console.warn('prune',e)}
+   window.toast&&toast(window.T?T('Respaldo automático guardado ☁️'):'Respaldo automático guardado ☁️');if(window.bkRefresh)bkRefresh();return 'saved'}
+  catch(e){console.warn('backup',e);return fail()}}
+ window.fbAutoBackup=autoBackup;
  window.fbUser=()=>!!user;
  window.fbShareSet=(t,d)=>F.setDoc(F.doc(fs,'shares',t),{...d,owner:user.uid});
  window.fbShareDel=t=>F.deleteDoc(F.doc(fs,'shares',t));

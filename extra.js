@@ -111,7 +111,7 @@ function bkCfg(){const signed=window.fbUser&&window.fbUser(),le=localStorage.get
  `<div class="muted" style="font-size:13px">${T('Sin sesión: exporta un JSON cada semana como respaldo.')}</div><div class="muted">${T('Última exportación: {0}',le?fdate(le):T('Nunca'))}</div>${old?`<div style="color:#b45309;font-size:14px;margin:4px 0">${T('⚠️ Hace más de 7 días que no exportas un respaldo.')}</div>`:''}`}
  <div class="grid" style="margin-top:6px"><button onclick="exp()">${T('Exportar JSON')}</button><button class="sec" onclick="document.getElementById('imp').click()">${T('Importar JSON')}</button></div>
  <input type="file" id="imp" accept="application/json,.json" hidden onchange="imp(this.files[0])"></div>`}
-function bkWhen(b){const id=typeof b==='string'?b:b.id,m=id.match(/^(\d{4})-(\d\d)-(\d\d)(?:_(\d\d)-(\d\d)-(\d\d))?$/),loc=LANG==='en'?'en-US':'es-US';
+function bkWhen(b){const id=typeof b==='string'?b:b.id,m=id.match(/^(\d{4})-(\d\d)-(\d\d)(?:_(\d\d)-(\d\d)-(\d\d))?(?:_[a-z0-9-]+)?$/),loc=LANG==='en'?'en-US':'es-US';
  if(!m)return id;const d=m[4]?new Date(+m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6]):new Date(+m[1],m[2]-1,+m[3],12);
  const ds=d.toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short',year:'numeric'});return m[4]?ds+' · '+d.toLocaleTimeString(loc,{hour:'numeric',minute:'2-digit'}):ds}
 async function loadBk(){const el=document.getElementById('bklist');if(!el||!window.fbBackups)return;let L2;try{L2=await window.fbBackups()}catch(e){L2=[]}const el2=document.getElementById('bklist');if(!el2)return;

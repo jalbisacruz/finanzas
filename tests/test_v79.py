@@ -33,7 +33,7 @@ for lang in ['es','en']:
         E("()=>{tab='ini';render();scrollTo(0,0)}");shot(pg,'hoy');shot(pg,'barra','nav')
     # ---- Hoy: la línea de Por hacer lleva a Operaciones ----
     E("()=>{tab='ini';render()}");n=E("todoN()");pg.click('#todobtn');pg.wait_for_timeout(80)
-    check(E("tab")=='mov' and not E("dlg().open") and ids(pg)[0]=='todocard','todo line opens Operaciones › Por hacer')
+    check(E("tab")=='mov' and not E("dlg().open") and [i for i in ids(pg) if i!='oscard'][0]=='todocard','todo line opens Operaciones › Por hacer')
     # ---- Fase 3: Operaciones ----
     order=ids(pg);exp=['todocard','comcard','opinc','bal-income','bal-cards','movcard','billsm']
     check([i for i in order if i in exp]==exp,'Operaciones order %s'%order)
