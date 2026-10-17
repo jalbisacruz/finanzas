@@ -81,7 +81,8 @@ CTL.bills.edit=i=>{const b=L().bills[i];if(!b)return;nameDlg({title:T('Editar'),
  nameDlg({title:T('Editar'),name:DN(s),onOk:({n})=>{if(S[key].some(x=>x!==s&&same(DN(x),n))){alert(T('Ya existe'));return false}setLabel([t],s,n)}})};
  const _it=CTL[k].items;CTL[k].items=()=>(S[key]||[]).map(s=>({label:DN(s)}))});
 // --- aviso discreto en Hoy ---
-function migNote(){const st=localStorage.getItem(MIG_ST);if(!st)return'';const ok=st==='ok',cl=window.fbUser&&window.fbUser()?T(' y en la nube'):'';
+function migNote(){const st=localStorage.getItem(MIG_ST);if(!st||st==='ok')return'';  // v78: el aviso de éxito (v2) ya no se muestra; solo el de error
+ const ok=st==='ok',cl=window.fbUser&&window.fbUser()?T(' y en la nube'):'';
  return `<div class="card" id="mignote" style="font-size:14px;${ok?'background:#f0fdf4;border:1px solid #86efac':'background:#fffbeb;border:1px solid #fcd34d'}">${ok?T('✅ Formato de datos actualizado (v2). Se guardó una copia previa en este dispositivo{0}.',cl):T('⚠️ No se pudo actualizar el formato de datos. Tus datos siguen igual (v1); no se perdió nada.')}
  <div class="grid" style="margin-top:8px">${ok&&localStorage.getItem(MIG_SNAP)?`<button class="sec" onclick="migDl()">${T('Descargar copia')}</button>`:'<span></span>'}<button class="sec" onclick="localStorage.removeItem('${MIG_ST}');render()">OK</button></div></div>`}
 function migDl(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([localStorage.getItem(MIG_SNAP)],{type:'application/json'}));a.download='finanzas-antes-de-v2.json';a.click()}

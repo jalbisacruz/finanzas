@@ -17,6 +17,8 @@ for lang in ['es','en']:
         for t in ['ini','mov','res','rep']:
             pg.evaluate(f"tab='{t}';render()");pg.wait_for_timeout(120);seen+=dollars(pg.evaluate("document.getElementById('v').textContent"))
         old=set(sum(base['tabs'].values(),[]));missing=old-set(seen)
+        # v78: Plan del mes dropped its small explanation line (Gastado X · quedan Y), as Joe approved
+        missing-=set(pg.evaluate("(()=>{const n=planNums();return [f(n.sp),f(n.remB)]})()"))
         check(not missing,f'amounts missing in new UI: {missing}')
         txt=''
         for t in ['ini','mov','res','rep','cfg']:

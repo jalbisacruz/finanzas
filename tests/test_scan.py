@@ -16,7 +16,7 @@ IMG="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQ
 with app(ROOT) as pg:
     E=pg.evaluate
     E(MOCK%json.dumps(json.dumps(RESP)))
-    E("()=>{tab='ini';render()}");check(pg.locator('#scanh').count()==1,'Hoy button')
+    E("()=>{tab='ini';render()}");check(pg.locator('#scanh').count()==0 and E("typeof fabMenu")=='function','v78: no Hoy bar; scan lives in the + menu')
     E("()=>{tab='mov';render()}");check(pg.locator('[id^=scanc]').count()>=1,'next to new shared purchase')
     E("quick()");check(pg.locator('#scanq').count()==1,'in ➕ dialog');E("dlg().close()")
     n0=E("M().purchases.length")

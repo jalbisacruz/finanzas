@@ -120,13 +120,17 @@ async function loadBk(){const el=document.getElementById('bklist');if(!el||!wind
 async function restoreBk(id){if(!confirm(T('¿Restaurar el respaldo del {0}? Primero se descargará una copia de tus datos actuales.',bkWhen(id))))return;
  exp();try{await window.fbRestore(id);toast(T('Respaldo restaurado'))}catch(e){console.warn(e);alert(T('No se pudo restaurar'))}}
 // ---------- 6. plan del mes ----------
-function planCard(){const ent=Object.entries(S.budgets).filter(([,l])=>+l>0);
- if(!ent.length)return `<div class="muted" id="planhint" style="margin:0 4px 10px">🎯 ${T('Define un presupuesto para ver tu plan del mes.')} <a href="#" onclick="tab='cfg';render();setTimeout(()=>document.getElementById('budcfg')?.scrollIntoView(),50);return false">${T('Ajustes › Presupuesto')}</a></div>`;
+// v78: los números del plan, en una función aparte (Hoy los muestra en 5 líneas iguales)
+function planNums(){const ent=Object.entries(S.budgets).filter(([,l])=>+l>0);
  const k=keys().at(-1),m=L(),rec=earned(m).total,pend=S.checks.filter(c=>c.status==='pending'&&(c.date||'').startsWith(k)),pendT=sum(pend,c=>c.amount);
  const known=S.checks.filter(c=>c.date&&!c.legacy).sort((a,b)=>a.date<b.date?-1:1),last=known.at(-1),pc0=pendingCheck(),lastDep=known.filter(c=>c.status==='deposited').at(-1),lastAmt=pc0&&+pc0.amount>0?+pc0.amount:(lastDep?+lastDep.amount||0:0);
  let est=0,n=0;if(last&&lastAmt>0){let x=nextThu(last.date);while(x<today())x=nextThu(x);while(x.startsWith(k)){est+=lastAmt;n++;x=nextThu(x)}}
  const inc=r2(rec+pendT+est),bud=r2(sum(ent,([,l])=>+l)),plan=r2(inc-bud),by=budBy(m).by,sp=r2(sum(ent,([c])=>by[c]||0)),remB=r2(bud-sp),real=r2(rec-sp);
  const c=calc(m),proj=r2(sum(m.income,x=>x.amount)+(pendingCheck()?pendingCheck().amount:0)-c.tonyDue-sum(prevPend(),p=>p.c.tonyDue)-c.credit),cl=v=>v>=0?'pos':'neg';
+ return {ent,k,m,rec,inc,n,bud,plan,sp,remB,real,proj,cl}}
+function planCard(){const ent=Object.entries(S.budgets).filter(([,l])=>+l>0);
+ if(!ent.length)return `<div class="muted" id="planhint" style="margin:0 4px 10px">🎯 ${T('Define un presupuesto para ver tu plan del mes.')} <a href="#" onclick="tab='cfg';render();setTimeout(()=>document.getElementById('budcfg')?.scrollIntoView(),50);return false">${T('Ajustes › Presupuesto')}</a></div>`;
+ const {k,m,rec,inc,n,bud,plan,sp,remB,real,proj,cl}=planNums();
  return `<div class="card" id="plancard"><h2>📋 ${T('Plan del mes')}<span class="muted" style="font-size:13px">${lbl(k)}</span></h2>
  <div class="row"><span class="n">${T('Ingresos esperados')}${n?` <span class="muted">(~${T(n>1?'{0} estimados':'{0} estimado',n)})</span>`:''}</span>${n?'~':''}${f(inc)}</div>
  <div class="row"><span class="n">${T('− Presupuesto')}</span>${f(bud)}</div>

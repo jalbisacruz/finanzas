@@ -76,4 +76,4 @@ const scanBtn=id=>`<button class="sec" id="${id}" style="width:100%;margin-top:8
 const _quickV62=quick;quick=function(){_quickV62();const b=[...dlg().querySelectorAll('button')].find(x=>/editP\(\)/.test(x.getAttribute('onclick')||''));if(b&&!document.getElementById('scanq'))b.insertAdjacentHTML('afterend',scanBtn('scanq'))};
 const _renderV62=render;render=function(){_renderV62();const v=document.getElementById('v');if(!v)return;
  v.querySelectorAll('button[onclick="editP()"]').forEach((b,k)=>{if(!b.nextElementSibling||!/^scan/.test(b.nextElementSibling.id||''))b.insertAdjacentHTML('afterend',scanBtn('scanc'+k))});
- if(typeof tab!=='undefined'&&tab==='ini'&&!document.getElementById('scanh')){const c=v.querySelector('.card');if(c)c.insertAdjacentHTML('afterend',`<div class="card" style="padding:10px">${scanBtn('scanh').replace('margin-top:8px','margin:0')}</div>`)}};
+ /* v78: la barra de Hoy se quitó; Cargar recibo está en el botón + */};

@@ -1,6 +1,9 @@
 // v52+: estructura nueva (Hoy · Movimientos · Mes · Reportes + Configuración desde ☰), catálogos uniformes, mejoras rápidas.
 // Solo interfaz: el formato de datos no cambia (campos nuevos opcionales: storeMem, check.ok).
-const APP_V='v61';
+let APP_V='…';  // v78: se lee sola del service worker (caché finanzas-vNN)
+(async()=>{let v='';try{const k=(await caches.keys()).map(x=>(x.match(/^finanzas-(v\d+)$/)||[])[1]).filter(Boolean).sort((a,b)=>+b.slice(1)-+a.slice(1))[0];if(k)v=k}catch(e){}
+ if(!v)try{const t=await (await fetch('sw.js',{cache:'no-store'})).text();v=(t.match(/finanzas-(v\d+)/)||[])[1]||''}catch(e){}
+ if(v){APP_V=v;const el=document.getElementById('appver');if(el)el.textContent=T('Versión')+' '+v}})();
 Object.assign(EN,{"Hoy":"Today","Transferir":"Transfer","Cobrar":"Collect","No se mezclan con el mes actual. Si llega un bill tarde, anótalo en su mes (Mes › Cuentas de Tony del mes) y aquí se actualiza.":"Kept separate from the current month. If a bill arrives late, enter it in its month (Month › Tony's bills this month) and this updates.","Configuración":"Settings","Versión":"Version","Por hacer":"To do","✅ Todo al día":"✅ All caught up",
 "Cheque de {0} depositado. ¿Llegó ese monto?":"Check for {0} deposited. Did that amount arrive?","Sí":"Yes","Otro monto":"Other amount","Monto que llegó $":"Amount that arrived $","Cheque corregido":"Check corrected",
 "Enviar mensaje":"Send message","Mensaje para {0}":"Message for {0}","Copiar":"Copy","Copiado":"Copied","Cerrar":"Close",

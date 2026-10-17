@@ -42,8 +42,9 @@ for fx,bl in [('fixture.json','baseline-fix-v52.json'),('fixture_real.json','bas
             seen=[]
             for t in ['ini','mov','res','rep']:
                 E(f"tab='{t}';render()");pg.wait_for_timeout(80);seen+=dollars(E("document.getElementById('v').textContent"))
-            check(not (set(sum(base['tabs'].values(),[]))-set(seen)),'all amounts shown')
-            check(pg.locator('#mignote').count()==1 if E("tab='ini';render(),1") else False,'notice shown')
+            gone=set(E("(()=>{const n=planNums();return [f(n.sp),f(n.remB),f(sum(prevPend(),p=>p.c.tonyDue))]})()"))  # v78 (also the projection formula line; that amount stays in Por hacer): plan explanation removed
+            check(not (set(sum(base['tabs'].values(),[]))-set(seen)-gone),'all amounts shown %s'%(set(sum(base['tabs'].values(),[]))-set(seen)-gone))
+            check(pg.locator('#mignote').count()==0 if E("tab='ini';render(),1") else False,'v78: success notice no longer shown')
             # rename specials (label only): Tony category, Kalshi concept, card, store, person
             before=E(METRICS_JS);DATA="(()=>{const o=stripV2(S);delete o.updatedAt;return JSON.stringify(o)})()";data0=E(DATA)
             E("catEdit(S.cats.indexOf('🤝 Tony'))");pg.fill('#ndn','Casa Tony');pg.fill('#nde','🏡');E("_ndGo()")
