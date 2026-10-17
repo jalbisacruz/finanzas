@@ -10,7 +10,7 @@ Object.assign(EN,{"🤝 Dinero de terceros":"🤝 Money held for others","Dinero
  "Pon un nombre o descripción":"Enter a name or description","No puedes enviar más de lo pendiente ({0})":"You can't send more than what's left ({0})","Ya enviaste {0}; el monto no puede ser menor.":"You already sent {0}; the amount can't be lower.",
  "No alcanza en {0}. Disponible: {1}":"Not enough in {0}. Available: {1}","¿Borrar el depósito de {0}? Se quita {1} de {2} (lo que queda sin enviar).":"Delete the deposit from {0}? {1} is taken out of {2} (what's still unsent).",
  "¿Borrar este envío de {0}? Vuelve {1} a {2}.":"Delete this transfer of {0}? {1} goes back to {2}.","Depósito guardado":"Deposit saved","Envío registrado":"Transfer recorded","Borrado":"Deleted",
- "🤝 Sin {0} de terceros (están en tu cuenta)":"🤝 Excludes {0} held for others (it's in your account)","Disponible ahora sin dinero de terceros":"Available now without money held for others"});
+ "Tuyo: {0} · sin {1} de terceros":"Yours: {0} · without {1} held for others","Incluye dinero de terceros":"Includes money held for others","Disponible ahora sin dinero de terceros":"Available now without money held for others"});
 const HELD_CAT='🤝 Dinero de terceros',VIAS=['Western Union','Zelle','Efectivo','Transferencia bancaria','Otro'];
 const HL=()=>S.held||[];  // datos viejos sin S.held = lista vacía (no se toca el estado hasta que hay un depósito)
 const hSent=e=>r2((e.sends||[]).reduce((s,x)=>s+(+x.amount||0),0)),hPend=e=>r2((+e.amount||0)-hSent(e));
@@ -26,8 +26,9 @@ const _calcV87=calc;calc=function(m){const r=_calcV87(m);if(m&&m===L()){const h=
 const _balBoxV87=balBox;balBox=function(){let o=_balBoxV87();const c=calc(L());if(c.held&&o.includes('id="baldet"')){
  o=o.replace(/(<div class="row bsub"><span class="n">[^<]*<\/span><span>[^<]*<\/span><\/div>)(?![\s\S]*<div class="row bsub">)/,`$1<div class="row bsub" id="balheld"><span class="n">${T('Dinero de terceros')}</span><span>${f(c.held)}</span></div>`)}return o};
 // Disponible ahora: sin lo de terceros (la línea de cuentas sigue mostrando lo que hay en el banco)
+// v88: el número grande es lo REAL en tu cuenta (incluye terceros); debajo, lo que es tuyo
 const _heroV87=hero;hero=function(){let o=_heroV87();const h=heldPend();if(!(h>0.004))return o;const m=L(),disp=r2(sum(m.income,x=>x.amount)),mine=r2(disp-h);
- return o.replace(/<div class="big xl [^"]*">[^<]*<\/div>/,`<div class="big xl ${mine>=0?'pos':'neg'}" id="dispv" title="${T('Disponible ahora sin dinero de terceros')}">${f(mine)}</div><div class="muted" id="heldnote" style="color:#7c3aed">${T('🤝 Sin {0} de terceros (están en tu cuenta)',f(h))}</div>`)};
+ return o.replace(/<div class="big xl ([^"]*)">([^<]*)<\/div>/,(_,cl,v)=>`<div class="big xl ${cl}" id="dispv" title="${T('Incluye dinero de terceros')}">${v}</div><div id="heldnote" style="font-size:15.5px;font-weight:600;color:#e0e7ff;margin:2px 0 4px;line-height:1.3">${T('Tuyo: {0} · sin {1} de terceros',`<b style="color:#fff">${f(mine)}</b>`,f(h))}</div>`)};
 // ---------- Operaciones › 🤝 Dinero de terceros ----------
 let HELD_OPEN=null;
 function heldRow(e){const p=hPend(e),done=p<=0.004,sent=hSent(e),pct=e.amount>0?Math.min(100,sent/e.amount*100):0;

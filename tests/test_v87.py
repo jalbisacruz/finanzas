@@ -48,8 +48,8 @@ with app(ROOT,now='2026-10-17T18:30:00',expand=False,width=390,height=844) as pg
     check(hist[0].startswith('Enviado · Zelle') and 'primera parte' in pg.locator(f'#heldcard .hcard[data-id="{eid}"] .hhist .row').first.inner_text() and hist[-1].startswith('Depósito · Western Union'),'history newest first with method %s'%hist)
     # Disponible ahora / Hoy
     E("()=>{tab='ini';BAL_OPEN=true;render()}");pg.wait_for_timeout(150)
-    disp=E("r2(sum(L().income,x=>x.amount))");check(pg.locator('#heldnote').count()==1 and '$72.00' in pg.inner_text('#heldnote'),'Hoy note')
-    check(E("document.getElementById('dispv').textContent").replace('$','').replace(',','')==('%.2f'%(disp-72)),'Disponible ahora excludes held')
+    disp=E("r2(sum(L().income,x=>x.amount))");check(pg.locator('#heldnote').count()==1 and 'Tuyo: $%s · sin $72.00 de terceros'%format(disp-72,',.2f') in pg.inner_text('#heldnote'),'Hoy subtitle '+pg.inner_text('#heldnote'))
+    check(E("document.getElementById('dispv').textContent").replace('$','').replace(',','')==('%.2f'%disp),'v88: Disponible ahora = real account (includes held)')
     check(pg.locator('#balheld').count()==1 and '$72.00' in pg.inner_text('#balheld'),'Mi balance detail line Dinero de terceros')
     if SH:shot('152-terceros-hoy.png')
     # Movimientos 🤝
