@@ -4,7 +4,7 @@
 Object.assign(EN,{"📥 Compras por revisar ({0})":"📥 Purchases to review ({0})","Compró: {0}":"Bought by: {0}","Enviada desde el enlace de {0}":"Sent from {0}'s link",
  "Rechazar":"Reject","¿Rechazar esta compra? Se borra del buzón.":"Reject this purchase? It will be removed from the inbox.","Compra rechazada":"Purchase rejected",
  "No toca tus cuentas: la pagó {0}. Tu parte es lo que le debes.":"Doesn't touch your accounts: {0} paid. Your share is what you owe them.",
- "No toca tus cuentas: la pagó {0}. Tu parte se suma a las Cuentas de Tony (Comida).":"Doesn't touch your accounts: {0} paid. Your share is added to Tony's bills (Food).","Compras que pagaron otros este mes (tu parte)":"Purchases others paid this month (your share)",
+ "No toca tus cuentas: la pagó {0}. Tu parte se suma a la Comida de Tony y cuenta como gasto cuando le transfieres.":"Doesn't touch your accounts: {0} paid. Your share is added to Tony's Food bill and counts as an expense when you transfer to him.","{0} de recibos":"{0} from receipts","{0} de recibos + {1} ajuste = {2}":"{0} from receipts + {1} adjustment = {2}","{0} de recibos − {1} ajuste = {2}":"{0} from receipts − {1} adjustment = {2}","Compras que pagaron otros este mes (tu parte)":"Purchases others paid this month (your share)",
  "Pagada por otra persona: no entra en el Total del mes. Si compró Tony o Arianna, la parte de Joe va a las Cuentas de Tony (Comida).":"Paid by someone else: not in the Month total. If Tony or Arianna bought it, Joe's share goes to Tony's bills (Food).",
  "Revisar":"Review","Pendiente entre Tony y Carlos ({0})":"Pending between Tony and Carlos ({0})","✅ Marcar pagado":"✅ Mark paid","Marcado como pagado":"Marked as paid","{0} dice que ya pagó a {1}":"{0} says they paid {1}","− Mi parte de tus compras":"− My share of your purchases","Te debo":"I owe you","− Parte de Joe en compras de Carlos":"− Joe's share of Carlos's purchases","Le debes a Carlos (neto)":"You owe Carlos (net)","Le debes a {0}":"You owe {0}","{0} le debe a {1}":"{0} owes {1}","entre ellos":"between them","Comida: {0} escrito + {1} de compras de Tony/Arianna = {2}":"Food: {0} typed + {1} from Tony/Arianna purchases = {2}","incl. {0} de compras de Tony/Arianna":"incl. {0} from Tony/Arianna purchases","🛒 Comida (compras de Tony/Arianna)":"🛒 Food (Tony/Arianna purchases)","🧾 Deudas de compras":"🧾 Purchase debts","Sin compras por revisar.":"Nothing to review."});
 let INBOX=[],inboxAt=0;
@@ -19,7 +19,7 @@ function inboxOpen(id){const x=INBOX.find(y=>y.id===id);if(!x)return;editP();con
 const _drawPV72=drawP;drawP=function(){_drawPV72();if(!D||!D.paidBy)return;D.method='';
  const sel=[...dlg().querySelectorAll('select')].find(s=>[...s.options].some(o=>o.value==='deb'));if(sel){sel.value='';sel.disabled=true;sel.style.opacity=.5}
  dlg().querySelector('h2').insertAdjacentHTML('afterend',`<div id="inbbox" style="background:#fef9c3;border:1px solid #facc15;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:14px">
-  <b>${T('Compró: {0}',esc(D.paidBy))}</b>${D._inbox?` · <span class="muted">${T('Enviada desde el enlace de {0}',esc(DN(D._inbox.link)))}</span>`:''}<div class="muted">${(TFAM.includes(D.paidBy)?T('No toca tus cuentas: la pagó {0}. Tu parte se suma a las Cuentas de Tony (Comida).',esc(D.paidBy)):T('No toca tus cuentas: la pagó {0}. Tu parte es lo que le debes.',esc(D.paidBy)))}</div>
+  <b>${T('Compró: {0}',esc(D.paidBy))}</b>${D._inbox?` · <span class="muted">${T('Enviada desde el enlace de {0}',esc(DN(D._inbox.link)))}</span>`:''}<div class="muted">${(TFAM.includes(D.paidBy)?T('No toca tus cuentas: la pagó {0}. Tu parte se suma a la Comida de Tony y cuenta como gasto cuando le transfieres.',esc(D.paidBy)):T('No toca tus cuentas: la pagó {0}. Tu parte es lo que le debes.',esc(D.paidBy)))}</div>
   ${D._inbox?`<button class="del" id="inbrej" style="margin-top:6px;min-height:34px;font-size:14px" onclick="inboxReject()">${T('Rechazar')}</button>`:''}</div>`)};
 async function inboxSettle(id,ok){const x=INBOX.find(y=>y.id===id);if(!x)return;if(ok&&S.months[x.month])tcSettle(x.month,inbStr(x.by,20));try{await fbInboxDel(x.t,x.id)}catch(e){console.warn(e)}INBOX=INBOX.filter(y=>y.id!==id);inboxList();render()}
 async function inboxReject(){if(!D||!D._inbox||!confirm(T('¿Rechazar esta compra? Se borra del buzón.')))return;const x=D._inbox;try{await fbInboxDel(x.t,x.id)}catch(e){console.warn(e)}
@@ -48,11 +48,10 @@ const syncAllTFood=()=>{let ch=false;Object.values(S.months||{}).forEach(m=>{if(
 // cada guardado recalcula la Comida de Tony (editar, borrar o aceptar una compra la ajusta sola)
 const _saveV74=save;save=function(){try{foldLegacyTF(S);Object.values((S&&S.months)||{}).forEach(syncTFood)}catch(e){console.warn('tfood',e)}return _saveV74.apply(this,arguments)};
 // v74: lo que Joe escribe en Comida es su monto manual; la parte automática se suma encima
-const _updV74=upd;upd=function(k,id,fld,val){const m=M(),b=k==='bills'&&fld==='amount'&&m.bills.find(x=>x.id===id);
- if(b&&+b.tfood>0){b.amount=r2(Math.max(0,r2(val))+(+b.tfood));save();render();return}return _updV74.apply(this,arguments)};
+// v75: la casilla de Comida muestra el total (recibos + ajuste). Si Joe escribe otro número, la diferencia queda como ajuste (b.amount − b.tfood).
 const billLbl=b=>DN(b.name)+(+b.tfood>0?' ('+T('incl. {0} de compras de Tony/Arianna',f(+b.tfood))+')':'');
-const billInVal=x=>+x.tfood>0?(tfManual(x)||''):(x.amount||'');
-const tfNote=x=>+x.tfood>0?`<div class="muted tfnote" style="font-size:12px;margin:-4px 0 6px 44px">🛒 ${T('Comida: {0} escrito + {1} de compras de Tony/Arianna = {2}',f(tfManual(x)),f(+x.tfood),f(+x.amount||0))}</div>`:'';
+const billInVal=x=>x.amount||'';
+const tfNote=x=>{if(!(+x.tfood>0))return '';const aj=tfManual(x);return `<div class="muted tfnote" style="font-size:12px;margin:-4px 0 6px 44px">🛒 ${Math.abs(aj)<0.005?T('{0} de recibos',f(+x.tfood)):T(aj>0?'{0} de recibos + {1} ajuste = {2}':'{0} de recibos − {1} ajuste = {2}',f(+x.tfood),f(Math.abs(aj)),f(+x.amount||0))}</div>`};
 // v74: la línea aparte de v72/v73 (si quedó en los datos) se une a Comida, con respaldo antes y control de totales
 function foldLegacyTF(st){if(!st||!st.months)return false;const ms=Object.values(st.months).filter(m=>(m.bills||[]).some(isLegacyTF));if(!ms.length)return false;
  const snap=JSON.parse(JSON.stringify(st));let ok=true;
@@ -69,8 +68,9 @@ function foldLegacyTF(st){if(!st||!st.months)return false;const ms=Object.values
 // Tony: en "Transferir" no se descuenta la parte de Tony de compras que él/Arianna pagaron (ya es suya)
 tonyInfo=function(m){const food=r2(sum(m.purchases.filter(p=>!p.paidBy),x=>+(x.shares||{}).Tony||0)),P=r2(sum(m.bills,b=>Math.min(+b.paid||0,+b.amount||0))),X=tXfer(m);
  return {food,unapplied:Math.max(0,r2(food-Math.max(0,P-X)))}};
-// presupuestos: la parte automática de Comida ya cuenta como gasto por la compra; no se cuenta otra vez al pagar la cuenta de Tony
-tonyBy=function(m){const o={};(m.bills||[]).forEach(b=>{const p=Math.max(0,Math.min(+b.paid||0,+b.amount||0,tfManual(b)));if(p>0){const c=billCat(b);o[c]=r2((o[c]||0)+p)}});return o};
+// v75 (decisión de Joe): la parte de Joe de compras que pagaron Tony/Arianna NO es gasto al aceptar el recibo; solo sube la Comida de Tony.
+// El gasto se cuenta al transferirle a Tony: cada cuenta pagada va a su categoría (tonyBy, en presupuestos/Plan del mes), Comida → Comida/Supermercado.
+const _movesV75=moves;moves=function(m){const P={};(m.purchases||[]).forEach(p=>P[p.id]=p);return _movesV75(m).map(x=>x.kind==='compra'&&P[x.id]&&TFAM.includes(P[x.id].paidBy)?{...x,mine:0}:x)};
 const _ssV74=window.setState;window.setState=o=>{const ch=foldLegacyTF(o);_ssV74(o);if(ch)setTimeout(()=>{save();render()},0)};
 setTimeout(()=>{if(foldLegacyTF(S)){save();render()}else syncAllTFood()},0);
 const _calcV72=calc;calc=function(m){const r=_calcV72(m);const P=paidOther(m);if(!P.length)return r;

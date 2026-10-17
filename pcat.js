@@ -5,7 +5,7 @@ Object.assign(EN,{"Categoría":"Category"});
 const _movesV60=moves;moves=function(m){const P={};(m.purchases||[]).forEach(p=>P[p.id]=p);return _movesV60(m).map(x=>x.kind==='compra'&&P[x.id]?{...x,cat:pCat(P[x.id])}:x)};
 // gasto de Joe: su parte compartida va a la categoría de la compra; sus ítems individuales, a la suya
 const _spentV60=spent;spent=function(m){const r=_spentV60(m),by=r.by;
- (m.purchases||[]).forEach(p=>{const Tn=+(p.shares||{}).Tony||0,Cc=+(p.shares||{}).Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v)),mine=r2(tot-Tn-Cc);if(mine<0.02)return;
+ (m.purchases||[]).forEach(p=>{const Tn=+(p.shares||{}).Tony||0,Cc=+(p.shares||{}).Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v)),mine=r2(tot-Tn-Cc);if(mine<0.02||['Tony','Arianna'].includes(p.paidBy))return;  // v75: lo que pagaron Tony/Arianna cuenta al transferir
   const pc=pCat(p);personItems(p,'Yo').forEach(({it:x,por})=>{const c=itCat(x,p),a=Math.min(por,by[pc]||0);if(c===pc||!(a>0))return;by[pc]=r2(by[pc]-a);by[c]=r2((by[c]||0)+a)})});
  Object.keys(by).forEach(c=>{if(Math.abs(by[c])<0.005)delete by[c]});return {by,total:r.total}};
 // diálogo: selector de categoría de la compra
