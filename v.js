@@ -11,6 +11,15 @@ Object.assign(TXA.en,{tcT:'Between Tony and Carlos',tcL:'{0} owes {1}',tcPaid:'�
 Object.assign(TXA.es,{reg:'➕ Registrar compra',buyer:'Compró',store:'Tienda',date:'Fecha',total:'Total $',tax:'Impuesto $ (opcional)',items:'Ítems (opcional)',addItem:'+ Ítem',send:'Enviar a Joe',cancel:'Cancelar',scan:'📷 Escanear recibo',reading:'Leyendo el recibo…',sent:'✅ Enviado, Joe lo revisará.',sending:'Enviando…',needT:'Pon la tienda y el total.',over:'Los ítems y el impuesto superan el total.',sendErr:'No se pudo enviar. Revisa tu conexión e inténtalo otra vez.',scanErr:'No pude leer el recibo. Llénalo a mano.',pdfBig:'El PDF es muy grande (máximo 15 MB).',pendN:'Enviadas desde este teléfono: {0}',note:'Nombre',scanned:'📷 Leído del recibo. Revisa antes de enviar.',byNote:'Pagada por quien la compró: no entra en el Total del mes.',joeOwes:'Joe te debe (compras que pagaste)'});
 Object.assign(TXA.en,{reg:'➕ Record purchase',buyer:'Bought by',store:'Store',date:'Date',total:'Total $',tax:'Tax $ (optional)',items:'Items (optional)',addItem:'+ Item',send:'Send to Joe',cancel:'Cancel',scan:'📷 Scan receipt',reading:'Reading the receipt…',sent:'✅ Sent, Joe will review it.',sending:'Sending…',needT:'Enter the store and total.',over:'Items and tax exceed the total.',sendErr:"Couldn't send. Check your connection and try again.",scanErr:"I couldn't read the receipt. Fill it in by hand.",pdfBig:'The PDF is too big (15 MB max).',pendN:'Sent from this phone: {0}',note:'Name',scanned:'📷 Read from the receipt. Review before sending.',byNote:'Paid by the buyer: not included in the Month total.',joeOwes:'Joe owes you (purchases you paid)'});let TX=TXA[ES?'es':'en'];const setLangV=l=>{ES=l!=='en';TX=TXA[ES?'es':'en'];document.documentElement.lang=ES?'es':'en'};
 const t=(k,...a)=>TX[k].replace(/\{(\d)\}/g,(_,i)=>a[i]);
+// v82: pista para agregar a la pantalla de inicio (solo iPhone/iPad, una vez, no si ya se abrió desde el ícono)
+Object.assign(TXA.es,{a2hs:'Para abrir tu página como una app: toca <b>Compartir</b> {0} y luego <b>Agregar a pantalla de inicio</b>.',a2hsX:'Cerrar',apT:'Cuentas {0}'});
+Object.assign(TXA.en,{a2hs:'To open your page like an app: tap <b>Share</b> {0}, then <b>Add to Home Screen</b>.',a2hsX:'Close',apT:'{0} bills'});
+const SHARE_SVG='<svg width="18" height="22" viewBox="0 0 18 22" fill="none" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Compartir"><path d="M9 14V2M4.5 6.5 9 2l4.5 4.5"/><path d="M6 9H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-3"/></svg>';
+const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isStandalone=()=>navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+function a2hsHint(){if(document.getElementById('a2hs')||!isIOS()||isStandalone())return;try{if(localStorage.getItem('v-a2hs-off'))return;const n=+localStorage.getItem('v-a2hs-n')||0;if(n>=3)return;if(!window._a2c){window._a2c=1;localStorage.setItem('v-a2hs-n',n+1)}}catch(e){}
+ const d=document.createElement('div');d.id='a2hs';d.setAttribute('role','note');d.innerHTML=t('a2hs',SHARE_SVG)+`<button id="a2hsx" aria-label="${t('a2hsX')}">✕</button>`;document.body.append(d);
+ document.getElementById('a2hsx').onclick=()=>{try{localStorage.setItem('v-a2hs-off','1')}catch(e){}d.remove()}}
 const f=n=>(n<0?'−':'')+'$'+Math.abs(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fd=d=>{if(!d)return'';const[y,m,dd]=d.split('-');return new Date(+y,m-1,+dd).toLocaleDateString(ES?'es':'en-US',{day:'numeric',month:'short'}).replace('.','')};
@@ -22,7 +31,7 @@ function vPdfName(who,k,d=new Date()){const L=(DOC.lang==='en'?'en-US':'es-US'),
 function nfDoc(){(DOC.months||[]).forEach(mo=>{if(mo&&!mo.nf&&Array.isArray(mo.purchases)){mo.purchases=[...mo.purchases].reverse().sort((a,b)=>String(b.d||'').localeCompare(String(a.d||'')));mo.nf=1}})}
 const $=id=>document.getElementById(id);
 function fail(msg){$('h1').textContent='Finanzas';if($('hact'))$('hact').innerHTML='';$('sub').textContent='';$('m').innerHTML=`<div class="card err">${esc(msg)}</div>`}
-function draw(){setLangV(DOC.lang);const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,T=w==='Tony';document.title=N(w)+' · '+mo.label;
+function draw(){setLangV(DOC.lang);const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,T=w==='Tony';document.title=N(w)+' · '+mo.label;{const ap=document.getElementById('aptitle');if(ap)ap.content=t('apT',N(w))}
  $('h1').textContent=t('title',N(w),mo.label);$('sub').textContent=t('from',d.from,new Date(d.updatedAt).toLocaleString(ES?'es':'en-US',{dateStyle:'medium',timeStyle:'short'}));
  let h=d.months.length>1?`<div class="tabs">${d.months.map((m,i)=>`<button class="${i===MI?'on':''}" onclick="pick(${i})">${esc(m.label)}</button>`).join('')}</div>`:'';
  {const pv=d.months[1];if(pv&&pv.tc&&!pv.tc.settled&&pv.tc.from===w)h=`<div class="card" id="vrem" style="background:#fef9c3;border:1px solid #facc15">${esc(t('tcRem',pv.label,N(pv.tc.to),f(pv.tc.amount)))}${MI!==1?` <button class="chip" onclick="pick(1)">${esc(pv.label)}</button>`:''}</div>`+h}
@@ -41,7 +50,7 @@ function draw(){setLangV(DOC.lang);const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.na
   ${p.rows.map(r=>`<tr><td>${esc(r.n)}</td><td class="l cat">${esc(r.c)}</td><td>${f(r.a)}</td><td class="l">${esc(r.sh)}</td>${P3.map(x=>`<td${hc(x)}>${r.v[x]?f(r.v[x]):'—'}</td>`).join('')}</tr>`).join('')}
   <tr class="tot"><td colspan="2" class="l">${t('ptot')}</td><td class="cat"></td><td></td>${P3.map(x=>`<td${hc(x)}>${f(p.tot[x])}</td>`).join('')}</tr></table></div></div>`}).join('')+
   `<div class="wrap"><table style="margin-top:12px"><tr class="tot"><td>${t('mtot')}</td>${P3.map(x=>`<td${hc(x)}>${f(mt[x])}</td>`).join('')}</tr></table></div>`:`<div class="muted">${t('none')}</div>`)+`</div>`;
- h+=`${mo.purchases.some(p=>p.by)?`<div class="muted" style="margin:-6px 4px 12px">* ${esc(t('byNote'))}</div>`:''}</div><div class="muted" style="text-align:center;margin:12px 0 30px">Finanzas · ${esc(d.from)}</div>`;$('m').innerHTML=h;if(REG)regDraw()}
+ h+=`${mo.purchases.some(p=>p.by)?`<div class="muted" style="margin:-6px 4px 12px">* ${esc(t('byNote'))}</div>`:''}</div><div class="muted" style="text-align:center;margin:12px 0 30px">Finanzas · ${esc(d.from)}</div>`;$('m').innerHTML=h;if(REG)regDraw();a2hsHint()}
 window.pick=i=>{MI=i;draw()};let DET=false;window.togDet=()=>{DET=!DET;draw()};
 window.REG=null;let FS=null;const today=()=>new Date().toLocaleDateString('en-CA');
 const r2=n=>Math.round((+n||0)*100)/100;
@@ -116,6 +125,8 @@ window.pdf=()=>{const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,J=new jsp
  const n=J.getNumberOfPages();for(let i=1;i<=n;i++){J.setPage(i);J.setFontSize(8);J.setTextColor(148,163,184);J.text(i+'/'+n,R,770,{align:'right'})}
  const b=J.output('blob'),u=URL.createObjectURL(b),el=document.createElement('a');el.href=u;el.download=vPdfName(N(w),mo.k);document.body.append(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};
 var tok;tok=new URLSearchParams(location.search).get('t')||'';
+// v82: si la app del ícono se abriera sin ?t=, usa el último token de este teléfono y lo vuelve a poner en la dirección
+try{if(/^[A-Za-z0-9_-]{20,}$/.test(tok))localStorage.setItem('v-tok',tok);else{const s=localStorage.getItem('v-tok');if(s&&/^[A-Za-z0-9_-]{20,}$/.test(s)){tok=s;history.replaceState(null,'','v.html?t='+encodeURIComponent(s))}}}catch(e){}
 if(!/^[A-Za-z0-9_-]{20,}$/.test(tok))fail(TX.bad);
 else if(window.__SHARE_DOC){DOC=window.__SHARE_DOC;nfDoc();draw()}
 else{try{const V='11.10.0',B=`https://www.gstatic.com/firebasejs/${V}/`;const [{initializeApp},F]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-firestore-lite.js')]);
