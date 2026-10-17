@@ -12,7 +12,7 @@ METRICS_JS=r"""()=>{const o={};for(const k of keys()){const m=S.months[k],c=calc
 def free_port():
     s=socket.socket();s.bind(('',0));p=s.getsockname()[1];s.close();return p
 @contextlib.contextmanager
-def app(root, lang='es', now=NOW, state=None, width=390, height=900, init='', routes=None):
+def app(root, lang='es', now=NOW, state=None, width=390, height=900, init='', routes=None, expand=True):
     port=free_port()
     srv=subprocess.Popen([sys.executable,'-m','http.server',str(port)],cwd=root,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     time.sleep(0.7)
@@ -29,6 +29,8 @@ def app(root, lang='es', now=NOW, state=None, width=390, height=900, init='', ro
             st=json.dumps(state or FIX)
             pg.add_init_script(f"if(!sessionStorage.getItem('seeded')){{localStorage.clear();localStorage.setItem('finanzas-v1',{json.dumps(st)});localStorage.setItem('finanzas-sync-asked','1');localStorage.setItem('finanzas-lang','{lang}');sessionStorage.setItem('seeded','1')}}")
             if init: pg.add_init_script(init)
+            # v79 closes most sections by default; older suites read/click inside them, so show their contents (expand=False = real look)
+            if expand: pg.add_init_script("addEventListener('DOMContentLoaded',()=>{const s=document.createElement('style');s.textContent='.card.col>:not(h2){display:revert!important}';document.head.appendChild(s)})")
             pg.goto(f'http://127.0.0.1:{port}/');pg.wait_for_timeout(800)
             pg.evaluate("()=>{unlocked=true;try{closeLock()}catch(e){};document.body.classList.remove('locked');render()}")
             pg.wait_for_timeout(200)

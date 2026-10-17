@@ -13,7 +13,7 @@ def shot(pg,n,loc=None):
     (pg.locator(loc).screenshot(path=p) if loc else pg.screenshot(path=p))
 for lang in ['es','en']:
   ES=lang=='es'
-  with app(ROOT,lang=lang,width=390,height=844) as pg:
+  with app(ROOT,lang=lang,width=390,height=844,expand=False) as pg:
     E=pg.evaluate;T=lambda s:s if ES else E("s=>T(s)",s)
     pre=json.dumps(E("S"),sort_keys=True)
     E("()=>{localStorage.setItem('finanzas-mig-status','ok');tab='ini';render()}");pg.wait_for_timeout(150)
@@ -63,8 +63,7 @@ for lang in ['es','en']:
     E("o=>{S.budgets=o;save();render()}",json.loads(pre)['budgets'])
     # Por hacer -> informative line, opens the full list
     n=E("todoN()");tl=pg.inner_text('#todoline');check(pg.locator('#todocard').count()==0 and (str(n) in tl) and '›' in tl,'todo line '+tl)
-    pg.click('#todobtn');pg.wait_for_timeout(60);check(pg.locator('#dlg #todocard').count()==1 and pg.locator('#dlg #todocard .row').count()==n,'opens Por hacer')
-    if ES:shot(pg,'por-hacer','#dlg')
+    pg.click('#todobtn');pg.wait_for_timeout(60);check(E("tab")=='mov' and pg.locator('#v>#todocard').count()==1,'v79: opens Operaciones › Por hacer');E("()=>{tab='ini';render()}")
     E("dlg().close()")
     # version label automatic
     E("()=>{tab='cfg';render()}");pg.wait_for_timeout(600);E("()=>render()");sw=open(os.path.join(ROOT,'sw.js')).read();v=sw.split("'finanzas-")[1].split("'")[0]

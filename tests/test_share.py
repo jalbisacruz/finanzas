@@ -38,7 +38,7 @@ for lang in ['es','en']:
     check('$42.50' in c and 'Shampoo' in c and ('PENDIENTE' in c or 'PENDING' in c),c)
     check(c.split('\n')[1]=='' and (('COMPRAS' if ES else 'PURCHASES') in c),'carlos sections: '+c)
     check(('   Shampoo $10.00\n   🛒 Comida/Supermercado $20.00\n   + parte compartida $12.50' if ES else '   Shampoo $10.00\n   🛒 Food/Groceries $20.00\n   + shared part $12.50') in c,'carlos breakdown: '+c)
-    check(('Publix · 5 oct  $50.00\nAldi' if ES else 'Publix · Oct 5  $50.00\nAldi') in c and '$0.00' not in c,'carlos no-items lines: '+c)
+    check(('Aldi · 9 oct  $20.00\nPublix · 5 oct  $50.00' if ES else 'Aldi · Oct 9  $20.00\nPublix · Oct 5  $50.00') in c and '$0.00' not in c,'carlos no-items lines: '+c)
     check(c.rstrip().endswith(('PENDIENTE  $92.50' if ES else 'PENDING  $92.50')) and ('YA PAGASTE  −$20.00' if ES else 'ALREADY PAID  −$20.00') in c,'carlos totals: '+c)
     check('ingreso' not in c.lower() and 'income' not in c.lower(),'no income word carlos')
     # dialog from existing 📤 button

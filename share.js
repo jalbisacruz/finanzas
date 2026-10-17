@@ -10,8 +10,8 @@ Object.assign(EN,{"📄 PDF del mes":"📄 Monthly PDF","Resumen mensual":"Month
 const shI=(p,w)=>r2(((p.items||{})[w]||[]).reduce((s,x)=>s+(+x.a||0),0));
 function pShare(p,w){const t=r2(+(p.shares||{})[w]||0),pi=personItems(p,w),i=r2(pi.reduce((s,x)=>s+x.por,0));return {t,i,s:r2(t-i),notes:pi.map(x=>itLine(x.it,p,w,x.por))}}
 const billSt2=b=>{const a=+b.amount||0,p=+b.paid||0;return a>0&&p>=a-0.005?'paid':'pend'};
-function tonyData(k){const m=S.months[k],c=calc(m);return {m,c,bills:m.bills.filter(b=>+b.amount),pur:m.purchases.filter(p=>!p.paidBy&&+(p.shares||{}).Tony).map(p=>({p,...pShare(p,'Tony')}))}}
-function carlosData(k){const m=S.months[k],c=calc(m);return {m,c,pur:m.purchases.filter(p=>!p.paidBy&&+(p.shares||{}).Carlos).map(p=>({p,...pShare(p,'Carlos')}))}}
+function tonyData(k){const m=S.months[k],c=calc(m);return {m,c,bills:m.bills.filter(b=>+b.amount),pur:byNew(m.purchases).filter(p=>!p.paidBy&&+(p.shares||{}).Tony).map(p=>({p,...pShare(p,'Tony')}))}}
+function carlosData(k){const m=S.months[k],c=calc(m);return {m,c,pur:byNew(m.purchases).filter(p=>!p.paidBy&&+(p.shares||{}).Carlos).map(p=>({p,...pShare(p,'Carlos')}))}}
 // v57: desglose solo si esa persona tiene ítems individuales (X>0); si no, solo "Tu parte"
 const hasI=x=>x.i>0.004,brk=x=>hasI(x)?`${T('ítems {0}',f(x.i))} + ${T('parte {0}',f(x.s))}${x.tx>0.004?' + '+T('impuesto {0}',f(x.tx)):''} = ${f(x.t)}`:T('Tu parte: {0}',f(x.t));
 // ---------- mensajes ----------
@@ -77,7 +77,7 @@ const PPL3=['Yo','Tony','Carlos'];
 const pdfNm=w=>w==='Yo'?'Joe':DN(w);
 function ownTxt(o){o=[...new Set(o)];return o.length>=3?T('Todos'):o.length===2?o.map(pdfNm).join(T(' y ')):T('No')}
 function pdfPurch(D2,P,cols,hl){const hi=hl?4+cols.indexOf(hl):undefined,one=cols.length===1,W1=one?[176,118,68,84,70]:[128,96,58,74,54,54,52],tot={};cols.forEach(w=>tot[w]=0);
- P=[...P].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+ P=byNew(P);
  P.forEach(p=>{const sh=p.shares||{},L=pList(p).filter(it=>+it.a>0),mine=one?L.filter(it=>ownOf(it).includes(cols[0])):L,fam=(p.mode||'fam')==='fam';
   const isum={};cols.forEach(w=>isum[w]=r2(L.reduce((s,it)=>s+(itPort(it)[w]||0),0)));
   const ptx=(typeof pTaxOf==='function'&&pTaxOf(p))||null,txT=ptx?r2(+p.tax):0,rest=r2((+p.total||0)-txT-L.reduce((s,it)=>s+(+it.a||0),0));

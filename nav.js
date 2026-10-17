@@ -1,4 +1,4 @@
-// ---------- navegación: menú ☰, chips de secciones, colapsables, volver arriba ----------
+// ---------- navegación: colapsables y volver arriba (v79: sin menú ☰ ni barra de chips; la barra de abajo tiene las 4 pantallas) ----------
 Object.assign(EN,{"Menú":"Menu","Secciones":"Sections","Volver arriba":"Back to top","Mes":"Month","Plegar o desplegar":"Collapse or expand","Sección":"Section"});
 const NAV_COL='finanzas-collapsed';let navCol={};try{navCol=JSON.parse(localStorage.getItem(NAV_COL)||'{}')}catch(e){}
 const navTabs=[['ini','🏠','Hoy'],['mov','📝','Movimientos'],['res','📅','Mes'],['rep','📈','Reportes'],['cfg','⚙️','Configuración']];
@@ -19,16 +19,9 @@ function navCollapsibles(){document.querySelectorAll('#v>.card').forEach(c=>{con
  h.title=T('Plegar o desplegar');
  h.onclick=e=>{if(e.target.closest('button,input,select,a,label,textarea'))return;const on=!c.classList.contains('col');c.classList.toggle('col',on);
   navCol[k]=on?1:0;localStorage.setItem(NAV_COL,JSON.stringify(navCol))}})}
-function navChips(secs){let cb=document.getElementById('chipbar');const v=document.getElementById('v');
- if(secs.length<3){if(cb)cb.remove();return}
- if(!cb){cb=document.createElement('div');cb.id='chipbar';v.parentNode.insertBefore(cb,v)}
- cb.setAttribute('aria-label',T('Secciones'));cb.innerHTML=secs.map(s=>`<button class="nchip" onclick="goSec('${s.id}')">${esc(s.t)}</button>`).join('')}
-function navDrawer(secs){const d=document.getElementById('drawer');if(!d)return;
- d.innerHTML=`<div class="dh">${T('Menú')}<button class="dx" onclick="closeDrawer()" aria-label="✕">✕</button></div>`+navTabs.map(([k,i,l])=>`<button class="dt${k===tab?' on':''}" onclick="navGo('${k}')"><b>${i}</b>${T(l)}</button>`+(k===tab&&secs.length?`<div class="ds">${secs.map(s=>`<button onclick="goSec('${s.id}')">${esc(s.t)}</button>`).join('')}</div>`:'')).join('')}
 function navGo(k){closeDrawer();if(k===tab){scrollTo({top:0,behavior:'smooth'});return}tab=k;render();scrollTo(0,0)}
-function openDrawer(){navDrawer(navSections());document.body.classList.add('dopen')}
 function closeDrawer(){document.body.classList.remove('dopen')}
-function navAfter(){const secs=navSections();navCollapsibles();navChips(secs);navDrawer(secs);const m=document.getElementById('menub');if(m)m.setAttribute('aria-label',T('Menú'));const tt=document.getElementById('totop');if(tt)tt.setAttribute('aria-label',T('Volver arriba'))}
+function navAfter(){navSections();navCollapsibles();const tt=document.getElementById('totop');if(tt)tt.setAttribute('aria-label',T('Volver arriba'))}
 (function(){const st=document.createElement('style');st.textContent=`
 #menub{min-width:44px;font-size:22px;padding:0 10px}
 #chipbar{position:sticky;top:var(--hh,64px);z-index:4;display:flex;gap:6px;overflow-x:auto;padding:8px 12px;background:#f1f5f9ee;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);scrollbar-width:none;border-bottom:1px solid #e2e8f0}
@@ -48,8 +41,7 @@ body.dopen #drawer{transform:none}body.dopen #dscrim{opacity:1;pointer-events:au
 #totop{position:fixed;left:16px;bottom:calc(84px + env(safe-area-inset-bottom));width:44px;height:44px;border-radius:22px;padding:0;background:#0f172acc;font-size:20px;z-index:6;opacity:0;pointer-events:none;transition:opacity .2s}
 #totop.on{opacity:1;pointer-events:auto}
 body.locked #chipbar,body.locked #totop,body.locked #drawer,body.locked #dscrim{display:none}`;document.head.appendChild(st);
- const hd=document.querySelector('header'),mb=document.createElement('button');mb.id='menub';mb.textContent='☰';mb.onclick=openDrawer;hd.prepend(mb);
- const dr=document.createElement('aside');dr.id='drawer';const sc=document.createElement('div');sc.id='dscrim';sc.onclick=closeDrawer;document.body.append(sc,dr);
+ const hd=document.querySelector('header');
  const tt=document.createElement('button');tt.id='totop';tt.textContent='↑';tt.onclick=()=>scrollTo({top:0,behavior:'smooth'});document.body.append(tt);
  const sh=()=>document.documentElement.style.setProperty('--hh',hd.offsetHeight+'px');sh();addEventListener('resize',sh);
  addEventListener('scroll',()=>tt.classList.toggle('on',scrollY>500),{passive:true});

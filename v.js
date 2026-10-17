@@ -15,6 +15,8 @@ const f=n=>(n<0?'−':'')+'$'+Math.abs(+n||0).toLocaleString('en-US',{minimumFra
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fd=d=>{if(!d)return'';const[y,m,dd]=d.split('-');return new Date(+y,m-1,+dd).toLocaleDateString(ES?'es':'en-US',{day:'numeric',month:'short'}).replace('.','')};
 const P3=['Yo','Tony','Carlos'];window.DOC=null;let MI=0;
+// v79: compras de la más nueva a la más vieja (enlaces publicados antes venían de la más vieja a la más nueva)
+function nfDoc(){(DOC.months||[]).forEach(mo=>{if(mo&&!mo.nf&&Array.isArray(mo.purchases)){mo.purchases=[...mo.purchases].reverse().sort((a,b)=>String(b.d||'').localeCompare(String(a.d||'')));mo.nf=1}})}
 const $=id=>document.getElementById(id);
 function fail(msg){$('h1').textContent='Finanzas';if($('hact'))$('hact').innerHTML='';$('sub').textContent='';$('m').innerHTML=`<div class="card err">${esc(msg)}</div>`}
 function draw(){setLangV(DOC.lang);const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,T=w==='Tony';document.title=N(w)+' · '+mo.label;
@@ -112,7 +114,7 @@ window.pdf=()=>{const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,J=new jsp
  const b=J.output('blob'),u=URL.createObjectURL(b),el=document.createElement('a');el.href=u;el.download=(N(w)+'-'+mo.k+'.pdf');document.body.append(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};
 var tok;tok=new URLSearchParams(location.search).get('t')||'';
 if(!/^[A-Za-z0-9_-]{20,}$/.test(tok))fail(TX.bad);
-else if(window.__SHARE_DOC){DOC=window.__SHARE_DOC;draw()}
+else if(window.__SHARE_DOC){DOC=window.__SHARE_DOC;nfDoc();draw()}
 else{try{const V='11.10.0',B=`https://www.gstatic.com/firebasejs/${V}/`;const [{initializeApp},F]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-firestore-lite.js')]);
-  const db=F.getFirestore(initializeApp(window.FB_CONFIG));const sn=await F.getDoc(F.doc(db,'shares',tok));if(!sn.exists())fail(TX.bad);else{DOC=sn.data();if(!DOC.months||!DOC.months.length)fail(TX.bad);else draw()}}
+  const db=F.getFirestore(initializeApp(window.FB_CONFIG));const sn=await F.getDoc(F.doc(db,'shares',tok));if(!sn.exists())fail(TX.bad);else{DOC=sn.data();if(!DOC.months||!DOC.months.length)fail(TX.bad);else{nfDoc();draw()}}}
  catch(e){console.error(e);fail(/permission/i.test(String(e&&e.code))?TX.bad:TX.err)}}

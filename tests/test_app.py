@@ -14,6 +14,7 @@ for lang in ['es','en']:
     with app(ROOT,lang=lang) as pg:
         check(pg.evaluate(METRICS_JS)==base['metrics'],'metrics differ from v51')
         seen=[]
+        pg.evaluate("OPS_ALLM=true;OPS_ALLP=true")  # v79: lists expanded ('Ver todos') so every amount is on screen
         for t in ['ini','mov','res','rep']:
             pg.evaluate(f"tab='{t}';render()");pg.wait_for_timeout(120);seen+=dollars(pg.evaluate("document.getElementById('v').textContent"))
         old=set(sum(base['tabs'].values(),[]));missing=old-set(seen)
@@ -34,9 +35,9 @@ for lang in ['es','en']:
 # 2) Behaviour
 with app(ROOT) as pg:
     E=pg.evaluate
-    # nav: 4 tabs + settings in drawer
-    check(E("[...document.querySelectorAll('nav button')].map(b=>b.dataset.t).join()")=='ini,mov,res,rep','bottom tabs')
-    E("openDrawer()");check('Configuración' in pg.inner_text('#drawer'),'settings in menu');E("closeDrawer()")
+    # nav: 4 tabs (v79)
+    check(E("[...document.querySelectorAll('nav button')].map(b=>b.dataset.t).join()")=='ini,mov,rep,cfg','bottom tabs (v79: Configuración in the bar, no ☰)')
+    check(pg.locator('#menub').count()==0,'no ☰ menu')
     # check 1-tap: simulate auto deposit today then "Otro monto"
     E("()=>{const c=S.checks.find(x=>x.id==='k3');c.date=today();c.status='deposited';c.auto=true;c.depositedOn=today();debE(L()).amount=r2(debE(L()).amount+720);L().events.push({id:'vx',type:'check',date:today(),amount:720,checkId:'k3',auto:true});tab='ini';render()}")
     check(pg.locator('#chknote').count()==1,'check note shown')

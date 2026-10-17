@@ -21,7 +21,8 @@ with app(ROOT,now='2026-10-16T09:00:00') as pg:
     L=[x for x in m.splitlines()]
     sh=[x for x in L if 'Shampoo' in x][0];check('Hogar' in sh and ' No ' in sh and '$20.00' in sh,sh)
     vi=[x for x in L if 'Vino Tinto' in x][0];check('Joe y Tony' in vi and vi.count('$10.00')==2,vi)
-    re_=[x for x in L if 'Resto de la compra' in x][0];check('Todos' in re_ and '50/25/25' not in m and '$60.00' in re_ and '$30.00' in re_ and re_.count('$15.00')==2,re_)
+    re_=[x for x in L if 'Resto de la compra' in x and '$60.00' in x][0];  # v79: purchases newest first, pick the one by amount
+    check('Todos' in re_ and '50/25/25' not in m and '$60.00' in re_ and '$30.00' in re_ and re_.count('$15.00')==2,re_)
     co=[x for x in L if 'Toda la compra' in x and '$80.00' in x][0];check('Todos' in co and '$80.00' in co and '$40.00' in co and '$20.00' in co,co)
     check(any('Total del mes' in x for x in L),'month totals');hd=[x for x in L if 'Compartida' in x][0];check('Joe' in hd and 'Tony' in hd and 'Carlos' in hd and ' Yo ' not in hd,hd)
     check('Generado' not in m.split('Resumen mensual')[-1].split('Lo que tengo')[-1] and 'Finanzas ·' not in m,'footer only page')

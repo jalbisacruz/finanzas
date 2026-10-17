@@ -15,6 +15,8 @@ function setLang(l){LANG=l==='en'?'en':'es';localStorage.setItem(LANG_K,LANG);na
 const r2=n=>Math.round((+n||0)*100)/100, f=n=>(r2(n)<0?'−':'')+'$'+Math.abs(r2(n)).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>Math.random().toString(36).slice(2,9);
+// v79: listas e historiales, lo más nuevo primero (misma fecha: lo creado más reciente primero; el arreglo ya debe venir con lo nuevo primero)
+const byNew=(a,d=x=>x.date)=>[...a].sort((x,y)=>(d(y)||'').localeCompare(d(x)||''));
 const PEOPLE=['Yo','Tony','Carlos'];
 const STORES=["Sam's Club",'Walmart','Publix','Aldi','Amazon','Detwilers'];
 function seed(){
@@ -191,7 +193,7 @@ function cue(){const m=M();return list('income',T('Mi dinero'),T('La primera lí
  
  list('cards',T('Tarjetas de crédito'),T('Los saldos cambian solo con ingresos, gastos y pagos. Usa Ajustar para corregir.'))+list('bills',T('Cuentas para Tony'),T('“Fija” pasa su monto al mes siguiente; “Var.” empieza en 0'))+dueCard()+
  `<div class="card"><h2>${T('Cheques depositados ({0})',lbl(S.cur))}<span>${f(sum(depChecks(),c=>c.amount))}</span></h2>${depChecks().map(c=>`<div class="row"><span class="n">${wd(c.date)}<div class="muted">✅ ${T('Depositado')}${c.legacy?' · '+T('importado'):''}</div></span>${f(c.amount)}</div>`).join('')||'<div class="muted">'+T('Aún no hay cheques depositados este mes. Se agregan al confirmar el depósito en Inicio.')+'</div>'}</div>`}
-const depChecks=()=>S.checks.filter(c=>c.status==='deposited'&&(c.legacy?c.month===S.cur:(c.date||'').startsWith(S.cur))).sort((a,b)=>a.date<b.date?-1:1);
+const depChecks=()=>byNew(S.checks.filter(c=>c.status==='deposited'&&(c.legacy?c.month===S.cur:(c.date||'').startsWith(S.cur))).reverse());
 function com(){const m=M(),c=calc(m);return `<div class="card"><button style="width:100%" onclick="editP()">${T('+ Nueva compra compartida')}</button>
  <div class="tot"><span>Tony ${f(c.tony)}</span><span>Carlos ${f(c.carlos)}</span></div><div class="muted">${T('Toca una compra para editarla o borrarla.')}</div></div>
  ${m.purchases.map(p=>`<div class="card p" onclick="editP('${p.id}')"><div class="tot" style="padding:0"><span>${esc(DN(p.store))}</span><span>${f(p.total)}</span></div>
@@ -211,7 +213,9 @@ function moves(m){return [
  ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:(x.recipient?'→ '+DN(x.recipient)+(x.desc?' · ':''):'')+(x.desc||''),method:x.method,recipient:x.recipient})),
  ...m.purchases.map(p=>{const Tn=+p.shares.Tony||0,Cc=+p.shares.Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v));return {id:p.id,kind:'compra',date:p.date,amount:-tot,cat:SHARED_CAT,desc:DN(p.store)+' ('+T('compartida')+')',method:p.method,mine:(m=>m<0.02?0:m)(r2(tot-Tn-Cc))}}),
  ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay'||e.type==='saving')?-e.amount:e.type==='adjust'?e.diff:e.amount,cat:e.type==='income'?(e.concept||'📦 Otros'):e.type==='check'?'💼 Cheque':e.type==='carlos'?'↩️ Reembolso de Carlos':e.type==='tony'?'🤝 Tony':e.type==='todebit'?'🔁 Transferencia a débito':e.type==='cardpay'?'💳 Pago de tarjeta':e.type==='adjust'?'🛠️ Ajuste de saldo':e.type==='saving'?'🐷 Ahorro':'💵 Ingreso',desc:evDesc(e)+(e.card?' · 💳 '+DN(e.card):''),method:e.type==='adjust'?(e.lineKind==='cards'?'card:':'money:')+(e.lineName||''):e.method||'deb'}))
-].sort((a,b)=>(b.date||'')<(a.date||'')?-1:1)}
+].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||mvRank(m,b)-mvRank(m,a))}
+// recencia de creación: gastos y compras se agregan al principio (unshift), los eventos al final (push)
+function mvRank(m,x){if(x.kind==='gasto'){const i=m.personal.findIndex(y=>y.id===x.id);return m.personal.length-i}if(x.kind==='compra'){const i=m.purchases.findIndex(y=>y.id===x.id);return m.purchases.length-i}return (m.events||[]).findIndex(y=>y.id===x.id)+1}
 // gasto real de Joe por categoría (compartidas: solo su parte; transferencia a Tony no cuenta como gasto)
 function spent(m){const by={};moves(m).forEach(x=>{if(x.kind==='gasto')by[x.cat]=(by[x.cat]||0)+(-x.amount);if(x.kind==='compra'&&x.mine)by[x.cat]=(by[x.cat]||0)+x.mine});
  return {by,total:Object.values(by).reduce((a,b)=>a+b,0)}}

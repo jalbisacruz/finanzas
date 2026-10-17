@@ -40,6 +40,7 @@ for fx,bl in [('fixture.json','baseline-fix-v52.json'),('fixture_real.json','bas
             check(E("idFor('cat','⚖️ Casa')")==E("idFor('cat','⚖️ Casa')") and E("S.catalog.items[idFor('store','Walmart')]?.key")=='Walmart','deterministic ids')
             # all amounts still shown
             seen=[]
+            E("OPS_ALLM=true;OPS_ALLP=true")  # v79: lists expanded ('Ver todos') so every amount is on screen
             for t in ['ini','mov','res','rep']:
                 E(f"tab='{t}';render()");pg.wait_for_timeout(80);seen+=dollars(E("document.getElementById('v').textContent"))
             gone=set(E("(()=>{const n=planNums();return [f(n.sp),f(n.remB),f(sum(prevPend(),p=>p.c.tonyDue))]})()"))  # v78 (also the projection formula line; that amount stays in Por hacer): plan explanation removed

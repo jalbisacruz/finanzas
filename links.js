@@ -18,12 +18,12 @@ function snapPurch(p){const sh=p.shares||{},L=pList(p).filter(it=>+it.a>0),fam=(
  else if(rest>0.004)rows.push({n:T('Resto de la compra'),c:'',a:rest,sh:ownTxt(shr),v:pp(Object.fromEntries(PPL3.map(w=>[w,(+sh[w]||0)-isum[w]-(ptx?ptx[w]||0:0)])))});
  if(ptx)rows.push({n:T('Impuesto'),c:'',a:txT,sh:T('Proporcional'),v:pp(ptx)});
  return {...(p.paidBy?{by:p.paidBy}:{}),d:p.date||'',s:DN(p.store),c:DN(pCat(p)),t:r2(p.total),rows,tot:pp(sh)}}
-function snapMonth(k,who){const m=S.months[k];if(!m)return null;const c=calc(m),P=[...m.purchases].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(snapPurch);
+function snapMonth(k,who){const m=S.months[k];if(!m)return null;const c=calc(m),P=byNew(m.purchases).map(snapPurch);
  const o={k,label:lbl(k),purchases:P};
  if(who==='Tony'){o.bills=m.bills.filter(b=>+b.amount).map(b=>({n:DN(b.name),a:r2(b.amount),paid:billSt2(b)==='paid',...(+b.tfood>0?{x:r2(b.tfood)}:{})}));
   Object.assign(o,{billsTotal:r2(c.bills),share:r2(c.tony),toTransfer:r2(c.toTony),paid:r2(c.xfer||0),pending:r2(c.tonyDue)})}
  else Object.assign(o,{share:r2(c.carlos),joeShare:r2(c.joeCS||0),joeOwes:r2(c.joeOwesCarlos||0),paid:r2(c.recv||0),pending:r2(c.carlosDue)});
- if(typeof tcOf==='function'){const x=tcOf(m);if(x)o.tc={from:x.from,to:x.to,amount:x.amount,settled:x.settled}}return o}
+ if(typeof tcOf==='function'){const x=tcOf(m);if(x)o.tc={from:x.from,to:x.to,amount:x.amount,settled:x.settled}}o.nf=1;return o}
 function snapFor(who){const ks=keys(),i=ks.indexOf(S.cur),cur=S.cur,prev=i>0?ks[i-1]:null;
  return {v:1,who,lang:LANG,buyers:who==='Tony'?['Tony','Arianna']:['Carlos'],cats:pCats().map(c=>({v:c,l:DN(c)})),names:{Yo:'Joe',Tony:DN('Tony'),Carlos:DN('Carlos')},from:(window.fbName&&fbName())||'Joe Albisa Cruz',months:[snapMonth(cur,who),prev&&snapMonth(prev,who)].filter(Boolean)}}
 // escritura automática (solo si cambió)
