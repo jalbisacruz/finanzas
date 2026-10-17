@@ -50,12 +50,14 @@ with app(ROOT,routes=R,init="localStorage.setItem('finanzas-sync-uid','u1');") a
 SNT['months'][1]['tc']={'from':'Tony','to':'Carlos','amount':7,'settled':False}
 for who,doc,debtor in [('tony',SNT,True),('carlos',SNC,False)]:
   doc={**doc,'updatedAt':1760600000000}
-  with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps(doc)) as pg:
+  with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps(doc),width=390,height=844) as pg:
     base='/'.join(pg.url.split('/')[:3]);pg.goto(base+'/v.html?t=TokTokTokTokTokTokTok1');pg.wait_for_timeout(500);E=pg.evaluate
     tx=pg.inner_text('main');check('Entre Tony y Carlos' in tx and '$15.00' in tx,tx[:400])
     check((pg.locator('#vtcpay').count()==1)==debtor,'button only for debtor')
     if debtor:
         check(pg.locator('#vrem').count()==1,'reminder banner')
+        sb=pg.locator('#vdet').bounding_box();check(sb['y']+sb['height']<=844 and pg.locator('#vsum #vtcpay').count()==1,'v76: reminder + Ya pagué in summary, fits iPhone %s'%sb)
+        if '--shots' in sys.argv:pg.screenshot(path=os.path.join(ROOT,'shots','140-enlace-tony-yapague.png'))
         if '--shots' in sys.argv:pg.screenshot(path=os.path.join(ROOT,'shots','137-enlace-tony.png'),full_page=True)
         pg.click('#vtcpay');pg.wait_for_timeout(300);d=[v for k,v in E("window.__fs.docs").items() if '/inbox/' in k]
         check(d and d[0]=={'kind':'settle','by':'Tony','month':'2026-10','amount':15,'at':'__now__'} and 'Avisado' in pg.inner_text('main'),d)

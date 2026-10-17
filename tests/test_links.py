@@ -44,12 +44,33 @@ with app(ROOT,init="localStorage.setItem('finanzas-sync-uid','u1');",routes=R) a
     DOCT,DOCC=dt,E(f"window.__fs.docs['shares/{n}']")
 # public page with a fake doc
 for who,doc in [('tony',DOCT),('carlos',DOCC)]:
-  with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps(doc)) as pg:
+  with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps(doc),width=390,height=844) as pg:
     pg.goto(pg.url.split('/')[0]+'//'+pg.url.split('/')[2]+'/v.html?t=AAAAAAAAAAAAAAAAAAAAAA');pg.wait_for_timeout(500)
-    tx=pg.inner_text('main');check(('Pendiente' in tx or 'Pending' in tx) and 'Aldi' in tx and pg.locator('td.hl').count()>3,'page renders')
-    if '--shots' in sys.argv:pg.screenshot(path=os.path.join(ROOT,'shots','135-enlace-%s.png'%who),full_page=True)
+    # v76: summary only on open; details collapsed; icon buttons in header
+    tx=pg.inner_text('main');check('Pendiente' in tx and 'Aldi' not in tx and pg.locator('#vdetb').is_hidden(),'collapsed on open '+tx)
+    keys=['A transferirte','Ya transferido','Pendiente'] if who=='tony' else ['Tu parte','Ya pagado','Pendiente']
+    check(all(k in pg.inner_text('#vsum') for k in keys),'key totals %s'%pg.inner_text('#vsum'))
+    if who=='tony':check('Total cuentas' not in tx and 'Comida' not in tx,'bills list hidden')
+    for bid,cap,lab in [('#vreg','Registrar','Registrar compra'),('#vdl','PDF','Descargar PDF')]:
+        bx=pg.locator('header '+bid).bounding_box();check(bx and bx['width']>=44 and bx['height']>=44 and bx['x']>390/2,'%s top-right 44px %s'%(bid,bx))
+        check(pg.inner_text(bid).split()[-1]==cap and pg.get_attribute(bid,'aria-label')==lab and pg.get_attribute(bid,'title')==lab,'%s caption/labels'%bid)
+    check(pg.locator('button.dl#vreg,button.dl#vdl,main #vreg,main #vdl').count()==0,'old big buttons removed')
+    sb=pg.locator('#vdet').bounding_box();check(sb['y']+sb['height']<=844,'summary + toggle fit without scrolling %s'%sb)
+    check('Ver detalle' in pg.inner_text('#vdet') and pg.get_attribute('#vdet','aria-expanded')=='false','toggle label')
+    if '--shots' in sys.argv:pg.screenshot(path=os.path.join(ROOT,'shots','140-enlace-%s-resumen.png'%who))
+    pg.click('#vdet');pg.wait_for_timeout(50)
+    tx=pg.inner_text('main');check('Aldi' in tx and pg.locator('td.hl').count()>3 and 'Ocultar detalle' in pg.inner_text('#vdet'),'expanded')
+    if who=='tony':check('Total cuentas' in tx,'bills in details')
+    if '--shots' in sys.argv:pg.screenshot(path=os.path.join(ROOT,'shots','140-enlace-%s-detalle.png'%who),full_page=True)
+    pg.click('#vreg');pg.wait_for_timeout(50);check(pg.locator('#regform').count()==1 and pg.locator('#vdetb').is_visible(),'register opens, details stay')
+    pg.click('#vdet');pg.wait_for_timeout(50);check(pg.locator('#regform').count()==1 and pg.locator('#vdetb').is_hidden(),'collapse keeps form')
     with pg.expect_download(timeout=15000) as d: pg.click('#vdl')
     check(d.value.suggested_filename.endswith('-2026-10.pdf'),d.value.suggested_filename)
+  if who=='carlos':
+    with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps({**doc,'lang':'en'}),width=390,height=844) as pg:
+      pg.goto(pg.url.split('/')[0]+'//'+pg.url.split('/')[2]+'/v.html?t=AAAAAAAAAAAAAAAAAAAAAA');pg.wait_for_timeout(500)
+      check(pg.inner_text('#vreg').split()[-1]=='Add' and pg.get_attribute('#vreg','aria-label')=='Record purchase' and pg.inner_text('#vdl').split()[-1]=='PDF' and 'See details' in pg.inner_text('#vdet'),'EN captions')
+      if '--shots' in sys.argv:pg.screenshot(path=os.path.join(ROOT,'shots','140-enlace-carlos-en.png'))
   with app(ROOT,routes=R) as pg:
     pg.goto(pg.url.split('/')[0]+'//'+pg.url.split('/')[2]+'/v.html?t=bad');pg.wait_for_timeout(300);check('no es válido' in pg.inner_text('main') or 'not valid' in pg.inner_text('main'),'bad token')
 print('test_links OK',ok)
