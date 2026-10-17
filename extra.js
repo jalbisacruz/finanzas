@@ -97,7 +97,7 @@ const THK='finanzas-thu-hide';
 function thuCard(){const t=today(),isThu=tdy().getDay()===4,depToday=S.checks.filter(c=>c.status==='deposited'&&c.depositedOn===t);
  if(!(isThu||depToday.length)||localStorage.getItem(THK)===t)return'';
  const wk=new Date(tdy()-6*dayMs).toLocaleDateString('en-CA'),recent=S.checks.filter(c=>c.status==='deposited'&&(c.date||'')>=wk&&(c.date||'')<=t),chk=depToday.length?sum(depToday,c=>c.amount):sum(recent,c=>c.amount),pc=pendingCheck();
- const m=L(),c=calc(m),disp=sum(m.income,x=>x.amount),tony=r2(c.tonyDue+sum(prevPend(),p=>p.c.tonyDue)),left=r2(disp-tony-c.credit);
+ const m=L(),c=calc(m),disp=sum(m.income,x=>x.amount),tony=r2(c.tonyDue+sum(prevPend(),p=>p.c.tonyDue)),left=r2(disp-(window.heldPend?heldPend():0)-tony-c.credit);
  return `<div class="card" id="thucard" style="border:2px solid #2563eb"><h2>🗓️ ${isThu?T('Resumen del jueves'):T('Resumen del cheque')}<button class="sec" style="min-height:32px;padding:2px 10px;font-size:13px" onclick="localStorage.setItem('${THK}',today());render()">${T('Ocultar hoy')}</button></h2>
  <div class="row"><span class="n">💼 ${chk?T('Cheque'):T('Próximo cheque')}</span>${f(chk||(pc?pc.amount:0))}</div>
  <div class="row"><span class="n">🤝 ${T('Pendiente a Tony')}</span>−${f(tony)}</div><div class="row"><span class="n">💳 ${T('Saldo de tarjetas')}</span>−${f(c.credit)}</div>
@@ -126,7 +126,7 @@ function planNums(){const ent=Object.entries(S.budgets).filter(([,l])=>+l>0);
  const known=S.checks.filter(c=>c.date&&!c.legacy).sort((a,b)=>a.date<b.date?-1:1),last=known.at(-1),pc0=pendingCheck(),lastDep=known.filter(c=>c.status==='deposited').at(-1),lastAmt=pc0&&+pc0.amount>0?+pc0.amount:(lastDep?+lastDep.amount||0:0);
  let est=0,n=0;if(last&&lastAmt>0){let x=nextThu(last.date);while(x<today())x=nextThu(x);while(x.startsWith(k)){est+=lastAmt;n++;x=nextThu(x)}}
  const inc=r2(rec+pendT+est),bud=r2(sum(ent,([,l])=>+l)),plan=r2(inc-bud),by=budBy(m).by,sp=r2(sum(ent,([c])=>by[c]||0)),remB=r2(bud-sp),real=r2(rec-sp);
- const c=calc(m),proj=r2(sum(m.income,x=>x.amount)+(pendingCheck()?pendingCheck().amount:0)-c.tonyDue-sum(prevPend(),p=>p.c.tonyDue)-c.credit),cl=v=>v>=0?'pos':'neg';
+ const c=calc(m),proj=r2(sum(m.income,x=>x.amount)-(window.heldPend?heldPend():0)+(pendingCheck()?pendingCheck().amount:0)-c.tonyDue-sum(prevPend(),p=>p.c.tonyDue)-c.credit),cl=v=>v>=0?'pos':'neg';
  return {ent,k,m,rec,inc,n,bud,plan,sp,remB,real,proj,cl}}
 function planCard(){const ent=Object.entries(S.budgets).filter(([,l])=>+l>0);
  if(!ent.length)return `<div class="muted" id="planhint" style="margin:0 4px 10px">🎯 ${T('Define un presupuesto para ver tu plan del mes.')} <a href="#" onclick="tab='cfg';render();setTimeout(()=>document.getElementById('budcfg')?.scrollIntoView(),50);return false">${T('Ajustes › Presupuesto')}</a></div>`;

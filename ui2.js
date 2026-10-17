@@ -78,7 +78,7 @@ function todoCard(){const k=keys().at(-1),c=calc(L()),rows=[];
  prevPend().forEach(({k:kk,c:cc})=>{if(cc.tonyDue>0.005)rows.push(pr('tony',kk,cc.tonyDue,false));if(cc.carlosDue>0.005)rows.push(pr('carlos',kk,cc.carlosDue,false))});
  if(c.tonyDue>0.005)rows.push(pr('tony',k,c.tonyDue,true));if(c.carlosDue>0.005)rows.push(pr('carlos',k,c.carlosDue,true));
  return `<div class="card" id="todocard"><h2>📌 ${T('Por hacer')}</h2>${rows.join('')||`<div class="muted">${T('✅ Todo al día')}</div>`}</div>`}
-function planV2(){const m=L(),c=calc(m),disp=sum(m.income,x=>x.amount),pc=pendingCheck(),next=pc?pc.amount:0,oldT=sum(prevPend(),p=>p.c.tonyDue),proj=disp+next-c.tonyDue-oldT-c.credit;
+function planV2(){const m=L(),c=calc(m),disp=sum(m.income,x=>x.amount),pc=pendingCheck(),next=pc?pc.amount:0,oldT=sum(prevPend(),p=>p.c.tonyDue),proj=disp-(window.heldPend?heldPend():0)+next-c.tonyDue-oldT-c.credit;
  const rows=`<div style="margin-top:10px;padding-top:6px;border-top:1px solid #e2e8f0"><div class="row"><span class="n"><b>${T('Disponible proyectado')}</b></span><b class="${proj>=0?'pos':'neg'}">${f(proj)}</b></div>
  <div class="muted">${T('Disponible ahora')} ${f(disp)} ${T('+ Próximo cheque')} ${f(next)} ${T('− Transferencia a Tony')} ${f(c.tonyDue)}${oldT>0.005?' '+T('− Pendiente a Tony (meses anteriores)')+' '+f(oldT):''} ${T('− Pagos de tarjetas')} ${f(c.credit)}</div></div>`;
  let p=planCard();

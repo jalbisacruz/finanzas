@@ -94,7 +94,7 @@ function pdfPurch(D2,P,cols,hl,k){const hi=hl?4+cols.indexOf(hl):undefined,one=c
  if(hl)D2.table([T('Tu parte del mes')+' ('+pdfNm(hl)+')',f(tot[hl])],[],{ws:[408,108],hi:1});return tot}
 function pdfMonth(k){const m=S.months[k],c=calc(m),D2=Doc(T('Resumen mensual')+' · '+lblL(k),pdfSub());
  D2.h(T('Lo que tengo'));D2.row(T('Débito, efectivo y cheques'),f(c.inc));D2.row(T('Por cobrar Tony'),f(c.tony));D2.row(T('Por cobrar Carlos'),f(c.carlosDue));D2.row(T('Total a mi favor'),f(c.money),{b:1});
- D2.h(T('Lo que debo'));D2.row(T('Tarjetas de crédito'),f(c.credit));D2.row(T('Cuentas de Tony'),f(c.bills));if(c.xfer)D2.row(T('− Ya transferido a Tony'),f(c.xfer));D2.row(T('Total que debo'),f(c.debt),{b:1});
+ D2.h(T('Lo que debo'));D2.row(T('Tarjetas de crédito'),f(c.credit));D2.row(T('Cuentas de Tony'),f(c.bills));if(c.xfer)D2.row(T('− Ya transferido a Tony'),f(c.xfer));if(c.held)D2.row(T('Dinero de terceros'),f(c.held));D2.row(T('Total que debo'),f(c.debt),{b:1});
  D2.h(T('Balance'));D2.row(T('Lo que tengo − lo que debo'),f(c.bal),{b:1});
  const sp=spent(m),bb=budBy(m).by,lim=S.budgets||{},cats=[...new Set([...Object.keys(sp.by),...Object.keys(lim).filter(x=>+lim[x]>0)])].sort((a,b)=>(sp.by[b]||0)-(sp.by[a]||0));
  D2.h(T('Gasto por categoría vs presupuesto'));

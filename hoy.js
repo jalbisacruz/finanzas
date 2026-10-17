@@ -34,7 +34,7 @@ function todoOpen(){dlg().innerHTML=todoFull().replace('class="card"','class="ca
 todoCard=function(){const n=todoN();return `<div class="card" id="todoline" style="padding:10px 14px"><button class="lnk" id="todobtn" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;width:100%;font-size:15px;min-height:28px;align-items:center" onclick="todoOpen()"><span>${n?T(n===1?'📌 1 cosa por hacer':'📌 {0} cosas por hacer',n):T('📌 Por hacer: ✅ todo al día')}</span><span aria-hidden="true">›</span></button></div>`};
 // Plan del mes: 5 líneas al mismo nivel, negativos en rojo, sin explicaciones
 function planV78(){const P=planNums(),m=L(),k=keys().at(-1),c=calc(m),cl=v=>v>=-0.004?'':'neg',est=!!pcAmtPend(),tg=est?estTag():'';
- const disp=sum(m.income,x=>x.amount),pc=pendingCheck(),proj=r2(disp+(pc?pc.amount:0)-c.tonyDue-sum(prevPend(),p=>p.c.tonyDue)-c.credit);
+ const disp=sum(m.income,x=>x.amount),pc=pendingCheck(),proj=r2(disp-(window.heldPend?heldPend():0)+(pc?pc.amount:0)-c.tonyDue-sum(prevPend(),p=>p.c.tonyDue)-c.credit);
  const ln=(id,l,v,ap)=>`<div class="row pl" id="${id}"><span class="n">${T(l)}</span><b class="${cl(v)}">${ap?'~':''}${f(v)}</b></div>`;
  const body=P.ent.length?ln('pl-inc','Ingresos esperados',P.inc,P.n)+ln('pl-bud','Presupuesto de gastos',P.bud)+ln('pl-plan','Sobrante planificado',P.plan,P.n)+ln('pl-real','Sobrante real',P.real)
   :`<div class="muted" id="planhint" style="margin:0 0 6px">🎯 ${T('Define un presupuesto para ver tu plan del mes.')} <a href="#" onclick="tab='cfg';render();setTimeout(()=>document.getElementById('budcfg')?.scrollIntoView(),50);return false">${T('Configuración › Categorías')}</a></div>`;
