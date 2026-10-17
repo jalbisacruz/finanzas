@@ -1,7 +1,7 @@
 """Repeatable UI tests (made-up data only). Run: python tests/test_app.py [--shots]
 Requires: pip install playwright && playwright install chromium"""
 import json, os, sys, re
-from harness import app, METRICS_JS, dollars, HERE
+from harness import V81_GONE_JS, app, METRICS_JS, dollars, HERE
 ROOT=os.path.dirname(HERE); SHOTS='--shots' in sys.argv
 ok=0
 def check(c,msg):
@@ -20,6 +20,7 @@ for lang in ['es','en']:
         old=set(sum(base['tabs'].values(),[]));missing=old-set(seen)
         # v78: Plan del mes dropped its small explanation line (Gastado X · quedan Y), as Joe approved
         missing-=set(pg.evaluate("(()=>{const n=planNums();return [f(n.sp),f(n.remB)]})()"))
+        missing-=set(pg.evaluate(V81_GONE_JS))
         check(not missing,f'amounts missing in new UI: {missing}')
         txt=''
         for t in ['ini','mov','res','rep','cfg']:

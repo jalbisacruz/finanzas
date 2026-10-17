@@ -1,6 +1,6 @@
 """Migration v1 -> v2 tests (made-up data only). Baselines come from v52: python tests/test_migration.py"""
 import json,os
-from harness import app,METRICS_JS,dollars,HERE
+from harness import V81_GONE_JS, app,METRICS_JS,dollars,HERE
 ROOT=os.path.dirname(HERE);ok=0
 def norm(st,src):
     # the app (any version) adds an 'Affirm' card with a random id on load when missing: mask only that id
@@ -44,6 +44,7 @@ for fx,bl in [('fixture.json','baseline-fix-v52.json'),('fixture_real.json','bas
             for t in ['ini','mov','res','rep']:
                 E(f"tab='{t}';render()");pg.wait_for_timeout(80);seen+=dollars(E("document.getElementById('v').textContent"))
             gone=set(E("(()=>{const n=planNums();return [f(n.sp),f(n.remB),f(sum(prevPend(),p=>p.c.tonyDue))]})()"))  # v78 (also the projection formula line; that amount stays in Por hacer): plan explanation removed
+            gone|=set(E(V81_GONE_JS))
             check(not (set(sum(base['tabs'].values(),[]))-set(seen)-gone),'all amounts shown %s'%(set(sum(base['tabs'].values(),[]))-set(seen)-gone))
             check(pg.locator('#mignote').count()==0 if E("tab='ini';render(),1") else False,'v78: success notice no longer shown')
             # rename specials (label only): Tony category, Kalshi concept, card, store, person

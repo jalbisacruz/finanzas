@@ -56,13 +56,13 @@ for lang in ['es','en']:
     check(bal(E)==b2 and E("findMonth('events','v5').events.find(x=>x.id==='v5').method")=='deb','blocked when debit would go negative')
     E("dlg().close()")
     # ---- Reembolso (Carlos/Tony) ----
-    nm='↩️ Reembolso (Carlos/Tony)' if ES else '↩️ Reimbursement (Carlos/Tony)'
+    nm='↩️ Reembolso' if ES else '↩️ Reimbursement'  # v81: back to the short name
     check(E("DN('↩️ Reembolso')")==nm,'new visible name')
     E("incDlg()");pg.wait_for_timeout(40);check(nm in pg.inner_text('#icats'),'name in Ingreso chips')
     pg.fill('#ia','7');pg.click('#icats .chip[data-c="↩️ Reembolso"]');pg.click('#isave');pg.wait_for_timeout(60)
     ev=E("L().events.at(-1)");check(ev['concept']=='↩️ Reembolso','stored concept unchanged (no migration)')
     E("()=>{tab='rep';render()}");pg.wait_for_timeout(60);rc=pg.inner_text('#reemcard')
-    check(T('Reembolsos') in rc and nm in rc and T('Cobrado a Carlos') in rc and E("f(27)") in rc,'Reembolsos card '+rc)
+    check(T('Reembolsos') in rc and nm in rc and T('Cobrado a Carlos') in rc and E("f(28.24)") in rc,'Reembolsos card '+rc)
     check(E("[...document.querySelectorAll('#v>.card')].map(c=>c.id).indexOf('reemcard')")==E("[...document.querySelectorAll('#v>.card')].map(c=>c.id).indexOf('inccard')")+1,'after Ingresos por concepto')
     if ES: shot(pg,'reembolsos','#reemcard')
     E("()=>{tab='cfg';render()}");check(nm in E("document.getElementById('v').textContent"),'new name in Configuración › Conceptos')
