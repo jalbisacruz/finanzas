@@ -17,7 +17,7 @@ function snapPurch(p){const sh=p.shares||{},L=pList(p).filter(it=>+it.a>0),fam=(
  if(!L.length)rows.push({n:T('Toda la compra'),c:'',a:r2(p.total-txT),sh:ownTxt(shr),v:pp(Object.fromEntries(PPL3.map(w=>[w,(+sh[w]||0)-(ptx?ptx[w]||0:0)])))});
  else if(rest>0.004)rows.push({n:T('Resto de la compra'),c:'',a:rest,sh:ownTxt(shr),v:pp(Object.fromEntries(PPL3.map(w=>[w,(+sh[w]||0)-isum[w]-(ptx?ptx[w]||0:0)])))});
  if(ptx)rows.push({n:T('Impuesto'),c:'',a:txT,sh:T('Proporcional'),v:pp(ptx)});
- return {...(p.paidBy?{by:p.paidBy}:{}),d:p.date||'',s:DN(p.store),c:DN(pCat(p)),t:r2(p.total),rows,tot:pp(sh)}}
+ return {...(p.paidBy?{by:p.paidBy}:{}),d:dKey(p.date),s:DN(p.store),c:DN(pCat(p)),t:r2(p.total),rows,tot:pp(sh)}}
 function snapMonth(k,who){const m=S.months[k];if(!m)return null;const c=calc(m),P=byNew(m.purchases).map(snapPurch);
  const o={k,label:lbl(k),purchases:P};
  if(who==='Tony'){o.bills=m.bills.filter(b=>+b.amount).map(b=>({n:DN(b.name),a:r2(b.amount),paid:billSt2(b)==='paid',...(+b.tfood>0?{x:r2(b.tfood)}:{})}));

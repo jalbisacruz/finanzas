@@ -28,7 +28,11 @@ const P3=['Yo','Tony','Carlos'];window.DOC=null;let MI=0;
 // v80: nombre del PDF con mes y hora, p. ej. Tony-Octubre-2026-17oct-1-05pm.pdf
 function vPdfName(who,k,d=new Date()){const L=(DOC.lang==='en'?'en-US':'es-US'),na=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,''),[y,m]=k.split('-'),ml=new Date(+y,m-1,15).toLocaleDateString(L,{month:'long'}),p=n=>String(n).padStart(2,'0'),h=d.getHours();
  return na(who).replace(/\s+/g,'-')+'-'+na(ml[0].toUpperCase()+ml.slice(1))+'-'+y+'-'+d.getDate()+na(d.toLocaleDateString(L,{month:'short'})).replace('.','').toLowerCase()+'-'+(h%12||12)+'-'+p(d.getMinutes())+(h<12?'am':'pm')+'.pdf'}
-function nfDoc(){(DOC.months||[]).forEach(mo=>{if(mo&&!mo.nf&&Array.isArray(mo.purchases)){mo.purchases=[...mo.purchases].reverse().sort((a,b)=>String(b.d||'').localeCompare(String(a.d||'')));mo.nf=1}})}
+// v83: fotos viejas (antes de v79) venían por fecha ascendente con los empates ya en orden de la app (lo nuevo primero);
+// se ordenan por fecha descendente sin invertir los empates. Las sin fecha (importadas de Excel, más viejo primero) se invierten.
+const dK=s=>{s=String(s||'').trim();const r=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);return r?r[1]+'-'+r[2].padStart(2,'0')+'-'+r[3].padStart(2,'0'):s};
+function nfDoc(){(DOC.months||[]).forEach(mo=>{if(mo&&!mo.nf&&Array.isArray(mo.purchases)){const P=mo.purchases,nd=P.filter(p=>!dK(p.d)).reverse();
+ mo.purchases=[...P.filter(p=>dK(p.d)).sort((a,b)=>dK(b.d).localeCompare(dK(a.d))),...nd];mo.nf=1}})}
 const $=id=>document.getElementById(id);
 function fail(msg){$('h1').textContent='Finanzas';if($('hact'))$('hact').innerHTML='';$('sub').textContent='';$('m').innerHTML=`<div class="card err">${esc(msg)}</div>`}
 function draw(){setLangV(DOC.lang);const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,T=w==='Tony';document.title=N(w)+' · '+mo.label;{const ap=document.getElementById('aptitle');if(ap)ap.content=t('apT',N(w))}

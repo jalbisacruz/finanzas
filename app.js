@@ -16,7 +16,14 @@ const r2=n=>Math.round((+n||0)*100)/100, f=n=>(r2(n)<0?'−':'')+'$'+Math.abs(r2
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>Math.random().toString(36).slice(2,9);
 // v79: listas e historiales, lo más nuevo primero (misma fecha: lo creado más reciente primero; el arreglo ya debe venir con lo nuevo primero)
-const byNew=(a,d=x=>x.date)=>[...a].sort((x,y)=>(d(y)||'').localeCompare(d(x)||''));
+// v83: fecha normalizada (AAAA-M-D, ISO con hora, M/D/AAAA u otro texto de fecha) para ordenar bien
+const dKey=s=>{s=String(s||'').trim();if(!s)return'';let r=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(r)return r[1]+'-'+r[2].padStart(2,'0')+'-'+r[3].padStart(2,'0');
+ r=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(r)return r[3]+'-'+r[1].padStart(2,'0')+'-'+r[2].padStart(2,'0');const d=new Date(s);return isNaN(d)?s:d.toLocaleDateString('en-CA')};
+// v83: recencia de creación. Con 'at' (desde v83) manda la hora de creación; lo importado de Excel quedó en orden de la hoja (más viejo primero)
+// y es anterior a todo lo agregado en la app; lo agregado en la app sin 'at' está al principio (unshift: índice menor = más nuevo).
+const isImp=p=>/^Importado de Excel/.test((p&&p.note)||'');
+const cRank=(p,i,n)=>+(p&&p.at)>0?+p.at:isImp(p)?i:1e9+(n-i);
+const byNew=(a,d=x=>x.date)=>{const n=a.length,R=new Map(a.map((p,i)=>[p,cRank(p,i,n)]));return [...a].sort((x,y)=>dKey(d(y)).localeCompare(dKey(d(x)))||R.get(y)-R.get(x))};
 const PEOPLE=['Yo','Tony','Carlos'];
 const STORES=["Sam's Club",'Walmart','Publix','Aldi','Amazon','Detwilers'];
 function seed(){
@@ -85,7 +92,7 @@ const keys=()=>Object.keys(S.months).sort();
 const L=()=>S.months[keys().at(-1)];               // mes "vivo": saldos actuales
 const lbl=k=>{const[y,m]=k.split('-');const s=new Date(+y,m-1,15).toLocaleDateString(LOC(),{month:'short'}).replace('.','');return s[0].toUpperCase()+s.slice(1)+' '+y};
 const today=()=>new Date().toLocaleDateString('en-CA');
-const fdate=d=>{if(!d)return T('sin fecha');const[y,m,dd]=d.split('-');return new Date(+y,m-1,+dd).toLocaleDateString(LOC(),{day:'numeric',month:'short'}).replace('.','')};
+const fdate=d=>{d=dKey(d);if(!d)return T('sin fecha');const[y,m,dd]=d.split('-');return new Date(+y,m-1,+dd).toLocaleDateString(LOC(),{day:'numeric',month:'short'}).replace('.','')};
 const sum=(a,fn)=>a.reduce((s,x)=>s+(+fn(x)||0),0);
 const tXfer=m=>r2(sum(m.events.filter(e=>e.type==='tony'),e=>e.amount)+(+m.tonyBase||0));
 const cRecv=m=>r2(sum(m.events.filter(e=>e.type==='carlos'),e=>e.amount)+(+m.carlosBase||0));
@@ -213,9 +220,9 @@ function moves(m){return [
  ...m.personal.map(x=>({id:x.id,kind:'gasto',date:x.date,amount:-x.amount,cat:x.cat||'📦 Otros',desc:(x.recipient?'→ '+DN(x.recipient)+(x.desc?' · ':''):'')+(x.desc||''),method:x.method,recipient:x.recipient})),
  ...m.purchases.map(p=>{const Tn=+p.shares.Tony||0,Cc=+p.shares.Carlos||0,tot=Math.max(+p.total||0,sum(Object.values(p.shares||{}),v=>v));return {id:p.id,kind:'compra',date:p.date,amount:-tot,cat:SHARED_CAT,desc:DN(p.store)+' ('+T('compartida')+')',method:p.method,mine:(m=>m<0.02?0:m)(r2(tot-Tn-Cc))}}),
  ...m.events.map(e=>({id:e.id,kind:e.type,date:e.date,amount:(e.type==='tony'||e.type==='cardpay'||e.type==='saving')?-e.amount:e.type==='adjust'?e.diff:e.amount,cat:e.type==='income'?(e.concept||'📦 Otros'):e.type==='check'?'💼 Cheque':e.type==='carlos'?'↩️ Reembolso de Carlos':e.type==='tony'?'🤝 Tony':e.type==='todebit'?'🔁 Transferencia a débito':e.type==='cardpay'?'💳 Pago de tarjeta':e.type==='adjust'?'🛠️ Ajuste de saldo':e.type==='saving'?'🐷 Ahorro':'💵 Ingreso',desc:evDesc(e)+(e.card?' · 💳 '+DN(e.card):''),method:e.type==='adjust'?(e.lineKind==='cards'?'card:':'money:')+(e.lineName||''):e.method||'deb'}))
-].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||mvRank(m,b)-mvRank(m,a))}
+].sort((a,b)=>dKey(b.date).localeCompare(dKey(a.date))||mvRank(m,b)-mvRank(m,a))}
 // recencia de creación: gastos y compras se agregan al principio (unshift), los eventos al final (push)
-function mvRank(m,x){if(x.kind==='gasto'){const i=m.personal.findIndex(y=>y.id===x.id);return m.personal.length-i}if(x.kind==='compra'){const i=m.purchases.findIndex(y=>y.id===x.id);return m.purchases.length-i}return (m.events||[]).findIndex(y=>y.id===x.id)+1}
+function mvRank(m,x){if(x.kind==='gasto'){const i=m.personal.findIndex(y=>y.id===x.id);return m.personal.length-i}if(x.kind==='compra'){const i=m.purchases.findIndex(y=>y.id===x.id),p=m.purchases[i];return +(p&&p.at)>0?+p.at:isImp(p)?(i+1)/1e4:m.purchases.length-i}return (m.events||[]).findIndex(y=>y.id===x.id)+1}
 // gasto real de Joe por categoría (compartidas: solo su parte; transferencia a Tony no cuenta como gasto)
 function spent(m){const by={};moves(m).forEach(x=>{if(x.kind==='gasto')by[x.cat]=(by[x.cat]||0)+(-x.amount);if(x.kind==='compra'&&x.mine)by[x.cat]=(by[x.cat]||0)+x.mine});
  return {by,total:Object.values(by).reduce((a,b)=>a+b,0)}}
@@ -390,7 +397,7 @@ function drawP(){recomputeEq();const ppl=[...new Set([...S.people,...Object.keys
 Object.assign(EN,{'Falta {0}':'Missing {0}','Sobra {0}':'Over by {0}','✅ Cuadra':'✅ Balanced'});
 function tg(w){D.who=D.who.includes(w)?D.who.filter(x=>x!==w):[...D.who,w];drawP()}
 function saveP(){const{isNew,orig,...p}=D;{const o=orig&&orig.method==='deb'?orig.total:0,n=p.method==='deb'?p.total:0;if(noDeb(r2(n-o)))return}if(orig)spend(orig.method,-orig.total);spend(p.method,p.total);
- const m=isNew?S.months[monthFor(p.date)]:M(),i=m.purchases.findIndex(x=>x.id===p.id);i>=0?m.purchases[i]=p:m.purchases.unshift(p);save();dlg().close();render();toast(T('Compra guardada'))}
+ const m=isNew?S.months[monthFor(p.date)]:M(),i=m.purchases.findIndex(x=>x.id===p.id);if(i<0&&!(+p.at>0))p.at=Date.now();i>=0?m.purchases[i]=p:m.purchases.unshift(p);save();dlg().close();render();toast(T('Compra guardada'))}
 function delP(){if(D.orig)spend(D.orig.method,-D.orig.total);M().purchases=M().purchases.filter(x=>x.id!==D.id);save();dlg().close();render()}
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='finanzas-'+today()+'.json';a.click()}
 function imp(file){if(!file)return;file.text().then(t=>{const d=JSON.parse(t);if(!d.months)throw 0;d.updatedAt=Date.now();localStorage.setItem(K,JSON.stringify(d));localStorage.setItem('finanzas-force-push','1');location.reload()}).catch(()=>alert(T('Archivo inválido')))}

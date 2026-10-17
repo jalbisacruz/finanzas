@@ -101,9 +101,11 @@ const _res=res;res=function(){const o=_res(),i=o.lastIndexOf('<div class="card">
 // ---------- Reportes ----------
 rep=function(){const m=M(),sp=spent(m),{by:bb,t}=budBy(m),lim=S.budgets,er=earned(m),all=keys().map(k=>[k,spent(S.months[k]).total,earned(S.months[k]).total]),acc=all.reduce((a,[,x])=>a+x,0),accI=all.reduce((a,[,,i])=>a+i,0);
  const cats=[...new Set([...Object.keys(sp.by),...Object.keys(lim).filter(c=>+lim[c]>0)])].sort((a,b)=>(sp.by[b]||0)-(sp.by[a]||0)),mx=Math.max(1,...Object.values(sp.by));
- const rows=cats.map(c=>{const v=sp.by[c]||0,l=+lim[c]||0,bv=bb[c]||0,p=l?bv/l*100:0,col=p>100?'#dc2626':p>=80?'#f59e0b':'#16a34a';
-  return `<div class="bar" onclick="filt='${esc(c)}';tab='mov';render();setTimeout(()=>goSec&&goSec('movcard'),50)"><div class="bl"><span>${esc(DN(c))}</span><b>${f(v)}</b></div><div class="bt"><div style="width:${Math.max(2,v/mx*100)}%"></div></div>
-  ${l?`<div class="muted" style="display:flex;justify-content:space-between;margin-top:2px"><span>🎯 ${T('{0} de {1}',f(bv),f(l))}${t[c]?' · '+T('incl. Tony {0}',f(t[c])):''}</span><b style="color:${col}">${Math.round(p)}%</b></div>`:''}</div>`}).join('');
+ const rows=cats.map(c=>{const v=sp.by[c]||0,l=+lim[c]||0,bv=bb[c]||0,p=l?bv/l*100:0,pr=Math.round(p),col=pr>100?'#dc2626':pr>=80?'#f59e0b':'#16a34a';
+  // v83: con presupuesto la barra es gastado/presupuesto (tope visual 100%, roja si se pasa) y del color del %; sin presupuesto, gris y relativa al mayor gasto
+  const bw=l?Math.min(100,Math.max(2,p)):Math.max(2,v/mx*100),bst=l?`width:${bw}%;background:${col}`:`width:${bw}%;background:#94a3b8`;
+  return `<div class="bar" onclick="filt='${esc(c)}';tab='mov';render();setTimeout(()=>goSec&&goSec('movcard'),50)"><div class="bl"><span>${esc(DN(c))}</span><b>${f(v)}</b></div><div class="bt${l?' bud':' nobud'}"${l?'':` title="${T('Sin presupuesto')}"`}><div style="${bst}"></div></div>
+  ${l?`<div class="muted" style="display:flex;justify-content:space-between;margin-top:2px"><span>🎯 ${T('{0} de {1}',f(bv),f(l))}${t[c]?' · '+T('incl. Tony {0}',f(t[c])):''}</span><b style="color:${col}">${pr}%</b></div>`:`<div class="muted" style="margin-top:2px">${T('Sin presupuesto')}</div>`}</div>`}).join('');
  return `<div class="card" id="gpcard"><h2>${T('Gasto y presupuesto por categoría')}<span>${f(sp.total)}</span></h2><div class="muted">${lbl(S.cur)} · ${T('compras compartidas cuentan solo tu parte')}</div>${rows||'<div class="muted">'+T('Sin gastos registrados.')+'</div>'}</div>
  <div class="card" id="inccard"><h2>${T('Ingresos por concepto')}<span class="pos">${f(er.total)}</span></h2><div class="muted">${lbl(S.cur)} · ${T('sin reembolsos, transferencias entre tus cuentas ni pagos de tarjeta')}</div>${bars(er.by,'pos')||'<div class="muted">'+T('Sin ingresos registrados.')+'</div>'}</div>
  ${[remCard(m),cbCard(cbBy([m]),lbl(S.cur),cbBy(keys().map(k=>S.months[k])))].map(x=>x.replace('<div class="card"','<div class="card defcol"')).join('')}
