@@ -10,8 +10,8 @@ Object.assign(EN,{"📄 PDF del mes":"📄 Monthly PDF","Resumen mensual":"Month
 const shI=(p,w)=>r2(((p.items||{})[w]||[]).reduce((s,x)=>s+(+x.a||0),0));
 function pShare(p,w){const t=r2(+(p.shares||{})[w]||0),pi=personItems(p,w),i=r2(pi.reduce((s,x)=>s+x.por,0));return {t,i,s:r2(t-i),notes:pi.map(x=>itLine(x.it,p,w,x.por))}}
 const billSt2=b=>{const a=+b.amount||0,p=+b.paid||0;return a>0&&p>=a-0.005?'paid':'pend'};
-function tonyData(k){const m=S.months[k],c=calc(m);return {m,c,bills:m.bills.filter(b=>+b.amount),pur:byNew(m.purchases).filter(p=>!p.paidBy&&+(p.shares||{}).Tony).map(p=>({p,...pShare(p,'Tony')}))}}
-function carlosData(k){const m=S.months[k],c=calc(m);return {m,c,pur:byNew(m.purchases).filter(p=>!p.paidBy&&+(p.shares||{}).Carlos).map(p=>({p,...pShare(p,'Carlos')}))}}
+function tonyData(k){const m=S.months[k],c=calc(m);return {m,c,bills:m.bills.filter(b=>+b.amount),pur:byNew(m.purchases,undefined,k).filter(p=>!p.paidBy&&+(p.shares||{}).Tony).map(p=>({p,...pShare(p,'Tony')}))}}
+function carlosData(k){const m=S.months[k],c=calc(m);return {m,c,pur:byNew(m.purchases,undefined,k).filter(p=>!p.paidBy&&+(p.shares||{}).Carlos).map(p=>({p,...pShare(p,'Carlos')}))}}
 // v57: desglose solo si esa persona tiene ítems individuales (X>0); si no, solo "Tu parte"
 const hasI=x=>x.i>0.004,brk=x=>hasI(x)?`${T('ítems {0}',f(x.i))} + ${T('parte {0}',f(x.s))}${x.tx>0.004?' + '+T('impuesto {0}',f(x.tx)):''} = ${f(x.t)}`:T('Tu parte: {0}',f(x.t));
 // ---------- mensajes ----------
@@ -76,8 +76,8 @@ const pdfSub=()=>pdfWho()+' · '+T('Generado el {0}',new Date().toLocaleDateStri
 const PPL3=['Yo','Tony','Carlos'];
 const pdfNm=w=>w==='Yo'?'Joe':DN(w);
 function ownTxt(o){o=[...new Set(o)];return o.length>=3?T('Todos'):o.length===2?o.map(pdfNm).join(T(' y ')):T('No')}
-function pdfPurch(D2,P,cols,hl){const hi=hl?4+cols.indexOf(hl):undefined,one=cols.length===1,W1=one?[176,118,68,84,70]:[128,96,58,74,54,54,52],tot={};cols.forEach(w=>tot[w]=0);
- P=byNew(P);
+function pdfPurch(D2,P,cols,hl,k){const hi=hl?4+cols.indexOf(hl):undefined,one=cols.length===1,W1=one?[176,118,68,84,70]:[128,96,58,74,54,54,52],tot={};cols.forEach(w=>tot[w]=0);
+ P=byNew(P,undefined,k);
  P.forEach(p=>{const sh=p.shares||{},L=pList(p).filter(it=>+it.a>0),mine=one?L.filter(it=>ownOf(it).includes(cols[0])):L,fam=(p.mode||'fam')==='fam';
   const isum={};cols.forEach(w=>isum[w]=r2(L.reduce((s,it)=>s+(itPort(it)[w]||0),0)));
   const ptx=(typeof pTaxOf==='function'&&pTaxOf(p))||null,txT=ptx?r2(+p.tax):0,rest=r2((+p.total||0)-txT-L.reduce((s,it)=>s+(+it.a||0),0));
@@ -106,15 +106,15 @@ function pdfMonth(k){const m=S.months[k],c=calc(m),D2=Doc(T('Resumen mensual')+'
  const td=tonyData(k);D2.h(T('Tony: transferencia'));td.bills.forEach(b=>D2.row((typeof billLbl==='function'?billLbl(b):DN(b.name))+' ('+T(billSt2(b)==='paid'?'pagada':'pendiente')+')',f(b.amount),{ind:8}));
  D2.row(T('Total cuentas'),f(c.bills),{b:1});D2.row('− '+T('Tu parte de las compras'),f(c.tony));D2.row(T('= A transferir'),f(c.toTony),{b:1});if(c.xfer)D2.row(T('Ya transferido'),f(c.xfer));D2.row(T('Pendiente'),f(c.tonyDue),{b:1});
  D2.h(T('Carlos (por cobrar)'));D2.row(T('Total compras'),f(c.carlos));if(c.joeCS>0.004)D2.row(T('− Parte de Joe en compras de Carlos'),f(c.joeCS));if(c.joeOwesCarlos>0.004)D2.row(T('Le debes a Carlos (neto)'),f(c.joeOwesCarlos),{b:1});D2.row(T('Ya cobrado'),f(c.recv));D2.row(T('Pendiente'),f(c.carlosDue),{b:1});
- D2.h(T('Compras compartidas'));pdfPurch(D2,m.purchases,PPL3);
+ D2.h(T('Compras compartidas'));pdfPurch(D2,m.purchases,PPL3,undefined,k);
  D2.h(T('Saldos de tarjetas'));if(m.cards.length)D2.table([T('Tarjeta'),T('Saldo')],m.cards.map(x=>[DN(x.name),f(x.amount)]),{ws:[366,150],tot:[T('Total'),f(c.credit)]});else D2.note('—');
  return D2.out()}
 function pdfTony(k){const{c,bills,pur}=tonyData(k),D2=Doc(T('Cuentas de {0} – Tony',lblL(k)),pdfSub());
  D2.h(T('Cuentas'));D2.table([T('Cuentas'),T('Monto'),''],bills.map(b=>[typeof billLbl==='function'?billLbl(b):DN(b.name),f(b.amount),T(billSt2(b)==='paid'?'pagada':'pendiente')]),{ws:[316,100,100],tot:[T('Total cuentas'),f(c.bills),'']});
- D2.h(T('Tu parte de las compras'));pdfPurch(D2,S.months[k].purchases,PPL3,'Tony');
+ D2.h(T('Tu parte de las compras'));pdfPurch(D2,S.months[k].purchases,PPL3,'Tony',k);
  D2.h(T('Balance'));D2.row(T('Total cuentas'),f(c.bills));D2.row('− '+T('Tu parte de las compras'),f(c.tony));D2.row(T('= A transferir'),f(c.toTony),{b:1});if(c.xfer)D2.row(T('Ya transferido'),f(c.xfer));D2.row(T('Pendiente'),f(c.tonyDue),{b:1});return D2.out()}
 function pdfCarlos(k){const{c,pur}=carlosData(k),D2=Doc(T('Compras de {0} – Carlos',lblL(k)),pdfSub());
- D2.h(T('Compras compartidas'));pdfPurch(D2,S.months[k].purchases,PPL3,'Carlos');
+ D2.h(T('Compras compartidas'));pdfPurch(D2,S.months[k].purchases,PPL3,'Carlos',k);
 D2.h(T('Balance'));D2.row(T('Total'),f(c.carlos));if(c.joeCS>0.004)D2.row(T('− Mi parte de tus compras'),f(c.joeCS));D2.row(T('Ya pagado'),f(c.recv));D2.row(T('Pendiente'),f(c.carlosDue),{b:1});if(c.joeOwesCarlos>0.004)D2.row(T('Te debo'),f(c.joeOwesCarlos),{b:1});return D2.out()}
 async function makePDF(kind,k){await loadPDF();const doc=kind==='tony'?pdfTony(k):kind==='carlos'?pdfCarlos(k):pdfMonth(k);
  const nm=(kind==='tony'?'Tony':kind==='carlos'?'Carlos':T('Resumen mensual').replace(/\s/g,'-'))+'-'+k+'.pdf';return new File([doc.output('blob')],nm,{type:'application/pdf'})}

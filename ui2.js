@@ -1,10 +1,17 @@
 // v52+: estructura nueva (Hoy · Movimientos · Mes · Reportes + Configuración desde ☰), catálogos uniformes, mejoras rápidas.
 // Solo interfaz: el formato de datos no cambia (campos nuevos opcionales: storeMem, check.ok).
-let APP_V='…';  // v78: se lee sola del service worker (caché finanzas-vNN)
-(async()=>{let v='';try{const k=(await caches.keys()).map(x=>(x.match(/^finanzas-(v\d+)$/)||[])[1]).filter(Boolean).sort((a,b)=>+b.slice(1)-+a.slice(1))[0];if(k)v=k}catch(e){}
- if(!v)try{const t=await (await fetch('sw.js',{cache:'no-store'})).text();v=(t.match(/finanzas-(v\d+)/)||[])[1]||''}catch(e){}
- if(v){APP_V=v;const el=document.getElementById('appver');if(el)el.textContent=T('Versión')+' '+v}})();
-Object.assign(EN,{"Hoy":"Today","Transferir":"Transfer","Cobrar":"Collect","No se mezclan con el mes actual. Si llega un bill tarde, anótalo en su mes (Mes › Cuentas de Tony del mes) y aquí se actualiza.":"Kept separate from the current month. If a bill arrives late, enter it in its month (Month › Tony's bills this month) and this updates.","Configuración":"Settings","Versión":"Version","Por hacer":"To do","✅ Todo al día":"✅ All caught up",
+let APP_V=typeof CODE_V!=='undefined'?CODE_V:'…';  // v84: la versión del código que está corriendo (app.js CODE_V); antes se leía de la caché
+// v84: compara con el sw.js publicado; si hay una más nueva, avisa con «Actualizar» (recarga con el código nuevo)
+let NEW_V='';
+(async()=>{let v='';try{const t=await (await fetch('sw.js?cb='+Date.now(),{cache:'no-store'})).text();v=(t.match(/finanzas-(v\d+)/)||[])[1]||''}catch(e){}
+ if(v&&+v.slice(1)>+String(APP_V).slice(1)){NEW_V=v;try{const r=await navigator.serviceWorker.getRegistration();if(r)await r.update()}catch(e){}}
+ const el=document.getElementById('appver');if(el)el.innerHTML=verHtml()})();
+function verHtml(){return esc(T('Versión')+' '+APP_V)+(NEW_V?` · <button class="lnk" id="appupd" onclick="appUpd()">${esc(T('Hay una nueva ({0}) · Actualizar',NEW_V))}</button>`:'')}
+async function appUpd(){try{const r=await navigator.serviceWorker.getRegistration();if(r){await r.update();if(r.waiting)r.waiting.postMessage('skip')}}catch(e){}location.reload()}
+if('serviceWorker'in navigator){const had=!!navigator.serviceWorker.controller;let rl=false;
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!rl&&!(typeof dlg==='function'&&dlg()&&dlg().open)){rl=true;location.reload()}});
+ navigator.serviceWorker.getRegistration().then(r=>r&&r.update()).catch(()=>{})}
+Object.assign(EN,{"Hoy":"Today","Transferir":"Transfer","Cobrar":"Collect","No se mezclan con el mes actual. Si llega un bill tarde, anótalo en su mes (Mes › Cuentas de Tony del mes) y aquí se actualiza.":"Kept separate from the current month. If a bill arrives late, enter it in its month (Month › Tony's bills this month) and this updates.","Configuración":"Settings","Versión":"Version","Hay una nueva ({0}) · Actualizar":"New version ({0}) · Update","Por hacer":"To do","✅ Todo al día":"✅ All caught up",
 "Cheque de {0} depositado. ¿Llegó ese monto?":"Check for {0} deposited. Did that amount arrive?","Sí":"Yes","Otro monto":"Other amount","Monto que llegó $":"Amount that arrived $","Cheque corregido":"Check corrected",
 "Enviar mensaje":"Send message","Mensaje para {0}":"Message for {0}","Copiar":"Copy","Copiado":"Copied","Cerrar":"Close",
 "Hola Tony, cuentas de {0}:":"Hi Tony, bills for {0}:","Total cuentas":"Total bills","− Tu parte de las compras":"− Your share of purchases","− Ya transferido":"− Already transferred","Te transfiero":"I'm transferring you",
@@ -50,7 +57,7 @@ function chkFix(id){const c=S.checks.find(x=>x.id===id),a=r2(document.getElement
 function msgFor(who,k){const m=S.months[k],c=calc(m),L2=[];
  if(who==='tony'){L2.push(T('Hola Tony, cuentas de {0}:',lbl(k)));m.bills.filter(b=>+b.amount).forEach(b=>L2.push(`• ${DN(b.name)}: ${f(b.amount)}`));
   L2.push(`${T('Total cuentas')}: ${f(c.bills)}`,`${T('− Tu parte de las compras')}: ${f(c.tony)}`);if(c.xfer)L2.push(`${T('− Ya transferido')}: ${f(c.xfer)}`);L2.push(`${T('Te transfiero')}: ${f(c.tonyDue)}`)}
- else{L2.push(T('Hola Carlos, tu parte de las compras de {0}:',lbl(k)));byNew(m.purchases).filter(p=>+p.shares.Carlos).forEach(p=>L2.push(`• ${DN(p.store)} ${p.date?fdate(p.date):''}: ${f(p.shares.Carlos)}`));
+ else{L2.push(T('Hola Carlos, tu parte de las compras de {0}:',lbl(k)));byNew(m.purchases,undefined,k).filter(p=>+p.shares.Carlos).forEach(p=>L2.push(`• ${DN(p.store)} ${p.date?fdate(p.date):''}: ${f(p.shares.Carlos)}`));
   L2.push(`${T('Total')}: ${f(c.carlos)}`);if(c.recv)L2.push(`${T('− Ya pagado')}: ${f(c.recv)}`);L2.push(`${T('Pendiente')}: ${f(c.carlosDue)}`)}
  return L2.join('\n')}
 async function shareMsg(who,k){const t=msgFor(who,k);if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e&&e.name==='AbortError')return}}
@@ -197,5 +204,5 @@ const _cfg=cfg;cfg=function(){let o=_cfg();
  const b=budCfg().replace('🎯 '+T('Presupuesto mensual'),'🏷️ '+T('Categorías y presupuesto'));
  const cat=`<div class="muted" style="margin:14px 4px 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">${T('Catálogos')}</div>`+b+['inc','money','cards','bills','people','stores','recips'].map(ctlCard).join('');
  o=o.replace(budCfg(),'');const mk=T('Se guarda solo en este dispositivo.')+'</div></div>',i=o.indexOf(mk)+mk.length;
- return o.slice(0,i)+cat+o.slice(i)+`<div class="muted" id="appver" style="text-align:center;margin:14px 0">${T('Versión')} ${APP_V}</div>`};
+ return o.slice(0,i)+cat+o.slice(i)+`<div class="muted" id="appver" style="text-align:center;margin:14px 0">${verHtml()}</div>`};
 const _render=render;render=function(){if(tab==='cue'||tab==='com')tab='mov';return _render.apply(this,arguments)};

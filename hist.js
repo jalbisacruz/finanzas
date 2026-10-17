@@ -4,7 +4,7 @@ let hRange='cur';const hOpen=new Set();
 function hList(){const out=[];keys().forEach(k=>{if(hRange==='cur'&&k!==S.cur)return;if(hRange==='prev'&&k>=S.cur)return;
  (S.months[k].purchases||[]).forEach((p,i)=>out.push({k,p,i}))});
  const n={};out.forEach(o=>{n[o.k]=(n[o.k]||0)+1});
- return out.sort((a,b)=>(dKey(b.p.date)||b.k).localeCompare(dKey(a.p.date)||a.k)||cRank(b.p,b.i,n[b.k])-cRank(a.p,a.i,n[a.k]))}
+ const q=o=>sKey(dKey(o.p.date),o.k)||o.k;return out.sort((a,b)=>cmpS(q(b),q(a))||cRank(b.p,b.i,n[b.k])-cRank(a.p,a.i,n[a.k]))}
 function hEdit(k,id){const prev=S.cur;if(k!==prev){S.cur=k;dlg().addEventListener('close',()=>{if(S.months[prev])S.cur=prev;render()},{once:true})}editP(id)}
 function hTog(ev,id){ev.stopPropagation();hOpen.has(id)?hOpen.delete(id):hOpen.add(id);render()}
 function hDetail(p){const sh=p.shares||{},L2=pList(p),all=r2(L2.reduce((s,x)=>s+(+x.a||0),0)),ppl=[...new Set([...S.people,...Object.keys(sh),...L2.flatMap(ownOf)])],iS=w=>r2(personItems(p,w).reduce((s,x)=>s+x.por,0));

@@ -40,7 +40,7 @@ function scanStore(n){n=String(n||'').trim().slice(0,40);if(!n)return null;const
  return S.stores.find(s=>k(s)===kn||(kn.length>2&&(k(s).includes(kn)||kn.includes(k(s))&&k(s).length>2)))||n}
 // Convierte la respuesta en el borrador de compra compartida (no guarda nada)
 function scanApply(o){editP();const U=new Set((o.uncertain||[]).map(String));const st=scanStore(o.store);if(st)D.store=st;else U.add('store');
- if(/^\d{4}-\d{2}-\d{2}$/.test(o.date||'')&&!isNaN(new Date(o.date)))D.date=o.date;else U.add('date');
+ if(/^\d{4}-\d{2}-\d{2}$/.test(o.date||'')&&!isNaN(new Date(o.date))){const fy=scanYear(o.date);D.date=fy.d;if(fy.fixed)U.add('date')}else U.add('date');
  const L=(Array.isArray(o.items)?o.items:[]).map((x,i)=>({a:scanNum(x.amount),n:String(x.name||'').trim().slice(0,40),c:scanCat(x.category),own:['Yo','Tony','Carlos'],bad:x.confident===false||!(scanNum(x.amount)>0)})).filter(x=>x.a>0||x.n);
  let t=scanNum(o.total);const isum=r2(L.reduce((s,x)=>s+(x.a>0?x.a:0),0));if(!(t>0)){t=isum;U.add('total')}
  let tx=scanNum(o.tax);if(!(tx>0)||tx>=t)tx=0;if(r2(isum+tx)>t+0.004)U.add('total');D.total=t;if(tx)D.tax=tx;else delete D.tax;
@@ -77,3 +77,8 @@ const _quickV62=quick;quick=function(){_quickV62();const b=[...dlg().querySelect
 const _renderV62=render;render=function(){_renderV62();const v=document.getElementById('v');if(!v)return;
  v.querySelectorAll('button[onclick="editP()"]').forEach((b,k)=>{if(!b.nextElementSibling||!/^scan/.test(b.nextElementSibling.id||''))b.insertAdjacentHTML('afterend',scanBtn('scanc'+k))});
  /* v78: la barra de Hoy se quitó; Cargar recibo está en el botón + */};
+
+// v84: el año leído del recibo a veces sale mal (p. ej. 2025 en un recibo de esta semana): si con el año actual la fecha cae en los últimos
+// 75 días (o hasta 2 días adelante), se usa el año actual y la fecha queda marcada para revisar.
+function scanYear(d){const t=today(),ty=t.slice(0,4);if(d.slice(0,4)===ty)return {d,fixed:false};const c=ty+d.slice(4),ms=new Date(c+'T12:00')-new Date(t+'T12:00');
+ return !isNaN(ms)&&ms<=2*864e5&&ms>=-75*864e5?{d:c,fixed:true}:{d,fixed:false}}

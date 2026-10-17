@@ -22,7 +22,9 @@ function a2hsHint(){if(document.getElementById('a2hs')||!isIOS()||isStandalone()
  document.getElementById('a2hsx').onclick=()=>{try{localStorage.setItem('v-a2hs-off','1')}catch(e){}d.remove()}}
 const f=n=>(n<0?'−':'')+'$'+Math.abs(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fd=d=>{if(!d)return'';const[y,m,dd]=d.split('-');return new Date(+y,m-1,+dd).toLocaleDateString(ES?'es':'en-US',{day:'numeric',month:'short'}).replace('.','')};
+const fd=d=>{if(!d)return'';const[y,m,dd]=d.split('-');const mo=DOC&&DOC.months&&DOC.months[MI],cy=mo&&mo.k?String(mo.k).slice(0,4):y;return new Date(+y,m-1,+dd).toLocaleDateString(ES?'es':'en-US',y===cy?{day:'numeric',month:'short'}:{day:'numeric',month:'short',year:'numeric'}).replace('.','')};
+// v84: mismo arreglo de año que en la app (recibo con año mal leído)
+const yfix=d=>{const t=today(),c=t.slice(0,4)+d.slice(4),ms=new Date(c+'T12:00')-new Date(t+'T12:00');return d.slice(0,4)!==t.slice(0,4)&&!isNaN(ms)&&ms<=2*864e5&&ms>=-75*864e5?c:d};
 const P3=['Yo','Tony','Carlos'];window.DOC=null;let MI=0;
 // v79: compras de la más nueva a la más vieja (enlaces publicados antes venían de la más vieja a la más nueva)
 // v80: nombre del PDF con mes y hora, p. ej. Tony-Octubre-2026-17oct-1-05pm.pdf
@@ -99,7 +101,7 @@ window.vScan=()=>{const i=document.createElement('input');i.type='file';i.accept
  i.onchange=async()=>{const file=i.files&&i.files[0];i.remove();if(!file)return;const btn=$('vscan'),e=$('rerr');btn.disabled=true;btn.textContent=t('reading');
   try{const pdf=/pdf$/i.test(file.type)||/\.pdf$/i.test(file.name);const b64=pdf?await vPdf(file):await vResize(file);let s=String(await vAI(b64,pdf?'application/pdf':'image/jpeg')).trim().replace(/^```(?:json)?\s*|\s*```$/g,'');
    const o=JSON.parse(s.slice(s.indexOf('{'),s.lastIndexOf('}')+1));if(o.isReceipt===false)throw new Error('notreceipt');const cv=(DOC.cats||[]).map(c=>c.v);
-   Object.assign(REG,{store:String(o.store||'').slice(0,60),date:/^\d{4}-\d{2}-\d{2}$/.test(o.date||'')?o.date:REG.date,total:+o.total>0?r2(o.total):'',tax:+o.tax>0&&+o.tax<+o.total?r2(o.tax):'',scan:true,
+   Object.assign(REG,{store:String(o.store||'').slice(0,60),date:/^\d{4}-\d{2}-\d{2}$/.test(o.date||'')?yfix(o.date):REG.date,total:+o.total>0?r2(o.total):'',tax:+o.tax>0&&+o.tax<+o.total?r2(o.tax):'',scan:true,
     items:(Array.isArray(o.items)?o.items:[]).filter(x=>+x.amount>0).slice(0,60).map(x=>({n:String(x.name||'').slice(0,40),a:r2(x.amount),own:['Yo','Tony','Carlos'],c:cv.includes(x.category)?x.category:(cv[0]||'')}))});regDraw()}
   catch(x){console.warn('scan',x);regDraw();$('rerr').textContent=String(x&&x.message)==='pdfsize'?t('pdfBig'):t('scanErr')}};
  document.body.appendChild(i);i.click()};
