@@ -1,5 +1,5 @@
 """v72: purchases sent from private links -> Joe reviews (fake Firebase, made-up data): python tests/test_inbox.py [--shots]"""
-import json,os,sys,subprocess
+import re,json,os,sys,subprocess
 from harness import app,HERE
 ROOT=os.path.dirname(HERE);ok=0;FAKE=open(os.path.join(HERE,'fakefb.js')).read()
 def check(c,m):
@@ -54,7 +54,8 @@ with app(ROOT,routes=R,init=init) as pg:
     E("saveP()");pg.wait_for_timeout(200)
     p=E("M().purchases.find(x=>x.paidBy==='Arianna')");check(p and p['method']=='' and E("M().purchases.length")==n0+1,'saved, no method')
     check(E("debE(M()).amount")==deb0,'debit untouched')
-    b=E("M().bills.find(b=>b.id==='_tfood')");check(b and b['amount']==16.05,'Comida bill = Joe share %s'%b)
+    b=E("comidaBill(M())");check(b and b['amount']==16.05 and b['tfood']==16.05 and b['name']=='Food','Comida bill = Joe share %s'%b)  # v74: fixture has no Food line -> exactly one created
+    check(not E("M().bills.some(isLegacyTF)") and E("M().bills.filter(isComidaBill).length")==1,'one Comida line, no separate line')
     c1=E("calc(M())");check(abs(c1['tony']-c0['tony'])<1e-9 and abs(c1['carlos']-c0['carlos'])<1e-9,'por cobrar unchanged')
     check(abs(c1['toTony']-c0['toTony']-16.05)<1e-9,'A transferirte +16.05 %s %s'%(c0['toTony'],c1['toTony']))
     check(('shares/%s/inbox/%s'%(TT,ia['id'])) not in E("window.__fs.docs"),'inbox doc deleted')
@@ -72,8 +73,8 @@ with app(ROOT,routes=R,init=init) as pg:
     E("()=>{tab='mov';render()}");pg.wait_for_timeout(100);check('Compró: Arianna' in pg.inner_text('#v'),'history tag')
     with pg.expect_download(timeout=20000) as d: E("()=>pdfDl('tony','2026-10')")
     d.value.save_as('/tmp/v72t.pdf');tx=subprocess.run(['pdftotext','-layout','/tmp/v72t.pdf','-'],capture_output=True,text=True).stdout
-    check('Compró: Arianna' in tx and 'Comida (compras de Tony/Arianna)' in tx,'pdf')
-    t=E("msgShort('tony','2026-10')");check('Comida (compras de Tony/Arianna)' in t and 'Publix — $32.10' not in t,'tony message: bill line, purchase not charged')
+    check('Compró: Arianna' in tx and 'Comida (incl. $16.05' in tx and 'Comida (compras de Tony/Arianna)' not in tx,'pdf: one Comida line with breakdown')
+    t=E("msgShort('tony','2026-10')");check(re.search(r'Comida\s+\$16\.05',t) and 'compras de Tony/Arianna' not in t and 'Publix — $32.10' not in t,'tony message: Comida line, purchase not charged '+t)
     snap=E("snapFor('Tony')");check(snap['buyers']==['Tony','Arianna'] and any(p.get('by')=='Arianna' for p in snap['months'][0]['purchases']),'snapshot')
     errs=[e for e in pg.errors if 'DIALOG' not in e];check(not errs,errs)
 print('test_inbox OK',ok)

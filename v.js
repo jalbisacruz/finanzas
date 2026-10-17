@@ -1,10 +1,10 @@
 // v71: página pública de solo lectura para Tony/Carlos (shares/{token}). No usa el estado privado de Joe.
 let ES=!/^en/i.test(navigator.language||'es');
 const TXA={es:{title:'{0} · {1}',from:'De {0} · Actualizado {1}',share:'Tu parte',paid:'Ya pagado',paidT:'Ya transferido',pend:'Pendiente',pendT:'Pendiente de transferirte',
- bills:'Cuentas',billsT:'Total cuentas',minus:'− Tu parte de las compras',toT:'= A transferirte',purch:'Compras compartidas',item:'Ítem',cat:'Categoría',amt:'Monto',shared:'Compartida',ptot:'Total de la compra',
+ bills:'Cuentas',inclTF:'incl. {0} de compras de Tony/Arianna',billsT:'Total cuentas',minus:'− Tu parte de las compras',toT:'= A transferirte',purch:'Compras compartidas',item:'Ítem',cat:'Categoría',amt:'Monto',shared:'Compartida',ptot:'Total de la compra',
  mtot:'Total del mes',none:'Sin compras este mes.',paidB:'pagada',pendB:'pendiente',dl:'⬇️ Descargar PDF',bad:'Este enlace no es válido o fue desactivado.',err:'No se pudo cargar. Revisa tu conexión.',sum:'Resumen'},
  en:{title:'{0} · {1}',from:'From {0} · Updated {1}',share:'Your share',paid:'Already paid',paidT:'Already transferred',pend:'Pending',pendT:'Pending to transfer you',
- bills:'Bills',billsT:'Bills total',minus:'− Your share of purchases',toT:'= To transfer you',purch:'Shared purchases',item:'Item',cat:'Category',amt:'Amount',shared:'Shared',ptot:'Purchase total',
+ bills:'Bills',inclTF:'incl. {0} from Tony/Arianna purchases',billsT:'Bills total',minus:'− Your share of purchases',toT:'= To transfer you',purch:'Shared purchases',item:'Item',cat:'Category',amt:'Amount',shared:'Shared',ptot:'Purchase total',
  mtot:'Month total',none:'No purchases this month.',paidB:'paid',pendB:'pending',dl:'⬇️ Download PDF',bad:'This link is not valid or was turned off.',err:"Couldn't load. Check your connection.",sum:'Summary'}};
 Object.assign(TXA.es,{tcT:'Entre Tony y Carlos',tcL:'{0} le debe a {1}',tcPaid:'✅ Ya pagué',tcSent:'✅ Avisado a Joe.',tcDone:'✅ Pagado',tcRem:'⏳ Recordatorio: de {0} todavía le debes a {1} {2}.',joeSh:'− Parte de Joe en tus compras',joeOw:'Joe te debe'});
 Object.assign(TXA.en,{tcT:'Between Tony and Carlos',tcL:'{0} owes {1}',tcPaid:'✅ I paid',tcSent:'✅ Joe was notified.',tcDone:'✅ Paid',tcRem:'⏳ Reminder: for {0} you still owe {1} {2}.',joeSh:'− Joe\'s share of your purchases',joeOw:'Joe owes you'});
@@ -27,7 +27,7 @@ function draw(){setLangV(DOC.lang);const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.na
  if(mo.joeOwes>0.004)h+=`<div class="row"><span>${t('joeOw')}</span><b>${f(mo.joeOwes)}</b></div>`;
  if(mo.tc){const x=mo.tc,mine=x.from===w,sk='vtc-'+tok+'-'+mo.k;h+=`<div class="row" id="vtc"><span>${t('tcT')}: ${esc(t('tcL',N(x.from),N(x.to)))}</span><b>${f(x.amount)}</b></div>${x.settled?`<div class="muted">${t('tcDone')}</div>`:mine?(localStorage.getItem(sk)?`<div class="muted">${t('tcSent')}</div>`:`<button class="dl" id="vtcpay" style="background:#15803d;margin-top:6px" onclick="tcPaid()">${t('tcPaid')}</button>`):''}`}
  h+=`</div>`;
- if(T&&mo.bills&&mo.bills.length)h+=`<div class="card"><h2>${t('bills')}</h2>${mo.bills.map(b=>`<div class="row"><span>${esc(b.n)} <span class="muted">${b.paid?t('paidB'):t('pendB')}</span></span><span>${f(b.a)}</span></div>`).join('')}<div class="row"><b>${t('billsT')}</b><b>${f(mo.billsTotal)}</b></div></div>`;
+ if(T&&mo.bills&&mo.bills.length)h+=`<div class="card"><h2>${t('bills')}</h2>${mo.bills.map(b=>`<div class="row"><span>${esc(b.n)}${b.x?` <span class="muted">(${t('inclTF').replace('{0}',f(b.x))})</span>`:''} <span class="muted">${b.paid?t('paidB'):t('pendB')}</span></span><span>${f(b.a)}</span></div>`).join('')}<div class="row"><b>${t('billsT')}</b><b>${f(mo.billsTotal)}</b></div></div>`;
  const hc=c=>c===w?' class="hl"':'';const mt={Yo:0,Tony:0,Carlos:0};
  h+=`<div class="card"><h2>${t('purch')}</h2>`+(mo.purchases.length?mo.purchases.map(p=>{if(!p.by)P3.forEach(x=>mt[x]+=p.tot[x]||0);return `<div class="ph"><span>${esc(fd(p.d))} · ${esc(p.s)} <span class="muted">${esc(p.c)}</span>${p.by?` <span class="muted">· ${esc(TX.buyer)}: ${esc(p.by)} *</span>`:''}</span><span>${f(p.t)}</span></div>
   <div class="wrap"><table><tr><th>${t('item')}</th><th class="l cat">${t('cat')}</th><th>${t('amt')}</th><th class="l">${t('shared')}</th>${P3.map(x=>`<th${hc(x)}>${esc(N(x))}</th>`).join('')}</tr>
@@ -92,7 +92,7 @@ window.pdf=()=>{const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,J=new jsp
  const row=(l,v,b)=>{need(16);J.setFont('helvetica',b?'bold':'normal');J.setFontSize(10.5);J.text(pt(l),X,y);J.text(pt(v),R,y,{align:'right'});y+=15};
  const h2=s=>{need(40);y+=8;J.setFont('helvetica','bold');J.setFontSize(13);J.setTextColor(37,99,235);J.text(pt(s),X,y);J.setDrawColor(203,213,225);J.line(X,y+5,R,y+5);J.setTextColor(15,23,42);y+=20};
  h2(t('sum'));if(w==='Tony'){row(t('billsT'),f(mo.billsTotal));row(t('minus'),f(mo.share));row(t('toT'),f(mo.toTransfer),1);if(mo.paid)row(t('paidT'),f(mo.paid));row(t('pendT'),f(mo.pending),1);
-  if(mo.bills&&mo.bills.length){h2(t('bills'));mo.bills.forEach(b=>row(b.n+' ('+(b.paid?t('paidB'):t('pendB'))+')',f(b.a)))}}
+  if(mo.bills&&mo.bills.length){h2(t('bills'));mo.bills.forEach(b=>row(b.n+(b.x?' ('+t('inclTF').replace('{0}',f(b.x))+')':'')+' ('+(b.paid?t('paidB'):t('pendB'))+')',f(b.a)))}}
  else{row(t('share'),f(mo.share));row(t('paid'),f(mo.paid));row(t('pend'),f(mo.pending),1)}
  h2(t('purch'));const mt={Yo:0,Tony:0,Carlos:0};
  mo.purchases.forEach(p=>{need(60);J.setFont('helvetica','bold');J.setFontSize(10.5);J.text(pt(fd(p.d)+' · '+p.s+' · '+p.c),X,y);J.text(pt(f(p.t)),R,y,{align:'right'});y+=14;

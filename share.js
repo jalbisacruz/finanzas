@@ -95,14 +95,14 @@ function pdfMonth(k){const m=S.months[k],c=calc(m),D2=Doc(T('Resumen mensual')+'
  const er=earned(m);D2.h(T('Ingresos por concepto'));
  if(Object.keys(er.by).length)D2.table([T('Concepto'),T('Monto')],Object.entries(er.by).sort((a,b)=>b[1]-a[1]).map(([x,v])=>[DN(x),f(v)]),{ws:[366,150],tot:[T('Total'),f(er.total)]});else D2.note(T('Sin ingresos registrados.'));
  D2.note(T('sin reembolsos, transferencias entre tus cuentas ni pagos de tarjeta'));
- const td=tonyData(k);D2.h(T('Tony: transferencia'));td.bills.forEach(b=>D2.row(DN(b.name)+' ('+T(billSt2(b)==='paid'?'pagada':'pendiente')+')',f(b.amount),{ind:8}));
+ const td=tonyData(k);D2.h(T('Tony: transferencia'));td.bills.forEach(b=>D2.row((typeof billLbl==='function'?billLbl(b):DN(b.name))+' ('+T(billSt2(b)==='paid'?'pagada':'pendiente')+')',f(b.amount),{ind:8}));
  D2.row(T('Total cuentas'),f(c.bills),{b:1});D2.row('− '+T('Tu parte de las compras'),f(c.tony));D2.row(T('= A transferir'),f(c.toTony),{b:1});if(c.xfer)D2.row(T('Ya transferido'),f(c.xfer));D2.row(T('Pendiente'),f(c.tonyDue),{b:1});
  D2.h(T('Carlos (por cobrar)'));D2.row(T('Total compras'),f(c.carlos));if(c.joeCS>0.004)D2.row(T('− Parte de Joe en compras de Carlos'),f(c.joeCS));if(c.joeOwesCarlos>0.004)D2.row(T('Le debes a Carlos (neto)'),f(c.joeOwesCarlos),{b:1});D2.row(T('Ya cobrado'),f(c.recv));D2.row(T('Pendiente'),f(c.carlosDue),{b:1});
  D2.h(T('Compras compartidas'));pdfPurch(D2,m.purchases,PPL3);
  D2.h(T('Saldos de tarjetas'));if(m.cards.length)D2.table([T('Tarjeta'),T('Saldo')],m.cards.map(x=>[DN(x.name),f(x.amount)]),{ws:[366,150],tot:[T('Total'),f(c.credit)]});else D2.note('—');
  return D2.out()}
 function pdfTony(k){const{c,bills,pur}=tonyData(k),D2=Doc(T('Cuentas de {0} – Tony',lblL(k)),pdfSub());
- D2.h(T('Cuentas'));D2.table([T('Cuentas'),T('Monto'),''],bills.map(b=>[DN(b.name),f(b.amount),T(billSt2(b)==='paid'?'pagada':'pendiente')]),{ws:[316,100,100],tot:[T('Total cuentas'),f(c.bills),'']});
+ D2.h(T('Cuentas'));D2.table([T('Cuentas'),T('Monto'),''],bills.map(b=>[typeof billLbl==='function'?billLbl(b):DN(b.name),f(b.amount),T(billSt2(b)==='paid'?'pagada':'pendiente')]),{ws:[316,100,100],tot:[T('Total cuentas'),f(c.bills),'']});
  D2.h(T('Tu parte de las compras'));pdfPurch(D2,S.months[k].purchases,PPL3,'Tony');
  D2.h(T('Balance'));D2.row(T('Total cuentas'),f(c.bills));D2.row('− '+T('Tu parte de las compras'),f(c.tony));D2.row(T('= A transferir'),f(c.toTony),{b:1});if(c.xfer)D2.row(T('Ya transferido'),f(c.xfer));D2.row(T('Pendiente'),f(c.tonyDue),{b:1});return D2.out()}
 function pdfCarlos(k){const{c,pur}=carlosData(k),D2=Doc(T('Compras de {0} – Carlos',lblL(k)),pdfSub());

@@ -20,7 +20,7 @@ function snapPurch(p){const sh=p.shares||{},L=pList(p).filter(it=>+it.a>0),fam=(
  return {...(p.paidBy?{by:p.paidBy}:{}),d:p.date||'',s:DN(p.store),c:DN(pCat(p)),t:r2(p.total),rows,tot:pp(sh)}}
 function snapMonth(k,who){const m=S.months[k];if(!m)return null;const c=calc(m),P=[...m.purchases].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(snapPurch);
  const o={k,label:lbl(k),purchases:P};
- if(who==='Tony'){o.bills=m.bills.filter(b=>+b.amount).map(b=>({n:DN(b.name),a:r2(b.amount),paid:billSt2(b)==='paid'}));
+ if(who==='Tony'){o.bills=m.bills.filter(b=>+b.amount).map(b=>({n:DN(b.name),a:r2(b.amount),paid:billSt2(b)==='paid',...(+b.tfood>0?{x:r2(b.tfood)}:{})}));
   Object.assign(o,{billsTotal:r2(c.bills),share:r2(c.tony),toTransfer:r2(c.toTony),paid:r2(c.xfer||0),pending:r2(c.tonyDue)})}
  else Object.assign(o,{share:r2(c.carlos),joeShare:r2(c.joeCS||0),joeOwes:r2(c.joeOwesCarlos||0),paid:r2(c.recv||0),pending:r2(c.carlosDue)});
  if(typeof tcOf==='function'){const x=tcOf(m);if(x)o.tc={from:x.from,to:x.to,amount:x.amount,settled:x.settled}}return o}

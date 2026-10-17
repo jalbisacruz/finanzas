@@ -12,6 +12,7 @@ with app(ROOT,routes=R,init="localStorage.setItem('finanzas-sync-uid','u1');") a
     E=pg.evaluate;pg.wait_for_timeout(1500)
     c0=E("calc(M())");s0=E("spent(M())");deb0=E("debE(M()).amount")
     E("()=>{const m=M();m.purchases.push(%s,%s);syncAllTFood();save()}"%(P%('a1','Publix','2026-10-14',100,'Arianna',50,25,25),P%('c1','Costco','2026-10-15',80,'Carlos',40,20,20)))
+    check(not E("M().bills.some(isLegacyTF)") and E("M().bills.filter(isComidaBill).length")==1 and E("comidaBill(M()).tfood")==25,'v74: share in the single Comida line')
     c=E("calc(M())")
     check(abs(c['carlos']-c0['carlos'])<1e-9 and c['joeCS']==20 and abs(c['carlosDue']-max(0,c0['carlosOwes']-20-c0['recv']))<1e-9,'netting %s'%c)
     check(abs(c['toTony']-c0['toTony']-25)<1e-9,'Arianna -> Tony bills +25')
