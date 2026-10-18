@@ -9,7 +9,7 @@ Object.assign(EN,{"¿Restaurar el respaldo del {0}? Antes se guarda una copia de
  "Archivo listo":"File ready","Toca para guardarlo o compartirlo (Guardar en Archivos).":"Tap to save or share it (Save to Files).","Compartir / Guardar":"Share / Save","Cerrar":"Close"});
 const IOS_DEV=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const IOS_SA=()=>navigator.standalone===true||!!(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
-const NO_DL=()=>IOS_DEV||IOS_SA();   // aquí una descarga saca al usuario de la app
+const NO_DL=()=>IOS_DEV;   // v91: SOLO iPhone/iPad (una descarga saca al usuario de la app). Windows/Mac/Android/Linux, navegador o app instalada: descarga normal
 const PRE_K='finanzas-pre-restore';
 function preRestoreLocal(){try{localStorage.setItem(PRE_K,JSON.stringify({at:Date.now(),state:JSON.stringify(S)}));return true}catch(e){console.warn(e);return false}}
 // compartir un archivo sin salir de la app; si iOS no lo permite tras esperar, pide un toque

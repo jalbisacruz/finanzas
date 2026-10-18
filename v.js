@@ -129,7 +129,8 @@ window.pdf=()=>{const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,J=new jsp
   line([t('ptot'),'','','',...P3.map(x=>f(p.tot[x]))],true,[226,232,240]);P3.forEach(x=>mt[x]+=p.tot[x]||0);y=Math.max(y+4,end+24)});
  if(mo.purchases.length)line([t('mtot'),'','','',...P3.map(x=>f(mt[x]))],true,[226,232,240]);
  const n=J.getNumberOfPages();for(let i=1;i<=n;i++){J.setPage(i);J.setFontSize(8);J.setTextColor(148,163,184);J.text(i+'/'+n,R,770,{align:'right'})}
- const b=J.output('blob'),u=URL.createObjectURL(b),el=document.createElement('a');el.href=u;el.download=vPdfName(N(w),mo.k);document.body.append(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};
+ const b=J.output('blob');if(window.PV_IOS&&window.pdfView){pdfView(new File([b],vPdfName(N(w),mo.k),{type:'application/pdf'}),{lang:ES?'es':'en'});return}  // v91: en iPhone, visor (sin salir de la página)
+ const u=URL.createObjectURL(b),el=document.createElement('a');el.href=u;el.download=vPdfName(N(w),mo.k);document.body.append(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};
 var tok;tok=new URLSearchParams(location.search).get('t')||'';
 // v82: si la app del ícono se abriera sin ?t=, usa el último token de este teléfono y lo vuelve a poner en la dirección
 try{if(/^[A-Za-z0-9_-]{20,}$/.test(tok))localStorage.setItem('v-tok',tok);else{const s=localStorage.getItem('v-tok');if(s&&/^[A-Za-z0-9_-]{20,}$/.test(s)){tok=s;history.replaceState(null,'','v.html?t='+encodeURIComponent(s))}}}catch(e){}

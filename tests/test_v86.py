@@ -51,7 +51,7 @@ def run(browser,ios):
             check(any('No se pudo guardar la copia en la nube' in e for e in pg.errors) and E("window.__restored"),'cloud failure asks, still restores with local copy')
             # Exportar y PDF: Compartir, sin descargar
             E("exp()");pg.wait_for_timeout(300);s=E("window.__share");check(s and s[-1]['n'].startswith('finanzas-2026-10-17-') and s[-1]['n'].endswith('.json'),'export via share %s'%s)
-            E("()=>pdfDl('carlos','2026-10')");pg.wait_for_timeout(2500);s=E("window.__share");check(s[-1]['n'].endswith('.pdf') and s[-1]['t']=='application/pdf','PDF via share %s'%s[-1])
+            n0=len(E("window.__share"));E("()=>pdfDl('carlos','2026-10')");pg.wait_for_timeout(2500);s=E("window.__share");check(len(s)==n0 and pg.locator('#pdfview').count()==1,'v91: PDF opens the in-app viewer (no share sheet)');E("pdfViewClose()")
             # iOS sin gesto: muestra «Archivo listo» y comparte al tocar
             n=len(s);E("()=>{window.__shareDeny=true;exp()}");pg.wait_for_timeout(300);check(pg.locator('#fileready').is_visible(),'file-ready prompt when share needs a tap')
             if SH:pg.screenshot(path=os.path.join(ROOT,'shots','151-archivo-listo.png'))

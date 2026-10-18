@@ -123,7 +123,7 @@ async function shareOut({text,file,title}){const d={title};if(text)d.text=text;
  if(file&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({...d,files:[file]});return 'shared'}catch(e){if(e&&e.name==='AbortError')return 'abort'}}
  if(file)dl(file);if(text&&navigator.share&&!file){try{await navigator.share(d);return 'shared'}catch(e){if(e&&e.name==='AbortError')return 'abort'}}
  if(text){try{await navigator.clipboard.writeText(text);toast(T('Copiado'))}catch(e){}}return 'fallback'}
-async function pdfMes(k){k=k||S.cur;toast(T('Generando PDF…'));try{const file=await makePDF('mes',k);await shareOut({file,title:T('Resumen mensual')+' '+lbl(k)})}catch(e){console.error(e);alert(T('No se pudo generar el PDF'))}}
+async function pdfMes(k){k=k||S.cur;toast(T('Generando PDF…'));try{const file=await makePDF('mes',k);dl(file)  /* v91: Ver PDF nunca abre Compartir: computadora = descarga; iPhone/iPad = visor dentro de la app */}catch(e){console.error(e);alert(T('No se pudo generar el PDF'))}}
 async function pdfDl(kind,k){k=k||S.cur;try{dl(await makePDF(kind||'mes',k))}catch(e){console.error(e);alert(T('No se pudo generar el PDF'))}}
 // ---------- diálogo Tony / Carlos ----------
 shareMsg=function(who,k){const P=who==='tony'?'Tony':'Carlos',t=msgFor(who,k);
