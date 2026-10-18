@@ -43,10 +43,11 @@ with app(ROOT,routes=R,init=init) as pg:
     E=pg.evaluate;pg.wait_for_timeout(1500)
     E("()=>{S.links={Tony:{t:'%s',on:true},Carlos:{t:'%s',on:true}};save()}"%(TT,TC));E("()=>inboxLoad(true)");pg.wait_for_timeout(300)
     E("()=>{tab='ini';render()}");pg.wait_for_timeout(200)
-    check(pg.locator('#inbbtn').count()==1 and '(3)' in pg.inner_text('#inbbtn'),'badge')
+    check(pg.locator('#inbbtn').count()==0 and '📥 3 compras por revisar' in pg.inner_text('#remcard [data-rem="inbox"]'),'v90: Hoy shows it once, as a Recordatorios line')
+    E("()=>{tab='mov';render()}");pg.wait_for_timeout(100);check('(3)' in pg.inner_text('#inbbtn'),'Operaciones › Compras entry');E("()=>{tab='ini';render()}");pg.wait_for_timeout(100)
     if '--shots' in sys.argv:pg.screenshot(path=os.path.join(ROOT,'shots','136-hoy-por-revisar.png'))
     c0=E("calc(M())");deb0=E("debE(M()).amount");n0=E("M().purchases.length")
-    pg.click('#inbbtn');pg.wait_for_timeout(50);ia=[x for x in E("INBOX") if x['by']=='Arianna'][0]
+    pg.click('#remcard [data-rem="inbox"] .remgo');pg.wait_for_timeout(50);check('Compras por revisar (3)' in pg.inner_text('dialog'),'reminder opens review list');ia=[x for x in E("INBOX") if x['by']=='Arianna'][0]
     E("id=>inboxOpen(id)",ia['id']);pg.wait_for_timeout(80)
     check('Arianna' in pg.inner_text('#inbbox') and E("D.paidBy")=='Arianna' and E("D.tax")==7,'prefilled with buyer')
     check(E("D.shares")=={'Tony':32.1,'Carlos':58.85,'Yo':16.05},E("D.shares"))
@@ -68,7 +69,8 @@ with app(ROOT,routes=R,init=init) as pg:
     # reject
     E("()=>{window.confirm=()=>true;inboxOpen('r1')}");pg.wait_for_timeout(50);pg.click('#inbrej');pg.wait_for_timeout(100)
     check('shares/%s/inbox/r1'%TT not in E("window.__fs.docs") and not E("M().purchases.some(p=>p.store==='Spam')"),'rejected')
-    check(E("INBOX.length")==0 and pg.locator('#inbbtn').count()==0,'inbox empty')
+    E("()=>{tab='ini';render()}");pg.wait_for_timeout(100);check(E("INBOX.length")==0 and pg.locator('#remcard [data-rem="inbox"]').count()==0,'inbox empty')
+    E("()=>{tab='mov';render()}");pg.wait_for_timeout(100);check(pg.locator('#inbbtn').count()==0,'no entry when empty');E("()=>{tab='ini';render()}")
     # history + PDF + message
     E("()=>{tab='mov';render()}");pg.wait_for_timeout(100);check('Compró: Arianna' in pg.inner_text('#v'),'history tag')
     with pg.expect_download(timeout=20000) as d: E("()=>pdfDl('tony','2026-10')")

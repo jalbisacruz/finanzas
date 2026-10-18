@@ -11,7 +11,7 @@ let INBOX=[],inboxAt=0;
 const inbAt=x=>{const a=x&&x.at;return !a?0:typeof a.toMillis==='function'?a.toMillis():a.seconds?a.seconds*1000:+a||0}; // v79: lo más nuevo primero
 async function inboxLoad(force){if(!(window.fbUser&&fbUser())||!window.fbInbox)return;if(!force&&Date.now()-inboxAt<60000)return;inboxAt=Date.now();
  const L=S.links||{},out=[];for(const w of ['Tony','Carlos']){const x=L[w];if(!x||!x.on||!x.t)continue;try{(await fbInbox(x.t)).forEach(d=>out.push({...d,link:w}))}catch(e){console.warn('inbox',e)}}
- out.sort((a,b)=>inbAt(b)-inbAt(a)||String(b.date||'').localeCompare(String(a.date||'')));const ch=JSON.stringify(out.map(x=>x.id))!==JSON.stringify(INBOX.map(x=>x.id));INBOX=out;if(ch&&typeof tab!=='undefined'&&tab==='ini')render()}
+ out.sort((a,b)=>inbAt(b)-inbAt(a)||String(b.date||'').localeCompare(String(a.date||'')));const ch=JSON.stringify(out.map(x=>x.id))!==JSON.stringify(INBOX.map(x=>x.id));INBOX=out;if(ch&&typeof tab!=='undefined'&&(tab==='ini'||tab==='mov'))render()}
 const inbStr=(v,n)=>String(v??'').slice(0,n);
 function inboxOpen(id){const x=INBOX.find(y=>y.id===id);if(!x)return;editP();const cats=pCats(),ok3=['Yo','Tony','Carlos'];
  D.store=inbStr(x.store,60)||D.store;if(/^\d{4}-\d{2}-\d{2}$/.test(x.date||''))D.date=x.date;D.total=r2(+x.total||0);if(+x.tax>0&&+x.tax<D.total)D.tax=r2(+x.tax);
@@ -92,6 +92,6 @@ const _renderV72=render;render=function(){_renderV72();if(typeof tab==='undefine
  const oe=owesBy(M()||{});let h='';
  const ks=keys(),pk=ks[ks.indexOf(S.cur)-1],px=pk&&tcOf(S.months[pk]);
  if(px&&!px.settled)h+=`<div class="card" id="tcprev" style="border-left:4px solid #f59e0b"><div class="row"><span class="n">⏳ ${T('Pendiente entre Tony y Carlos ({0})',lbl(pk))}<div class="muted">${T('{0} le debe a {1}',esc(DN(px.from)),esc(DN(px.to)))}</div></span><b>${f(px.amount)}</b></div><button class="sec" id="tcprevok" style="width:100%;margin-top:6px" onclick="tcSettle('${pk}')">${T('✅ Marcar pagado')}</button></div>`;
- if(INBOX.length)h+=`<div class="card" style="padding:10px"><button id="inbbtn" style="width:100%;background:#ca8a04" onclick="inboxList()">${T('📥 Compras por revisar ({0})',INBOX.length)}</button></div>`;
+ if(false&&INBOX.length)h+=`<div class="card" style="padding:10px"><button id="inbbtn" style="width:100%;background:#ca8a04" onclick="inboxList()">${T('📥 Compras por revisar ({0})',INBOX.length)}</button></div>`;
  if(oe.length)h+=`<div class="card" id="owecard"><h2>${T('🧾 Deudas de compras')}</h2>${oe.map(x=>`<div class="row"><span class="n">${x.a==='Yo'?T('Le debes a {0}',esc(DN(x.b))):T('{0} le debe a {1}',esc(DN(x.a)),esc(DN(x.b)))}${x.a==='Yo'?'':` <span class="muted">(${T('entre ellos')})</span>`}</span><b>${f(x.v)}</b>${x.tc?`<button class="sec" id="tcok" style="min-height:32px;font-size:13px;margin-left:6px" onclick="tcSettle(S.cur)">${T('✅ Marcar pagado')}</button>`:''}</div>`).join('')}<div class="muted">${T('Compras que pagaron otros este mes')}</div></div>`;
  if(h){const c=v.querySelector('.card');c?c.insertAdjacentHTML('afterend',h):v.insertAdjacentHTML('afterbegin',h)}};

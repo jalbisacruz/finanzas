@@ -62,7 +62,7 @@ for lang in ['es','en']:
     check(E("document.querySelector('#pl-plan b').className")=='neg','negative in red')
     E("o=>{S.budgets=o;save();render()}",json.loads(pre)['budgets'])
     # Por hacer -> informative line, opens the full list
-    n=E("todoN()");tl=pg.inner_text('#todoline');check(pg.locator('#todocard').count()==0 and (str(n) in tl) and '›' in tl,'todo line '+tl)
+    n=E("todoN()-Math.min(remDupN(),todoN())");tl=pg.inner_text('#todoline');check(pg.locator('#todocard').count()==0 and (str(n) in tl) and '›' in tl,'todo line (v90: without reminders) '+tl)
     pg.click('#todobtn');pg.wait_for_timeout(60);check(E("tab")=='mov' and pg.locator('#v>#todocard').count()==1,'v79: opens Operaciones › Por hacer');E("()=>{tab='ini';render()}")
     E("dlg().close()")
     # version label automatic

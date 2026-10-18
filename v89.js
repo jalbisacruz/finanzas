@@ -47,13 +47,13 @@ function remList(){const R=[],kL=keys().at(-1),m=L();if(!m)return R;
  const signed=window.fbUser&&fbUser(),cfg=abCfg(),ab=abInfo();
  if(signed){const old=!ab.last||Date.now()-ab.last>7*864e5;if(old&&(!cfg.on||(ab.fails||0)>=3))R.push({id:'bk',u:8,t:!cfg.on?T('☁️ El respaldo automático está apagado'):T('☁️ No se ha podido hacer el respaldo automático'),go:"tab='cfg';render();setTimeout(()=>goSec('bkcfg'),60)"})}
  else if(Object.keys(S.months||{}).length){const le=localStorage.getItem(LEK);if(!le||(tdy()-new Date(le+'T12:00'))>7*dayMs)R.push({id:'bk',u:8,t:T('☁️ Sin respaldo hace más de 7 días'),go:"tab='cfg';render();setTimeout(()=>goSec('bkcfg'),60)"})}
- const h=window.heldPend?heldPend():0;if(h>0.004)R.push({id:'held',u:9,t:T('🤝 {0} de terceros por enviar',f(h)),go:"tab='mov';render();setTimeout(()=>goSec('heldcard'),60)"});
+ // v90: sin línea de terceros: Disponible ahora ya dice «Tuyo: … · sin $X de terceros»
  const hid=remHidden();return R.filter(r=>!hid.includes(r.id)).sort((a,b)=>a.u-b.u)}
 function remCard(){if(typeof inboxLoad==='function')try{inboxLoad()}catch(e){}
  const R=remList();if(!R.length)return'';const MAX=3,vis=REM_ALL?R:R.slice(0,MAX);
  const row=r=>`<div class="remrow" data-rem="${esc(r.id)}"><button class="remgo" onclick="${r.go.replace(/"/g,'&quot;')}"${r.red?' style="color:#b91c1c"':''}>${r.t}</button><button class="remx" aria-label="${T('Ocultar hasta mañana')}" title="${T('Ocultar hasta mañana')}" onclick="remHide('${esc(r.id).replace(/'/g,"\\'")}')">✕</button></div>`;
  return `<div class="card" id="remcard" aria-label="${T('Recordatorios')}">${vis.map(row).join('')}${R.length>MAX?`<button class="remmore" id="remmore" onclick="REM_ALL=!REM_ALL;render()">${REM_ALL?T('Ver menos'):T('Ver {0} más',R.length-MAX)}</button>`:''}</div>`}
-{const _iniV89=ini;ini=function(){const h=_iniV89(),r=remCard();if(!r)return h;let i=h.indexOf('<div class="card" id="todoline"');if(i<0){const j=h.indexOf('id="balcard"');i=j<0?-1:h.indexOf('</div>',j)}
+{const _iniV89=ini;ini=function(){const h=_iniV89(),r=remCard();if(!r)return h;let i=h.indexOf('<div class="card" id="todoline"');if(i<0){const mm=h.match(/<div class="card[^"]*" id="plancard"/);i=mm?mm.index:-1}
  if(i<0)return r+h;return h.slice(0,i)+r+h.slice(i)}}
 // ---------- 2. Buscar en Operaciones (todos los meses) ----------
 let OS_Q='',OS_N=40,OS_R=[],OS_IDX=null,OS_KEY='';

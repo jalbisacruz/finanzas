@@ -21,7 +21,7 @@ with app(ROOT,now='2026-10-17T09:00:00',expand=False,width=390,height=844) as pg
       INBOX=[{id:'x1',t:'t',link:'Tony',store:'Publix',total:12},{id:'x2',t:'t',link:'Carlos',store:'Aldi',total:8}];
       spend('deb',-152);(S.held=S.held||[]).push({id:'h1',who:'Amigo',amount:152,date:'2026-10-17',method:'deb',via:'Western Union',note:'',at:1,sends:[]});save();render()}""");pg.wait_for_timeout(150)
     ids=E("remList().map(r=>r.id)")
-    check(ids[0]=='card:Store Card' and ids.index('card:Visa Test')<ids.index('inbox')<ids.index('held'),'order by urgency %s'%ids)
+    check(ids[0]=='card:Store Card' and ids.index('card:Visa Test')<ids.index('inbox') and 'held' not in ids,'order by urgency %s'%ids)
     check(all(('tony:'+k) in ids for k in pend),'previous months Tony pending %s'%pend)
     check('tony:2026-10' not in ids,'current month Tony not before the 25th')
     rows=pg.locator('#remcard .remrow');check(rows.count()==3,'max 3 visible');check('Ver %d más'%(len(ids)-3) in pg.inner_text('#remcard'),'ver más')
@@ -32,11 +32,10 @@ with app(ROOT,now='2026-10-17T09:00:00',expand=False,width=390,height=844) as pg
         pg.add_style_tag(content=HIDE);E("window.scrollTo(0,document.getElementById('remcard').getBoundingClientRect().top+scrollY-300)");pg.wait_for_timeout(100)
         pg.screenshot(path=os.path.join(ROOT,'shots','v89-recordatorios.png'))
     pg.click('#remmore');pg.wait_for_timeout(100);check(pg.locator('#remcard .remrow').count()==len(ids),'ver más shows all')
-    check('📥 2 compras por revisar' in pg.inner_text('#remcard') and '🤝 $152.00 de terceros por enviar' in pg.inner_text('#remcard'),'inbox + terceros')
+    check('📥 2 compras por revisar' in pg.inner_text('#remcard') and 'terceros' not in pg.inner_text('#remcard'),'inbox; terceros only in Disponible ahora (v90)')
     # tocar: tarjeta abre PAGAR; buzón abre la lista
     pg.click('#remcard [data-rem="card:Visa Test"] .remgo');pg.wait_for_timeout(150);check(E("dlg().open") and 'Visa Test' in pg.inner_text('dialog'),'tap card → pay dialog');E("dlg().close()")
     pg.click('#remcard [data-rem="inbox"] .remgo');pg.wait_for_timeout(150);check('Compras por revisar (2)' in pg.inner_text('dialog'),'tap inbox → list');E("dlg().close()")
-    pg.click('#remcard [data-rem="held"] .remgo');pg.wait_for_timeout(250);check(E("tab")=='mov' and 'col' not in pg.locator('#heldcard').get_attribute('class').split(),'tap terceros → Operaciones section open')
     # ✕ = hasta mañana
     E("()=>{tab='ini';render()}");pg.wait_for_timeout(100)
     pg.click('#remcard [data-rem="inbox"] .remx');pg.wait_for_timeout(100);check(pg.locator('#remcard [data-rem="inbox"]').count()==0,'dismissed')
