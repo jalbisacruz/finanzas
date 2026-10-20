@@ -21,8 +21,9 @@ with app(ROOT,state=st,init="localStorage.setItem('finanzas-sync-uid','u1');",ro
         with pg.expect_download(timeout=20000) as d: E("w=>w?pdfDl(w,'2026-10'):pdfDl('mes','2026-10')",who) if who else E("()=>pdfDl('mes','2026-10')")
         p='/tmp/v77-%s.pdf'%(who or 'mes');d.value.save_as(p);tx=pdftext(p)
         for s,tot in [('Detwilers','$5.20'),('Aldi','$43.44'),('Walmart','$5.32')]:
+            if who=='tony' and s=='Walmart':check('Walmart' not in tx,'v93: Carlos-only purchase hidden in Tony PDF');continue
             check(re.search(r'11 oct · %s.*\$%s'%(s,re.escape(tot[1:])),tx) and 'Total %s'%tot not in tx,'%s header line (date · store ... total) in %s'%(s,who))
-        check('Comida/Supermercado' in tx and 'Salud' in tx,'category chips')
+        check('Comida/Supermercado' in tx and ('Salud' in tx or who=='tony'),'category chips')
         if who=='tony':
             check('Tu parte del mes' in tx and 'Total cuentas' in tx,'rest of Tony PDF unchanged')
             if '--shots' in sys.argv:
@@ -47,13 +48,13 @@ with app(ROOT,state=st,init="localStorage.setItem('finanzas-sync-uid','u1');",ro
 with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps({**SNT,'updatedAt':1760600000000}),width=390,height=844) as pg:
     base='/'.join(pg.url.split('/')[:3]);pg.goto(base+'/v.html?t=TokTokTokTokTokTokTok1');pg.wait_for_timeout(500);E=pg.evaluate
     pg.click('#vdet');pg.wait_for_timeout(50)
-    check(pg.locator('.pc').count()==3 and pg.locator('.pc .pchip').count()==3 and pg.locator('.pc td.hl').count()>=6,'3 purchase blocks with chips + highlighted column')
+    check(pg.locator('.pc').count()==2 and pg.locator('.pc .pchip').count()==2 and pg.locator('.pc td.hl').count()>=4,'v93: 2 purchase blocks (Carlos-only Walmart hidden) with chips + highlighted column')
     st_=E("(()=>{const a=document.querySelector('.pc'),s=getComputedStyle(a),t=getComputedStyle(a.querySelector('.pt b')),m=getComputedStyle(a.querySelector('.pamt'));return {bl:s.borderLeftWidth,mb:s.marginBottom,tf:t.fontSize,af:m.fontSize}})()")
     check(st_['bl']=='4px' and float(st_['tf'][:-2])>=16 and float(st_['af'][:-2])>=18 and float(st_['mb'][:-2])>=12,st_)
     check('Detwilers' in pg.inner_text('.pc >> nth=0') and '$5.20' in pg.inner_text('.pc >> nth=0 >> .pamt'),'header content')
     if '--shots' in sys.argv:pg.locator('#vdetb').screenshot(path=os.path.join(ROOT,'shots','141-enlace-detalle.png'))
     with pg.expect_download(timeout=15000) as d: pg.click('#vdl')
-    d.value.save_as('/tmp/v77-link.pdf');tx=pdftext('/tmp/v77-link.pdf');check(re.search(r'11 oct · Walmart.*\$5\.32',tx),'link PDF header line')
+    d.value.save_as('/tmp/v77-link.pdf');tx=pdftext('/tmp/v77-link.pdf');check(re.search(r'11 oct · Aldi.*\$43\.44',tx) and 'Walmart' not in tx,'link PDF header line (v93: Carlos-only Walmart hidden)')
     if '--shots' in sys.argv:subprocess.run(['pdftoppm','-png','-r','110','-f','1','-l','1','-singlefile','/tmp/v77-link.pdf',os.path.join(ROOT,'shots','141-pdf-enlace-tony')],check=True)
     errs=[e for e in pg.errors if 'DIALOG' not in e];check(not errs,errs)
 print('test_v77 OK',ok)

@@ -35,6 +35,8 @@ function vPdfName(who,k,d=new Date()){const L=(DOC.lang==='en'?'en-US':'es-US'),
 const dK=s=>{s=String(s||'').trim();const r=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);return r?r[1]+'-'+r[2].padStart(2,'0')+'-'+r[3].padStart(2,'0'):s};
 function nfDoc(){(DOC.months||[]).forEach(mo=>{if(mo&&!mo.nf&&Array.isArray(mo.purchases)){const P=mo.purchases,nd=P.filter(p=>!dK(p.d)).reverse();
  mo.purchases=[...P.filter(p=>dK(p.d)).sort((a,b)=>dK(b.d).localeCompare(dK(a.d))),...nd];mo.nf=1}})}
+// v93: solo las compras donde esta persona tiene parte (o que compró ella y mueven lo que se debe). Los totales no cambian.
+function invDoc(){const w=DOC.who,B=DOC.buyers||[w];(DOC.months||[]).forEach(mo=>{if(mo&&Array.isArray(mo.purchases))mo.purchases=mo.purchases.filter(p=>{const T=p.tot||{};if((+T[w]||0)>0.004)return true;return !!p.by&&B.includes(p.by)&&Object.keys(T).some(x=>x!==w&&(+T[x]||0)>0.004)})})}
 const $=id=>document.getElementById(id);
 function fail(msg){$('h1').textContent='Finanzas';if($('hact'))$('hact').innerHTML='';$('sub').textContent='';$('m').innerHTML=`<div class="card err">${esc(msg)}</div>`}
 function draw(){setLangV(DOC.lang);const d=DOC,mo=d.months[MI],w=d.who,N=x=>d.names[x]||x,T=w==='Tony';document.title=N(w)+' · '+mo.label;{const ap=document.getElementById('aptitle');if(ap)ap.content=t('apT',N(w))}
@@ -135,7 +137,7 @@ var tok;tok=new URLSearchParams(location.search).get('t')||'';
 // v82: si la app del ícono se abriera sin ?t=, usa el último token de este teléfono y lo vuelve a poner en la dirección
 try{if(/^[A-Za-z0-9_-]{20,}$/.test(tok))localStorage.setItem('v-tok',tok);else{const s=localStorage.getItem('v-tok');if(s&&/^[A-Za-z0-9_-]{20,}$/.test(s)){tok=s;history.replaceState(null,'','v.html?t='+encodeURIComponent(s))}}}catch(e){}
 if(!/^[A-Za-z0-9_-]{20,}$/.test(tok))fail(TX.bad);
-else if(window.__SHARE_DOC){DOC=window.__SHARE_DOC;nfDoc();draw()}
+else if(window.__SHARE_DOC){DOC=window.__SHARE_DOC;nfDoc();invDoc();draw()}
 else{try{const V='11.10.0',B=`https://www.gstatic.com/firebasejs/${V}/`;const [{initializeApp},F]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-firestore-lite.js')]);
-  const db=F.getFirestore(initializeApp(window.FB_CONFIG));const sn=await F.getDoc(F.doc(db,'shares',tok));if(!sn.exists())fail(TX.bad);else{DOC=sn.data();if(!DOC.months||!DOC.months.length)fail(TX.bad);else{nfDoc();draw()}}}
+  const db=F.getFirestore(initializeApp(window.FB_CONFIG));const sn=await F.getDoc(F.doc(db,'shares',tok));if(!sn.exists())fail(TX.bad);else{DOC=sn.data();if(!DOC.months||!DOC.months.length)fail(TX.bad);else{nfDoc();invDoc();draw()}}}
  catch(e){console.error(e);fail(/permission/i.test(String(e&&e.code))?TX.bad:TX.err)}}

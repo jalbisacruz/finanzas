@@ -77,7 +77,7 @@ const PPL3=['Yo','Tony','Carlos'];
 const pdfNm=w=>w==='Yo'?'Joe':DN(w);
 function ownTxt(o){o=[...new Set(o)];return o.length>=3?T('Todos'):o.length===2?o.map(pdfNm).join(T(' y ')):T('No')}
 function pdfPurch(D2,P,cols,hl,k){const hi=hl?4+cols.indexOf(hl):undefined,one=cols.length===1,W1=one?[176,118,68,84,70]:[128,96,58,74,54,54,52],tot={};cols.forEach(w=>tot[w]=0);
- P=byNew(P,undefined,k);
+ P=byNew(P,undefined,k);if(hl&&typeof pInv==='function')P=P.filter(p=>pInv(p,hl));  // v93: en el PDF de Tony/Carlos solo sus compras
  P.forEach(p=>{const sh=p.shares||{},L=pList(p).filter(it=>+it.a>0),mine=one?L.filter(it=>ownOf(it).includes(cols[0])):L,fam=(p.mode||'fam')==='fam';
   const isum={};cols.forEach(w=>isum[w]=r2(L.reduce((s,it)=>s+(itPort(it)[w]||0),0)));
   const ptx=(typeof pTaxOf==='function'&&pTaxOf(p))||null,txT=ptx?r2(+p.tax):0,rest=r2((+p.total||0)-txT-L.reduce((s,it)=>s+(+it.a||0),0));
