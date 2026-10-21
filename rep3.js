@@ -5,12 +5,12 @@ const L3={es:{title:'Cuentas de la casa · {0}',sub:'Resumen de {0} · De {1} ·
  pays:'Paga',gets:'Recibe',even:'Al día',part:'Su parte de las compras',you:'TÚ',how:'Cómo se calcula',between:'{0} y {1}',owes:'{0} le debe a {1}',paid:'Ya pagado',pend:'Falta',
  tcNote:'Entre Tony y Carlos: la app no lleva cuándo se pagan; esta cifra es lo que se deben este mes.',purch:'Compras del mes',date:'Fecha',store:'Tienda',by:'Pagó',tot:'Total',
  mtot:'Total del mes',hid:'Otras compras personales ({0})',only:'solo {0}',none:'Sin compras este mes.',bills:'Cuentas de Tony',bill:'Cuenta',amt:'Monto',st:'Estado',
- paidB:'pagada',pendB:'pendiente',billsT:'Total cuentas',pnote:'Cada compra se divide según su parte. Quien la pagó recibe de los demás su parte (ver Cómo se calcula).',zero:'nada'},
+ paidB:'pagada',pendB:'pendiente',billsT:'Total cuentas',pnote:'Cada compra se divide según su parte. Quien la pagó recibe de los demás su parte (ver Cómo se calcula).',zero:'nada',mm:'Mi mes',mbud:'Presupuesto',msp:'Gastado',mpct:'{0}% del presupuesto',minc:'Ingresos recibidos',msav:'Ahorrado',mnote:'Gastado = categorías con presupuesto (de las compras compartidas solo tu parte). Ahorrado = ingresos recibidos - gastado.'},
  en:{title:'Household accounts · {0}',sub:'Summary for {0} · From {1} · {2}',xfer:'Who transfers to whom',x1:'{0} transfers {1}',ok:'All settled: nobody owes anybody.',
  pays:'Pays',gets:'Receives',even:'Settled',part:'Share of purchases',you:'YOU',how:'How it is calculated',between:'{0} and {1}',owes:'{0} owes {1}',paid:'Already paid',pend:'Left',
  tcNote:'Between Tony and Carlos: the app does not track when they pay; this is what they owe each other this month.',purch:'Purchases this month',date:'Date',store:'Store',by:'Paid by',tot:'Total',
  mtot:'Month total',hid:'Other personal purchases ({0})',only:'only {0}',none:'No purchases this month.',bills:"Tony's bills",bill:'Bill',amt:'Amount',st:'Status',
- paidB:'paid',pendB:'pending',billsT:'Bills total',pnote:'Each purchase is split by share. Whoever paid gets the others\' shares back (see How it is calculated).',zero:'nothing'}};
+ paidB:'paid',pendB:'pending',billsT:'Bills total',pnote:'Each purchase is split by share. Whoever paid gets the others\' shares back (see How it is calculated).',zero:'nothing',mm:'My month',mbud:'Budget',msp:'Spent',mpct:'{0}% of budget',minc:'Income received',msav:'Saved',mnote:'Spent = budgeted categories (only your share of shared purchases). Saved = income received - spent.'}};
 const P3=['Yo','Tony','Carlos'];
 const pt=s=>String(s??'').replace(/[−–—]/g,'-').replace(/[•·]/g,m=>m==='•'?'-':'·').replace(/[^\x00-\xff]/g,'').replace(/\s+/g,' ').trim();
 const fm=n=>(n<-0.004?'-':'')+'$'+Math.abs(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -36,6 +36,13 @@ function R3Doc(title,sub){const d=new jspdf.jsPDF({unit:'pt',format:'letter'}),W
  return o}
 // R = {lang,k,label,who,from,gen,names,transfers:[{from,to,amount}],people:{Yo:{pays,gets,part}},pairs:[{a,b,lines:[{l,v}],net,paid,paidL,pend,tc}],purchases:[...],hid,tot,bills,billsTotal,showBills}
 function rep3PDF(R,extra){const t=L3[R.lang==='en'?'en':'es'],N=x=>(R.names||{})[x]||x,o=R3Doc(fill(t.title,R.label),fill(t.sub,N(R.who),R.from,R.gen)),d=o.d,X=o.X,RR=o.R,W=RR-X;
+ // v97: «Mi mes» (solo el resumen de Joe: R.mimes = {bud,sp,pct,rec,sav})
+ if(R.mimes){const M=R.mimes,y0=o.y,bh=74,cw=(W+12)/4;d.setFillColor(248,250,252);d.setDrawColor(203,213,225);d.setLineWidth(0.8);d.roundedRect(X-6,y0-14,W+12,bh,8,8,'FD');
+  d.setFont('helvetica','bold');d.setFontSize(10);d.setTextColor(30,58,138);d.text(pt(t.mm).toUpperCase(),X+6,y0+2);
+  [[t.mbud,M.bud,[15,23,42]],[t.msp,M.sp,M.sp>M.bud+0.004?[185,28,28]:[15,23,42],fill(t.mpct,M.pct==null?'-':M.pct)],[t.minc,M.rec,[15,23,42]],[t.msav,M.sav,M.sav>=-0.004?[21,128,61]:[185,28,28]]].forEach(([l,v,col,sub],i)=>{const cx=X-6+i*cw+10;
+   d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(100,116,139);d.text(pt(l),cx,y0+20);d.setFont('helvetica','bold');d.setFontSize(15);d.setTextColor(...col);d.text(fm(v),cx,y0+38);
+   if(sub){d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(100,116,139);d.text(pt(sub),cx,y0+52)}});
+  d.setTextColor(15,23,42);o.y=y0-14+bh+8;o.note(t.mnote);o.y+=16}
  // 1) Quién transfiere a quién (bloque verde, igual en los 3)
  const TR=R.transfers||[];let y=o.y;const bh=TR.length?40+TR.length*24:58;
  d.setFillColor(240,253,244);d.setDrawColor(134,239,172);d.setLineWidth(1);d.roundedRect(X-6,y-14,W+12,bh,8,8,'FD');

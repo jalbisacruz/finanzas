@@ -53,11 +53,11 @@ for lang in ['es','en']:
     E("()=>{L().purchases=L().purchases.filter(p=>p.id!=='cx');save();BAL_OPEN=false;render()}")
     # Plan del mes
     P=E("withEst(planNums)");pl=pg.locator('#plancard')
-    ids=['pl-inc','pl-bud','pl-plan','pl-real','pl-proj'];check(all(pl.locator('#'+i).count()==1 for i in ids) and pl.locator('.row').count()==5,'5 lines')
+    ids=['pl-inc','pl-bud','pl-sp','pl-plan','pl-real','pl-proj'];check(all(pl.locator('#'+i).count()==1 for i in ids) and pl.locator('.row').count()==6,'6 lines (v97: + Gastado)')
     fs=E("()=>[...document.querySelectorAll('#plancard .row.pl')].map(r=>getComputedStyle(r.querySelector('b')).fontSize+'|'+getComputedStyle(r.querySelector('.n')).fontSize)");check(len(set(fs))==1,'same level %s'%fs)
     for i,k in [('pl-inc','inc'),('pl-bud','bud'),('pl-plan','plan'),('pl-real','real'),('pl-proj','proj')]:
         check(E("v=>f(v)",P[k]) in pg.inner_text('#'+i),'%s %s'%(i,pg.inner_text('#'+i)))
-    tx=pl.inner_text();check(('Gastado' not in tx) and ('Recibido' not in tx) and ('Disponible ahora' not in tx),'no explanations')
+    tx=pl.inner_text();check((tx.count(T('Gastado ({0}% del presupuesto)').split(' ')[0])==1) and ('Recibido' not in tx) and ('Disponible ahora' not in tx),'no explanations')
     E("()=>{S.budgets={'🛒 Comida/Supermercado':99999};save();render()}");pg.wait_for_timeout(50)
     check(E("document.querySelector('#pl-plan b').className")=='neg','negative in red')
     E("o=>{S.budgets=o;save();render()}",json.loads(pre)['budgets'])
