@@ -19,21 +19,19 @@ with app(ROOT,now='2026-10-16T09:00:00') as pg:
     pg.evaluate(ADD)
     m=grab(pg,'mes','/tmp/v66m.pdf');t=grab(pg,'tony','/tmp/v66t.pdf');c=grab(pg,'carlos','/tmp/v66c.pdf')
     L=[x for x in m.splitlines()]
-    sh=[x for x in L if 'Shampoo' in x][0];check('Hogar' in sh and ' No ' in sh and '$20.00' in sh,sh)
-    vi=[x for x in L if 'Vino Tinto' in x][0];check('Joe y Tony' in vi and vi.count('$10.00')==2,vi)
-    re_=[x for x in L if 'Resto de la compra' in x and '$60.00' in x][0];  # v79: purchases newest first, pick the one by amount
-    check('Todos' in re_ and '50/25/25' not in m and '$60.00' in re_ and '$30.00' in re_ and re_.count('$15.00')==2,re_)
-    co=[x for x in L if 'Toda la compra' in x and '$80.00' in x][0];check('Todos' in co and '$80.00' in co and '$40.00' in co and '$20.00' in co,co)
-    check(any('Total del mes' in x for x in L),'month totals');hd=[x for x in L if 'Compartida' in x][0];check('Joe' in hd and 'Tony' in hd and 'Carlos' in hd and ' Yo ' not in hd,hd)
-    check('Generado' not in m.split('Resumen mensual')[-1].split('Lo que tengo')[-1] and 'Finanzas ·' not in m,'footer only page')
+    # v95: una fila por compra (fecha, tienda, pagó, total, Joe/Tony/Carlos); debajo solo los ítems que NO son de todos
+    sh=[x for x in L if 'Shampoo' in x][0];check('$20.00' in sh and 'solo Carlos' in sh,sh)
+    vi=[x for x in L if 'Vino Tinto' in x][0];check('Joe y Tony' in vi and '$20.00' in vi,vi)
+    pu=[x for x in L if 'Publix' in x and '$100.00' in x][0];check('$25.00' in pu and '$40.00' in pu and '$35.00' in pu and 'Joe' in pu,pu)
+    co=[x for x in L if 'Costco' in x and '$80.00' in x][0];check('$40.00' in co and co.count('$20.00')==2,co)
+    hd=[x for x in L if 'Tienda' in x and 'Pagó' in x][0];check('Joe' in hd and 'Tony' in hd and 'Carlos' in hd and ' Yo ' not in hd,hd)
+    check('Finanzas ·' not in m,'footer only page')
     check(subprocess.run(['pdfinfo','/tmp/v66m.pdf'],capture_output=True,text=True).stdout.count('Pages:')==1,'pdf ok')
-    # Tony: only items where Tony is owner (+resto); not Carlos's Shampoo, not Yo's articles
-    check('Vino Tinto' in t and 'Shampoo' in t and 'Articulo largo' in t and 'Resto de la compra' in t and 'Costco' in t,'tony sees full table')
-    check('Shampoo' in c and 'Vino Tinto' in c and 'Articulo largo' in c,'carlos sees full table')
-    tp=[x for x in t.splitlines() if 'Tu parte del mes' in x];cp=[x for x in c.splitlines() if 'Tu parte del mes' in x];mt=[x for x in m.splitlines() if 'Total del mes' in x][-1];print(mt,tp,cp)
-    import re;nums=re.findall(r'\$[\d,.]+',mt);check(tp and nums[1] in tp[-1] and cp and nums[2] in cp[-1],'tu parte = month column %s %s %s'%(mt,tp,cp))
-    check('Pendiente' in t and 'Pendiente' in c and 'Balance' in t,'balance kept')
-    tl=[x for x in t.splitlines() if 'Total del mes' in x];check(tl,'tony month total')
+    # all 3 PDFs: same shared purchases and the same complete month totals
+    for x in (t,c):check('Vino Tinto' in x and 'Shampoo' in x and 'Articulo largo' in x and 'Costco' in x,'shared purchases in every PDF')
+    tot=lambda s:[x for x in s.splitlines() if 'Total del mes' in x][-1].split()
+    check(tot(m)==tot(t)==tot(c),'same month totals %s %s %s'%(tot(m),tot(t),tot(c)))
+    check(all('Quién transfiere a quién'.upper() in x and 'Cómo se calcula' in x for x in (m,t,c)),'transfer block in all')
     check(' 1/' in m or '1/' in m,'page numbers')
     if '--shots' in sys.argv:
         for f_ in glob.glob('/tmp/v66p*.png'):os.remove(f_)

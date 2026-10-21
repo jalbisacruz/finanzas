@@ -26,7 +26,7 @@ with app(ROOT,routes=R,init="localStorage.setItem('finanzas-sync-uid','u1');") a
     E("()=>{tab='ini';render()}");pg.wait_for_timeout(100);ow=pg.inner_text('#owecard');check('Tony le debe a Carlos' in ow and '$15.00' in ow and 'Le debes a Carlos' not in ow,ow)
     t=E("msgShort('carlos',S.cur)");check('− Mi parte de tus compras  −$20.00' in t,t)
     with pg.expect_download(timeout=20000) as d: E("()=>pdfDl('carlos',S.cur)")
-    d.value.save_as('/tmp/v73c.pdf');tx=subprocess.run(['pdftotext','-layout','/tmp/v73c.pdf','-'],capture_output=True,text=True).stdout;check('Mi parte de tus compras' in tx,'carlos pdf')
+    d.value.save_as('/tmp/v73c.pdf');tx=subprocess.run(['pdftotext','-layout','/tmp/v73c.pdf','-'],capture_output=True,text=True).stdout;check('Parte de Joe en compras que pagó Carlos' in tx and 'Tony le transfiere a Carlos' in tx,'carlos pdf v95 '+tx)
     sc=E("snapFor('Carlos')");st=E("snapFor('Tony')");check(sc['months'][0]['joeShare']==20 and sc['months'][0]['tc']['from']=='Tony' and st['months'][0]['tc']['amount']==15,'snapshots')
     # net negative -> Le debes a Carlos
     E("()=>{M().purchases.push(%s);save();tab='ini';render()}"%(P%('c2','Costco','2026-10-16',2000,'Carlos',1000,500,500)))
@@ -37,9 +37,7 @@ with app(ROOT,routes=R,init="localStorage.setItem('finanzas-sync-uid','u1');") a
     E("()=>{M().purchases=M().purchases.filter(p=>p.id!=='c2');save()}")
     # previous month unsettled -> notice on Hoy, manual settle
     E("()=>{const ks=keys(),pk=ks[ks.indexOf(S.cur)-1];S.months[pk].purchases.push(%s);save();tab='ini';render()}"%(P%('p1','Aldi','2026-09-20',40,'Tony',20,10,10)))
-    check(pg.locator('#tcprev').count()==1 and '$10.00' in pg.inner_text('#tcprev') and 'Carlos le debe a Tony' in pg.inner_text('#tcprev'),'prev month notice')
-    if '--shots' in sys.argv:pg.locator('#tcprev').screenshot(path=os.path.join(ROOT,'shots','137-recordatorio-hoy.png'))
-    pg.click('#tcprevok');pg.wait_for_timeout(100);check(pg.locator('#tcprev').count()==0,'settled manually')
+    check(pg.locator('#tcprev').count()==0 and pg.locator('#tcok').count()==0,'v95: no mark-paid / reminder for Tony-Carlos')
     SNT=E("snapFor('Tony')");SNC=E("snapFor('Carlos')")
     # settle confirmation from link inbox
     E("()=>{const m=M();delete m.tcSettled;INBOX=[{t:'TT',id:'s1',link:'Tony',kind:'settle',by:'Tony',month:S.cur,amount:15}];window.fbInboxDel=async()=>{};inboxList()}");pg.wait_for_timeout(50)
@@ -52,9 +50,10 @@ for who,doc,debtor in [('tony',SNT,True),('carlos',SNC,False)]:
   doc={**doc,'updatedAt':1760600000000}
   with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps(doc),width=390,height=844) as pg:
     base='/'.join(pg.url.split('/')[:3]);pg.goto(base+'/v.html?t=TokTokTokTokTokTokTok1');pg.wait_for_timeout(500);E=pg.evaluate
-    tx=pg.inner_text('main');check('Entre Tony y Carlos' in tx and '$15.00' in tx,tx[:400])
-    check((pg.locator('#vtcpay').count()==1)==debtor,'button only for debtor')
-    if debtor:
+    tx=pg.inner_text('main');check('Tony le transfiere a Carlos' in tx and '$15.00' in tx,tx[:400])
+    check(pg.locator('#vtcpay').count()==0 and pg.locator('#vrem').count()==0,'v95: no Ya pagué / reminder (the app does not track Tony-Carlos)')
+    pg.click('#vdet');pg.wait_for_timeout(50);check('Parte de Joe en compras que pagó Carlos' in pg.inner_text('main') and 'Parte de Tony en compras que pagó Carlos' in pg.inner_text('main'),'v95: pair detail')
+    if False:
         check(pg.locator('#vrem').count()==1,'reminder banner')
         sb=pg.locator('#vdet').bounding_box();check(sb['y']+sb['height']<=844 and pg.locator('#vsum #vtcpay').count()==1,'v76: reminder + Ya pagué in summary, fits iPhone %s'%sb)
         if '--shots' in sys.argv:pg.screenshot(path=os.path.join(ROOT,'shots','140-enlace-tony-yapague.png'))
@@ -62,5 +61,4 @@ for who,doc,debtor in [('tony',SNT,True),('carlos',SNC,False)]:
         pg.click('#vtcpay');pg.wait_for_timeout(300);d=[v for k,v in E("window.__fs.docs").items() if '/inbox/' in k]
         check(d and d[0]=={'kind':'settle','by':'Tony','month':'2026-10','amount':15,'at':'__now__'} and 'Avisado' in pg.inner_text('main'),d)
     elif '--shots' in sys.argv:pg.screenshot(path=os.path.join(ROOT,'shots','137-enlace-carlos.png'),full_page=True)
-    if not debtor: check('Parte de Joe en tus compras' in pg.inner_text('main'),'carlos netting row')
 print('test_v73 OK',ok)

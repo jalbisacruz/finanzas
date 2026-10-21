@@ -1,4 +1,4 @@
-"""v93 (made-up data): Tony/Carlos solo ven las compras en que participan (enlace privado y PDF). Totales iguales."""
+"""v93 (made-up data; v95: compras compartidas por 2+ personas las ven los tres): Tony/Carlos solo ven las compras en que participan (enlace privado y PDF). Totales iguales."""
 import os,sys,json,base64,subprocess,tempfile
 from harness import app,HERE
 ROOT=os.path.dirname(HERE);ok=0;FAKE=open(os.path.join(HERE,'fakefb.js')).read()
@@ -22,23 +22,23 @@ with app(ROOT,init="localStorage.setItem('finanzas-sync-uid','u1');",routes=R) a
     st=lambda d:[p['s'] for p in d['months'][0]['purchases']]
     check('CarlosSoloShop' not in st(DT) and 'JoeSoloShop' not in st(DT),'tony doc hides uninvolved %s'%st(DT))
     check('TonySoloShop' in st(DT) and 'AriannaShop' in st(DT),'tony doc shows involved + Arianna-bought')
-    check('TonySoloShop' not in st(DC) and 'AriannaShop' not in st(DC) and 'JoeSoloShop' not in st(DC) and 'CarlosSoloShop' in st(DC),'carlos doc %s'%st(DC))
+    check('TonySoloShop' in st(DC) and 'AriannaShop' not in st(DC) and 'JoeSoloShop' not in st(DC) and 'CarlosSoloShop' in st(DC),'carlos doc %s'%st(DC))
     check(abs(DT['months'][0]['pending']-c['tonyDue'])<1e-9 and abs(DC['months'][0]['pending']-c['carlosDue'])<1e-9 and abs(DC['months'][0]['share']-c['carlos'])<1e-9,'totals = calc')
     for k in ('tony','carlos'):
         t=pdft(pg,k);own='TonySoloShop' if k=='tony' else 'CarlosSoloShop';other='CarlosSoloShop' if k=='tony' else 'TonySoloShop'
-        check(own in t and other not in t and 'JoeSoloShop' not in t,'%s pdf filtered'%k)
+        check(own in t and ('CarlosSoloShop' not in t if k=='tony' else 'TonySoloShop' in t) and 'JoeSoloShop' not in t,'%s pdf filtered (v95: shared Joe+Tony visible to Carlos)'%k)
         if k=='tony':check('AriannaShop' in t,'tony pdf Arianna')
     tm=pdft(pg,'mes');check(all(s in tm for s in ['CarlosSoloShop','TonySoloShop','JoeSoloShop']),'monthly PDF keeps all')
     E("p=>window.__docs=p",[DT,DC])
 # shared page
-for who,doc,shown,hidden in [('tony',DT,['TonySoloShop','AriannaShop'],['CarlosSoloShop','JoeSoloShop']),('carlos',DC,['CarlosSoloShop'],['TonySoloShop','AriannaShop','JoeSoloShop'])]:
+for who,doc,shown,hidden in [('tony',DT,['TonySoloShop','AriannaShop'],['CarlosSoloShop','JoeSoloShop']),('carlos',DC,['CarlosSoloShop','TonySoloShop'],['AriannaShop','JoeSoloShop'])]:
   with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps(doc),width=390,height=844) as pg:
     pg.goto(pg.url.split('/')[0]+'//'+pg.url.split('/')[2]+'/v.html?t=AAAAAAAAAAAAAAAAAAAAAA');pg.wait_for_timeout(500);pg.click('#vdet');pg.wait_for_timeout(200)
     tx=pg.inner_text('main');check(all(s in tx for s in shown) and not any(s in tx for s in hidden),'%s page %s'%(who,tx[:300]))
     if '--shots' in sys.argv or True:pg.screenshot(path=os.path.join(ROOT,'shots','v93-%s.png'%who),full_page=True)
     check(not [e for e in pg.errors if not e.startswith('DIALOG')],pg.errors)
 # old doc (published before v93) is filtered on the page too; empty month -> message
-d=json.loads(json.dumps(DC));d['months'][0]['purchases']=[{'d':'2026-10-15','s':'JoeSoloShop','c':'x','t':9,'rows':[],'tot':{'Yo':9,'Tony':0,'Carlos':0}}]
+d=json.loads(json.dumps(DC));[mo.pop('r3',None) for mo in d['months']];d['months'][0]['purchases']=[{'d':'2026-10-15','s':'JoeSoloShop','c':'x','t':9,'rows':[],'tot':{'Yo':9,'Tony':0,'Carlos':0}}]
 with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps(d),width=390,height=844) as pg:
     pg.goto(pg.url.split('/')[0]+'//'+pg.url.split('/')[2]+'/v.html?t=AAAAAAAAAAAAAAAAAAAAAA');pg.wait_for_timeout(500);pg.click('#vdet');pg.wait_for_timeout(200)
     tx=pg.inner_text('main');check('JoeSoloShop' not in tx and 'Sin compras este mes.' in tx,'old doc filtered, empty msg '+tx)

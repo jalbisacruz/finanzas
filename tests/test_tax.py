@@ -38,17 +38,18 @@ with app(ROOT,now='2026-10-16T09:00:00') as pg:
     # PDF
     with pg.expect_download(timeout=20000) as d: E("()=>pdfDl('mes','2026-10')")
     d.value.save_as('/tmp/tax.pdf');tx=subprocess.run(['pdftotext','-layout','/tmp/tax.pdf','-'],capture_output=True,text=True).stdout
-    row=[x for x in tx.splitlines() if 'Impuesto' in x and 'Proporcional' in x];check(row and '$7.00' in row[0] and '$2.10' in row[0] and '$3.85' in row[0] and '$1.05' in row[0],row)
-    rs=[x for x in tx.splitlines() if 'Resto de la compra' in x and '$60.00' in x];check(rs and '$30.00' in rs[0] and rs[0].count('$15.00')==2,rs)
+    row=[x for x in tx.splitlines() if 'Impuesto' in x and 'proporcional' in x];check(row and '$7.00' in row[0],row)  # v95: una fila por compra; el impuesto va debajo
+    pr=[x for x in tx.splitlines() if 'Publix' in x and '$107.00' in x];check(pr and '$16.05' in pr[0] and '$32.10' in pr[0] and '$58.85' in pr[0],pr)
+    check(not any('Resto de la compra' in x for x in tx.splitlines()),'v95: no per-item table rows')
     with pg.expect_download(timeout=20000) as d: E("()=>pdfDl('tony','2026-10')")
     d.value.save_as('/tmp/taxt.pdf');tt=subprocess.run(['pdftotext','-layout','/tmp/taxt.pdf','-'],capture_output=True,text=True).stdout
-    check(any('Proporcional' in x for x in tt.splitlines()),'tony pdf tax row')
+    check(any('proporcional' in x for x in tt.splitlines()),'tony pdf tax row')
     if '--shots' in sys.argv:
         import glob
         for f_ in glob.glob('/tmp/taxp*.png'):os.remove(f_)
         subprocess.run(['pdftoppm','-png','-r','90','/tmp/tax.pdf','/tmp/taxp'],check=True)
         pgs=sorted(glob.glob('/tmp/taxp*.png'))
-        i=[j for j in range(len(pgs)) if 'Proporcional' in subprocess.run(['pdftotext','-f',str(j+1),'-l',str(j+1),'/tmp/tax.pdf','-'],capture_output=True,text=True).stdout][0]
+        i=[j for j in range(len(pgs)) if 'proporcional' in subprocess.run(['pdftotext','-f',str(j+1),'-l',str(j+1),'/tmp/tax.pdf','-'],capture_output=True,text=True).stdout][0]
         import shutil;shutil.copy(pgs[i],os.path.join(ROOT,'shots','133-impuesto-pdf.png'))
     # scan prefill with tax
     E("()=>{window.fbUser=()=>true;window.fbScan=async()=>JSON.stringify({isReceipt:true,store:'Publix',date:'2026-10-12',total:21.57,tax:0.82,uncertain:[],items:[{name:'Leche',amount:4.29,category:'🛒 Comida/Supermercado'},{name:'Toallas',amount:8.99,category:'🏠 Hogar'}]})}")

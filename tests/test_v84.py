@@ -19,7 +19,7 @@ EXP=['Aldi $14.72','Publix','Costco',"Sam's Club $88.94",'Detwilers','Aldi $43.4
 def blocks(tx):
     out=[]
     for L in tx.splitlines():
-        m=re.match(r'\s*(\d{1,2} oct(?: \d{4})?) · (.+?)\s{2,}.*?(\$[\d.,]+)\s*$',L)
+        m=re.match(r'\s*(\d{1,2} oct(?: \d{4})?)\s+(.+?)\s{2,}(?:Joe|Tony|Arianna|Carlos)\s+(\$[\d.,]+)',L)  # v95: fila fecha  tienda  pagó  total
         if m:out.append((m.group(1),m.group(2).strip(),m.group(3)))
     return out
 def names(bl):

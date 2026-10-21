@@ -75,7 +75,7 @@ with app(ROOT,routes=R,init=init) as pg:
     E("()=>{tab='mov';render()}");pg.wait_for_timeout(100);check('Compró: Arianna' in pg.inner_text('#v'),'history tag')
     with pg.expect_download(timeout=20000) as d: E("()=>pdfDl('tony','2026-10')")
     d.value.save_as('/tmp/v72t.pdf');tx=subprocess.run(['pdftotext','-layout','/tmp/v72t.pdf','-'],capture_output=True,text=True).stdout
-    check('Compró: Arianna' in tx and 'Comida (incl. $16.05' in tx and 'Comida (compras de Tony/Arianna)' not in tx,'pdf: one Comida line with breakdown')
+    check('Arianna' in tx and 'Pagó' in tx and 'Comida (incl. $16.05' in tx and 'Comida (compras de Tony/Arianna)' not in tx,'pdf: one Comida line with breakdown')
     t=E("msgShort('tony','2026-10')");check(re.search(r'Comida\s+\$16\.05',t) and 'compras de Tony/Arianna' not in t and 'Publix — $32.10' not in t,'tony message: Comida line, purchase not charged '+t)
     snap=E("snapFor('Tony')");check(snap['buyers']==['Tony','Arianna'] and any(p.get('by')=='Arianna' for p in snap['months'][0]['purchases']),'snapshot')
     errs=[e for e in pg.errors if 'DIALOG' not in e];check(not errs,errs)

@@ -9,8 +9,8 @@ def check(c,m):
 def grab(pg,kind,path):
     with pg.expect_download(timeout=15000) as d: pg.evaluate(f"()=>pdfDl('{kind}','2026-10')")
     d.value.save_as(path);return subprocess.run(['pdftotext','-layout','-l','1',path,'-'],capture_output=True,text=True).stdout
-for lang,init,exp in [('es','',['Resumen mensual · Octubre 2026','Joe Albisa Cruz · Generado el 16 oct 2026','Cuentas de Octubre 2026','Compras de Octubre 2026']),
-                      ('en',"window.fbName=()=>'Test Person';",['Monthly summary · October 2026','Test Person · Generated Oct 16, 2026'])]:
+for lang,init,exp in [('es','',['Cuentas de la casa · Octubre 2026','Resumen de Joe · De Joe Albisa Cruz · 16 oct 2026','Resumen de Tony · De Joe Albisa Cruz','Resumen de Carlos · De Joe Albisa Cruz']),
+                      ('en',"window.fbName=()=>'Test Person';",['Household accounts · October 2026','Summary for Joe · From Test Person · Oct 16, 2026'])]:
   with app(ROOT,lang=lang,now='2026-10-16T09:00:00') as pg:
     if init: pg.evaluate("()=>{"+init+"}")
     t=grab(pg,'mes','/tmp/m-%s.pdf'%lang)+grab(pg,'tony','/tmp/t-%s.pdf'%lang)+grab(pg,'carlos','/tmp/c-%s.pdf'%lang)

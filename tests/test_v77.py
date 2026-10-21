@@ -22,10 +22,10 @@ with app(ROOT,state=st,init="localStorage.setItem('finanzas-sync-uid','u1');",ro
         p='/tmp/v77-%s.pdf'%(who or 'mes');d.value.save_as(p);tx=pdftext(p)
         for s,tot in [('Detwilers','$5.20'),('Aldi','$43.44'),('Walmart','$5.32')]:
             if who=='tony' and s=='Walmart':check('Walmart' not in tx,'v93: Carlos-only purchase hidden in Tony PDF');continue
-            check(re.search(r'11 oct · %s.*\$%s'%(s,re.escape(tot[1:])),tx) and 'Total %s'%tot not in tx,'%s header line (date · store ... total) in %s'%(s,who))
-        check('Comida/Supermercado' in tx and ('Salud' in tx or who=='tony'),'category chips')
+            check(re.search(r'11 oct\s+%s\s.*\$%s'%(s,re.escape(tot[1:])),tx) and 'Total %s'%tot not in tx,'%s row (date  store ... total) in %s'%(s,who))  # v95: una fila por compra
+        check('Pagó' in tx,'v95: who-paid column')
         if who=='tony':
-            check('Tu parte del mes' in tx and 'Total cuentas' in tx,'rest of Tony PDF unchanged')
+            check('Total del mes' in tx and 'Total cuentas' in tx,'rest of Tony PDF')
             if '--shots' in sys.argv:
                 subprocess.run(['pdftoppm','-png','-r','110','-f','1','-l','2',p,'/tmp/v77t'],check=True)
                 import glob,shutil
@@ -54,7 +54,7 @@ with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps({**SNT,'updatedA
     check('Detwilers' in pg.inner_text('.pc >> nth=0') and '$5.20' in pg.inner_text('.pc >> nth=0 >> .pamt'),'header content')
     if '--shots' in sys.argv:pg.locator('#vdetb').screenshot(path=os.path.join(ROOT,'shots','141-enlace-detalle.png'))
     with pg.expect_download(timeout=15000) as d: pg.click('#vdl')
-    d.value.save_as('/tmp/v77-link.pdf');tx=pdftext('/tmp/v77-link.pdf');check(re.search(r'11 oct · Aldi.*\$43\.44',tx) and 'Walmart' not in tx,'link PDF header line (v93: Carlos-only Walmart hidden)')
+    d.value.save_as('/tmp/v77-link.pdf');tx=pdftext('/tmp/v77-link.pdf');check(re.search(r'11 oct\s+Aldi\s.*\$43\.44',tx) and 'Walmart' not in tx,'link PDF header line (v93: Carlos-only Walmart hidden)')
     if '--shots' in sys.argv:subprocess.run(['pdftoppm','-png','-r','110','-f','1','-l','1','-singlefile','/tmp/v77-link.pdf',os.path.join(ROOT,'shots','141-pdf-enlace-tony')],check=True)
     errs=[e for e in pg.errors if 'DIALOG' not in e];check(not errs,errs)
 print('test_v77 OK',ok)

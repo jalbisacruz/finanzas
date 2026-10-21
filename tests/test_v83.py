@@ -50,9 +50,9 @@ with app(ROOT,now='2026-10-16T21:00:00',expand=False,routes=R) as pg:
     hl=E("(hRange='all',hList().filter(o=>o.k==='2026-10').map(o=>o.p.store))");E("hRange='cur'");check(hl==EXP,'historial %s'%hl)
     # PDFs de Joe: Carlos (lo que vio Joe), Tony, resumen del mes
     for kind in ['carlos','tony','mes']:
-        tx=grab(pg,f"()=>pdfDl('{kind}','2026-10')",f'/tmp/v83{kind}.pdf');tx=tx.split('Compras compartidas')[-1] if kind!='tony' else tx.split('Tu parte de las compras')[1]
+        tx=grab(pg,f"()=>pdfDl('{kind}','2026-10')",f'/tmp/v83{kind}.pdf');tx=tx.split('Compras del mes')[1].split('Total del mes')[0]  # v95: mismo diseño en los 3
         check(order(tx,EXP)==EXP,'%s PDF %s'%(kind,order(tx,EXP)))
-        check('7 oct · Target' in tx and '12 oct · Amazon' in tx,'%s PDF dates'%kind)
+        check(re.search(r'7 oct\s+Target',tx) and re.search(r'12 oct\s+Amazon',tx),'%s PDF dates'%kind)
     # mensajes de texto (Carlos/Tony): sin la que pagó Carlos
     E2=[x for x in EXP if x!='Lidl']
     for w in ['carlos','tony']:

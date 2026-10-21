@@ -52,8 +52,7 @@ for lang in ['es','en']:
     check(s['text'].count('\n')>=6 and '\n\n' in s['text'] and s['text']==E("msgShort('carlos','2026-10')"),'share text keeps line breaks')
     pg.click('#mmpdf');pg.wait_for_timeout(50);pg.click('#msgsh');pg.wait_for_function("_sh.length==2",timeout=10000);s=E("_sh.at(-1)")
     check(re.match(r'Carlos-(Octubre|October)-2026-\d{1,2}[a-z]+-\d{1,2}-\d\d(am|pm)\.pdf$',s['files'][0]) and s['size'][0]>1000,s)
-    _,tx=pdftext(pg,'c.pdf');check(('Rest of the purchase' if lang=='en' else 'Resto de la compra') in tx and '$12.50' in tx and 'Snacks' in tx and '$0.00' not in tx,'carlos pdf v68 full table: '+tx)
-    check('Shampoo' in tx and '42.50' in tx and 'Tony' not in tx.replace('Tony',''),tx[:300])
+    _,tx=pdftext(pg,'c.pdf');check(('WHO TRANSFERS TO WHOM' if lang=='en' else 'QUIÉN TRANSFIERE A QUIÉN') in tx and '$42.50' in tx and 'Walmart' in tx,'carlos pdf v95: '+tx)  # v95: resumen de la casa
     # (v58 mailto checks removed in v59)
     # v59: no email button / field in the dialog; stored emails untouched
     check(pg.locator('#msgml').count()==0 and pg.locator('#msgmail').count()==0 and 'Correo' not in pg.locator('#dlg').inner_text() and 'Email' not in pg.locator('#dlg').inner_text(),'no email UI')
@@ -61,16 +60,16 @@ for lang in ['es','en']:
     E("dlg().close()")
     # Tony pdf
     E("shareMsg('tony','2026-10','pdf')");pg.click('#msgsh');pg.wait_for_function("_sh.length==3",timeout=10000)
-    _,tx=pdftext(pg,'t.pdf');check('$0.00' not in tx,'tony pdf no zero items: '+tx)
-    check('Walmart' in tx and '35.00' in tx and 'Carlos' in tx and ('Tu parte del mes' in tx or 'Your share this month' in tx),tx[:400]);E("dlg().close()")  # v68: full table
+    _,tx=pdftext(pg,'t.pdf')
+    check('Walmart' in tx and '35.00' in tx and 'Carlos' in tx and ('Total del mes' in tx or 'Month total' in tx),tx[:400]);E("dlg().close()")  # v68: full table
     # month PDF from Reportes
     E("tab='rep';render()");pg.wait_for_timeout(50);check(pg.locator('#pdfbtn').count()==1,'pdf button in Reportes')
     # v91: Ver PDF ya no abre Compartir en la computadora: descarga
     E("()=>{const o=dl;dl=function(f){window._lastFile=f;window._dls=(window._dls||[]).concat(f.name);return o(f)}}")
     E("pdfMes()");pg.wait_for_function("(window._dls||[]).length==1",timeout=10000);fn=E("_dls[0]");check(E("_sh.length")==3 and re.search(r'-(Octubre|October)-2026-Joe-\d{1,2}[a-z]+-\d{1,2}-\d\d(am|pm)\.pdf$',fn),fn)
     p,tx=pdftext(pg,f'm-{lang}.pdf')
-    for w in (['Lo que tengo','Lo que debo','Balance','Gasto por categor','Ingresos por concepto','Tony','Carlos (por cobrar)','Compras compartidas','Saldos de tarjetas','Walmart'] if lang=='es' else
-              ['What I','Balance','Spending by category','Income by concept','Carlos (to collect)','Shared purchases','Card balances','Walmart']):check(w in tx,f'{lang} pdf has {w}')
+    for w in (['Lo que tengo','Lo que debo','Balance','Gasto por categor','Ingresos por concepto','Tony','Cómo se calcula','Compras del mes','Saldos de tarjetas','Walmart'] if lang=='es' else
+              ['What I','Balance','Spending by category','Income by concept','How it is calculated','Purchases this month','Card balances','Walmart']):check(w in tx,f'{lang} pdf has {w}')
     check(('Reembolso de Carlos' not in tx) and ('Carlos reimb' not in tx),'reimbursement not in income')
     if '--shots' in sys.argv and lang=='es':
         txt=E("msgFor('tony','2026-10')")
