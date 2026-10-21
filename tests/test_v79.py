@@ -93,13 +93,13 @@ for lang in ['es','en']:
     # ---- Reportes ----
     E("()=>{tab='rep';render();scrollTo(0,0)}");pg.wait_for_timeout(60);r=ids(pg)
     check(r[0]=='rescard' and r[1]=='gastocard','Resumen first, then Gastos del mes %s'%r)
-    check(all(pg.locator('#rescard #'+i).count()==1 for i in ['pdfbtn','pdfdl','pdft','pdfc']),'Ver / Descargar PDF, PDF de Tony / Carlos')
+    check(all(pg.locator('#rescard #'+i).count()==1 for i in ['pdfbtn','pdft','pdfc']) and pg.locator('#rescard #pdfdl').count()==0,'v94: Mi resumen / Tony / Carlos')
     g=pg.inner_text('#gastocard');check(T('Gastos del mes: {0} (ya restados de tus saldos)',E("f(spent(M()).total)")) in g,g)
     check(col('gpcard') and not col('inccard') and col('acccard'),'Gasto y presupuesto closed, Ingresos open, Acumulado as before')
     for i in ['cbcard']:
         if pg.locator('#'+i).count():check(col(i),i+' closed')
     rm=E("[...document.querySelectorAll('#v>.card')].filter(c=>/💸/.test(c.textContent.slice(0,40))).map(c=>c.classList.contains('col'))");check(all(rm),'Remesas closed')
-    with pg.expect_download(timeout=20000) as d: pg.click('#pdft')
+    with pg.expect_download(timeout=20000) as d: pg.evaluate("pdfDl('tony',S.cur)")
     check(d.value.suggested_filename.endswith('.pdf'),'PDF de Tony downloads')
     shot(pg,'reportes-'+lang)
     # ---- Configuración: todo cerrado ----

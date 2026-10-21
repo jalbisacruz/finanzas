@@ -47,7 +47,7 @@ for case in ['legacy','scan']:
         check(E("M().purchases[0].date")=='2026-10-17' and len(E("M().purchases[0].list"))==3,'stored with this year')
     # todas las entradas al PDF de Carlos
     E("()=>{tab='rep';render()}");pg.wait_for_timeout(150)
-    with pg.expect_download() as d:pg.click('#pdfc')
+    with pg.expect_download() as d:pg.evaluate("pdfDl('carlos',S.cur)")
     d.value.save_as('/tmp/v84a.pdf');bl=chk_pdf(pdftxt('/tmp/v84a.pdf'),case+' Reportes › PDF de Carlos')
     check(bl[0][0]==('17 oct 2025' if case=='legacy' else '17 oct'),'%s date label %s'%(case,bl[0][0]))
     check(bl[3][0]=='13 oct','Sam\'s Club is 13 oct')

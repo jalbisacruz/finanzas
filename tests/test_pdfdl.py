@@ -11,8 +11,8 @@ for lang,lbl,name in [('es','⬇️ Descargar PDF','Resumen-Octubre-2026-Joe'),(
   with app(ROOT,lang=lang) as pg:
     E=pg.evaluate;E("()=>{window._shared=0;navigator.share=async()=>{window._shared++};navigator.canShare=()=>true}")
     E("()=>{tab='rep';render()}");pg.wait_for_timeout(50)
-    check(pg.inner_text('#pdfdl')==lbl,'label %s'%lang)
-    with pg.expect_download(timeout=15000) as d: pg.click('#pdfdl')
+    check(pg.locator('#pdfdl').count()==0,'v94: no Descargar button in Resumen %s'%lang)
+    with pg.expect_download(timeout=15000) as d: E("pdfDl('mes')")
     dd=d.value;check(re.match(re.escape(name)+r'-13oct-10-0\d(am|pm)\.pdf$',dd.suggested_filename),dd.suggested_filename);p=dd.path();check(open(p,'rb').read(5)==b'%PDF-','is pdf')
     check(E("window._shared")==0,'no share sheet')
     for who,fn in [('tony','Tony'),('carlos','Carlos')]:

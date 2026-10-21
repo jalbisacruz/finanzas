@@ -21,7 +21,7 @@ def desktop(standalone):
         check(E("matchMedia('(display-mode: standalone)').matches")==standalone and E("typeof navigator.share==='function'&&navigator.canShare({files:[new File(['x'],'a.pdf')]})"),'%s: share APIs present'%tag)
         check(E("NO_DL()")==False and E("PV_IOS")==False,'%s: not iOS'%tag)
         E("()=>{tab='rep';render()}");pg.wait_for_timeout(200)
-        pg.locator('#pdfbtn').first.click();pg.wait_for_timeout(2500)
+        E("pdfMes()");pg.wait_for_timeout(2500)
         check(any(x.endswith('.pdf') for x in dls) and E("__share.length")==0 and pg.locator('#pdfview').count()==0,'%s: Ver PDF downloads %s'%(tag,dls))
         n=len(dls);E("pdfDl('mes')");pg.wait_for_timeout(2000);check(len(dls)==n+1 and dls[-1].endswith('.pdf'),'%s: Descargar PDF downloads'%tag)
         E("pdfDl('tony',S.cur)");pg.wait_for_timeout(2000);E("pdfDl('carlos',S.cur)");pg.wait_for_timeout(2000);check(len(dls)==n+3,'%s: Tony/Carlos PDFs download'%tag)

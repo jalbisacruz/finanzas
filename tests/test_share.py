@@ -67,7 +67,7 @@ for lang in ['es','en']:
     E("tab='rep';render()");pg.wait_for_timeout(50);check(pg.locator('#pdfbtn').count()==1,'pdf button in Reportes')
     # v91: Ver PDF ya no abre Compartir en la computadora: descarga
     E("()=>{const o=dl;dl=function(f){window._lastFile=f;window._dls=(window._dls||[]).concat(f.name);return o(f)}}")
-    pg.click('#pdfbtn');pg.wait_for_function("(window._dls||[]).length==1",timeout=10000);fn=E("_dls[0]");check(E("_sh.length")==3 and re.search(r'-(Octubre|October)-2026-Joe-\d{1,2}[a-z]+-\d{1,2}-\d\d(am|pm)\.pdf$',fn),fn)
+    E("pdfMes()");pg.wait_for_function("(window._dls||[]).length==1",timeout=10000);fn=E("_dls[0]");check(E("_sh.length")==3 and re.search(r'-(Octubre|October)-2026-Joe-\d{1,2}[a-z]+-\d{1,2}-\d\d(am|pm)\.pdf$',fn),fn)
     p,tx=pdftext(pg,f'm-{lang}.pdf')
     for w in (['Lo que tengo','Lo que debo','Balance','Gasto por categor','Ingresos por concepto','Tony','Carlos (por cobrar)','Compras compartidas','Saldos de tarjetas','Walmart'] if lang=='es' else
               ['What I','Balance','Spending by category','Income by concept','Carlos (to collect)','Shared purchases','Card balances','Walmart']):check(w in tx,f'{lang} pdf has {w}')
@@ -79,7 +79,7 @@ for lang in ['es','en']:
         subprocess.run(['pdftoppm','-png','-r','90','-f','1','-l','1','-singlefile',p,os.path.join(ROOT,'shots','122-pdf')],check=True)
     # download fallback when files can't be shared
     E("()=>{navigator.canShare=()=>false;window._dl=0;const o=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(this.download)window._dl++;else o.call(this)}}")
-    pg.click('#pdfbtn');pg.wait_for_function("_dl==1",timeout=10000);check(True,'download (anchor) still works')
+    E("pdfMes()");pg.wait_for_function("_dl==1",timeout=10000);check(True,'download (anchor) still works')
     E("()=>{S.months['2026-10'].purchases.push({id:'pi2',store:'Aldi',date:'2026-10-13',total:40,mode:'fam',who:['Yo','Tony','Carlos'],method:'',shares:{Tony:15,Carlos:15,Yo:10},items:{Carlos:[{a:10,n:'Leche'}]}});tab='mov';hRange='cur';render()}")
     pg.click('.hrow[data-id="pi2"] .hexp');pg.wait_for_timeout(50);d=pg.locator('.hrow[data-id="pi2"] .hdet').inner_text()
     check('$10.00 + $5.00 =' in d and '$0.00 +' not in d and d.count(' + ')==1,'history expand rule: '+d)
