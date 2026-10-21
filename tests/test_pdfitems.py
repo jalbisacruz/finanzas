@@ -20,15 +20,17 @@ with app(ROOT,now='2026-10-16T09:00:00') as pg:
     m=grab(pg,'mes','/tmp/v66m.pdf');t=grab(pg,'tony','/tmp/v66t.pdf');c=grab(pg,'carlos','/tmp/v66c.pdf')
     L=[x for x in m.splitlines()]
     # v95: una fila por compra (fecha, tienda, pagó, total, Joe/Tony/Carlos); debajo solo los ítems que NO son de todos
-    sh=[x for x in L if 'Shampoo' in x][0];check('$20.00' in sh and 'solo Carlos' in sh,sh)
-    vi=[x for x in L if 'Vino Tinto' in x][0];check('Joe y Tony' in vi and '$20.00' in vi,vi)
+    # v96: los resúmenes no llevan artículos; los artículos van en «Detalle de compras»
+    check(not any(w in m for w in ('Shampoo','Vino Tinto')),'v96: no items in summary');dt=grab(pg,'det','/tmp/v66d.pdf')
+    sh=[x for x in dt.splitlines() if 'Shampoo' in x][0];check(sh.count('$20.00')==2 and sh.split().count('-')==2,sh)
+    vi=[x for x in dt.splitlines() if 'Vino Tinto' in x][0];check(vi.count('$10.00')==2 and '$20.00' in vi,vi)
     pu=[x for x in L if 'Publix' in x and '$100.00' in x][0];check('$25.00' in pu and '$40.00' in pu and '$35.00' in pu and 'Joe' in pu,pu)
     co=[x for x in L if 'Costco' in x and '$80.00' in x][0];check('$40.00' in co and co.count('$20.00')==2,co)
     hd=[x for x in L if 'Tienda' in x and 'Pagó' in x][0];check('Joe' in hd and 'Tony' in hd and 'Carlos' in hd and ' Yo ' not in hd,hd)
     check('Finanzas ·' not in m,'footer only page')
     check(subprocess.run(['pdfinfo','/tmp/v66m.pdf'],capture_output=True,text=True).stdout.count('Pages:')==1,'pdf ok')
     # all 3 PDFs: same shared purchases and the same complete month totals
-    for x in (t,c):check('Vino Tinto' in x and 'Shampoo' in x and 'Articulo largo' in x and 'Costco' in x,'shared purchases in every PDF')
+    for x in (t,c):check('Costco' in x and 'Vino Tinto' not in x,'shared purchases in every PDF, no items (v96)')
     tot=lambda s:[x for x in s.splitlines() if 'Total del mes' in x][-1].split()
     check(tot(m)==tot(t)==tot(c),'same month totals %s %s %s'%(tot(m),tot(t),tot(c)))
     check(all('Quién transfiere a quién'.upper() in x and 'Cómo se calcula' in x for x in (m,t,c)),'transfer block in all')

@@ -38,12 +38,15 @@ with app(ROOT,now='2026-10-16T09:00:00') as pg:
     # PDF
     with pg.expect_download(timeout=20000) as d: E("()=>pdfDl('mes','2026-10')")
     d.value.save_as('/tmp/tax.pdf');tx=subprocess.run(['pdftotext','-layout','/tmp/tax.pdf','-'],capture_output=True,text=True).stdout
-    row=[x for x in tx.splitlines() if 'Impuesto' in x and 'proporcional' in x];check(row and '$7.00' in row[0],row)  # v95: una fila por compra; el impuesto va debajo
+    check('Impuesto' not in tx,'v96: no tax line in summary')
+    with pg.expect_download(timeout=20000) as d: E("()=>pdfDl('det','2026-10')")
+    d.value.save_as('/tmp/taxd.pdf');td=subprocess.run(['pdftotext','-layout','/tmp/taxd.pdf','-'],capture_output=True,text=True).stdout
+    row=[x for x in td.splitlines() if x.strip().startswith('Impuesto')];check(row and '$7.00' in row[0],row)  # v96: impuesto en el Detalle
     pr=[x for x in tx.splitlines() if 'Publix' in x and '$107.00' in x];check(pr and '$16.05' in pr[0] and '$32.10' in pr[0] and '$58.85' in pr[0],pr)
     check(not any('Resto de la compra' in x for x in tx.splitlines()),'v95: no per-item table rows')
     with pg.expect_download(timeout=20000) as d: E("()=>pdfDl('tony','2026-10')")
     d.value.save_as('/tmp/taxt.pdf');tt=subprocess.run(['pdftotext','-layout','/tmp/taxt.pdf','-'],capture_output=True,text=True).stdout
-    check(any('proporcional' in x for x in tt.splitlines()),'tony pdf tax row')
+    check(not any('proporcional' in x for x in tt.splitlines()),'v96: no tax row in tony summary')
     if '--shots' in sys.argv:
         import glob
         for f_ in glob.glob('/tmp/taxp*.png'):os.remove(f_)

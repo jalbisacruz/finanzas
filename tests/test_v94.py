@@ -15,7 +15,7 @@ with app(ROOT,now='2026-10-17T17:45:00',expand=False,ctx_opts={'user_agent':WIN,
     E=pg.evaluate;dls=[];pg.on('download',lambda d:dls.append(d.suggested_filename))
     E("()=>{tab='rep';render();scrollTo(0,0)}");pg.wait_for_timeout(200)
     bt=pg.locator('#rescard .rlinks button');labels=[bt.nth(i).inner_text() for i in range(bt.count())]
-    check(labels==['📄 Mi resumen','📄 Tony','📄 Carlos'],labels)
+    check(labels==['📄 Mi resumen','📄 Tony','📄 Carlos','🧾 Detalle de compras'],labels)  # v96: 4.º botón
     check(pg.locator('#pdfdl').count()==0 and pg.locator('#pdfsh').count()==0,'no Ver/Descargar/Compartir buttons')
     pg.locator('#rescard').screenshot(path=os.path.join(ROOT,'shots','v94-resumen.png'))
     # real click opens a new tab synchronously (popup not blocked)

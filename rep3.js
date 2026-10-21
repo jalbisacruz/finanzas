@@ -70,7 +70,7 @@ function rep3PDF(R,extra){const t=L3[R.lang==='en'?'en':'es'],N=x=>(R.names||{})
  // 4) Compras del mes: una fila por compra; columnas de los tres SIEMPRE completas
  o.page();o.h(t.purch);const P=R.purchases||[];
  if(!P.length&&!(R.hid&&R.hid.n))o.note(t.none);else{
-  const hi=4+P3.indexOf(R.who),rows=P.map(p=>[p.dl,p.s,N(p.by),fm(p.t),...P3.map(x=>(+p.sh[x]||0)>0.004?fm(p.sh[x]):'-')]),sub=P.map(p=>(p.it||[]).map(i=>'· '+i.n+'  '+fm(i.a)+'  ('+(i.o)+')'));
+  const hi=4+P3.indexOf(R.who),rows=P.map(p=>[p.dl,p.s,N(p.by),fm(p.t),...P3.map(x=>(+p.sh[x]||0)>0.004?fm(p.sh[x]):'-')]),sub=P.map(()=>[]);  // v96: sin detalle de artículos (va en «Detalle de compras»)
   if(R.hid&&R.hid.n){rows.push(['',fill(t.hid,R.hid.n),'',fm(R.hid.t),...P3.map(x=>R.hid.sh[x]>0.004?fm(R.hid.sh[x]):'-')]);sub.push([])}
   o.table([t.date,t.store,t.by,t.tot,...P3.map(N)],rows,{ws:[56,178,58,56,56,56,56],left:[1,2],hi:R.who&&hi>=4?hi:undefined,sub,tot:['',t.mtot,'',fm(R.totAll),...P3.map(x=>fm(R.tot[x]))]});
   o.note(t.pnote)}
@@ -78,5 +78,24 @@ function rep3PDF(R,extra){const t=L3[R.lang==='en'?'en':'es'],N=x=>(R.names||{})
  if(R.showBills&&R.bills&&R.bills.length){o.h(t.bills);o.table([t.bill,t.amt,t.st],R.bills.map(b=>[b.n,fm(b.a),b.paid?t.paidB:t.pendB]),{ws:[316,100,100],tot:[t.billsT,fm(R.billsTotal),'']})}
  if(extra)extra(o);
  return o.out()}
-window.R3Doc=R3Doc;window.rep3PDF=rep3PDF;window.R3L=L3;
+// v96: «Detalle de compras»: un solo PDF con cada compra del mes (más nueva primero), quién pagó, sus artículos con la parte de cada uno,
+// resto de la compra, impuesto y total por persona; al final el total del mes (= los resúmenes). Recibe R=r3Data (usa R.det).
+const LD={es:{title:'Detalle de compras · {0}',sub:'Para {0} · De {1} · {2}',paid:'Pagó {0}',art:'Artículo',pr:'Precio',ptot:'Total de la compra',rest:'Resto de la compra',all:'Toda la compra',tax:'Impuesto',
+ mtot:'Total del mes',n:'{0} compras',none:'Sin compras este mes.',hidN:'Solo se suman: no son de {0}.'},
+ en:{title:'Purchase detail · {0}',sub:'For {0} · From {1} · {2}',paid:'Paid by {0}',art:'Item',pr:'Price',ptot:'Purchase total',rest:'Rest of the purchase',all:'Whole purchase',tax:'Tax',
+ mtot:'Month total',n:'{0} purchases',none:'No purchases this month.',hidN:'Only added up: they are not {0}\'s.'}};
+function rep3Det(R){const t=L3[R.lang==='en'?'en':'es'],u=LD[R.lang==='en'?'en':'es'],N=x=>(R.names||{})[x]||x,D=R.det||{rows:[]},o=R3Doc(fill(u.title,R.label),fill(u.sub,N(R.who),R.from,R.gen)),d=o.d,X=o.X,RR=o.R;
+ const hi=R.who&&P3.includes(R.who)?2+P3.indexOf(R.who):undefined,ws=[236,70,70,70,70],cols=[u.art,u.pr,...P3.map(N)],sh=s=>P3.map(x=>Math.abs(+s[x]||0)>0.004?fm(s[x]):'-');
+ if(!D.rows.length&&!(R.hid&&R.hid.n))o.note(u.none);
+ D.rows.forEach(p=>{o.need(16*(p.lines.length+2)+40);let y=o.y;
+  d.setFillColor(239,246,255);d.setDrawColor(191,219,254);d.setLineWidth(0.8);d.roundedRect(X-6,y-13,RR-X+12,22,5,5,'FD');
+  d.setFont('helvetica','bold');d.setFontSize(11);d.setTextColor(15,23,42);d.text(pt((p.dl?p.dl+'  ·  ':'')+p.s),X+2,y+2);
+  d.setFont('helvetica','normal');d.setFontSize(9.5);d.setTextColor(71,85,105);const pw=fill(u.paid,N(p.by));d.text(pt(pw),RR-90,y+2,{align:'right'});
+  d.setFont('helvetica','bold');d.setFontSize(11);d.setTextColor(15,23,42);d.text(fm(p.t),RR-2,y+2,{align:'right'});o.y=y+24;
+  o.table(cols,p.lines.map(l=>[l.k==='rest'?u.rest:l.k==='all'?u.all:l.k==='tax'?u.tax:l.n,fm(l.a),...sh(l.sh)]),{ws,hi,tot:[u.ptot,fm(p.t),...sh(p.sh)]});o.y+=8});
+ if(R.hid&&R.hid.n){o.h(fill(t.hid,R.hid.n));o.table([t.tot,...P3.map(N)],[[fm(R.hid.t),...sh(R.hid.sh)]],{ws:[236,93,93,94],hi:hi!=null?hi-1:undefined});o.note(fill(u.hidN,N(R.who)))}
+ o.h(u.mtot+' · '+fill(u.n,D.rows.length+((R.hid&&R.hid.n)||0)));
+ o.table(['',t.tot,...P3.map(N)],[],{ws:[166,70,70,70,70],hi,tot:[u.mtot,fm(R.totAll),...P3.map(x=>fm(R.tot[x]))]});
+ return o.out()}
+window.R3Doc=R3Doc;window.rep3PDF=rep3PDF;window.rep3Det=rep3Det;window.R3L=L3;
 })();
