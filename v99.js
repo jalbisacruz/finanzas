@@ -7,6 +7,7 @@
 // v99b: se manda en USD (sale del débito y cuenta en el presupuesto) y se reparte en CUP: tasa (CUP por USD, se recuerda la última en S.xRate),
 //    montos por persona en CUP; benef:[{n,cup,a}] con a = USD = cup/tasa (ajustado para sumar el total). Las viejas (sin tasa) se muestran solo en USD.
 //    Solo con categoría de remesas (isRem: «💸 Envíos a familia»); con otra categoría todo es en USD, sin tasa (se cambia al elegir la categoría).
+//    Reportes y PDF: solo USD por persona (CUP y tasa se guardan, pero no se muestran; decisión de Joe).
 // 3) Reportes y MI PDF (no Tony/Carlos): «Enviado por persona» del mes + «Historial de remesas» (más nuevo primero).
 Object.assign(EN,{"Tasa de cambio (CUP por USD)":"Exchange rate (CUP per USD)","Total en USD":"Total in USD","Monto CUP":"Amount CUP","Tasa {0}":"Rate {0}","Pon la tasa de cambio":"Enter the exchange rate","Tasa":"Rate","Falta {0} CUP (≈ {1})":"Missing {0} CUP (≈ {1})","Sobra {0} CUP (≈ {1})":"Over by {0} CUP (≈ {1})","Total: {0} CUP":"Total: {0} CUP","Beneficiario":"Beneficiary","beneficiario":"beneficiary","Beneficiarios":"Beneficiaries","+ Añadir beneficiario":"+ Add beneficiary",
  "Es beneficiario (recibe envíos; no entra en compras compartidas)":"Beneficiary (receives transfers; not part of shared purchases)",
@@ -74,10 +75,10 @@ saveXfer=function(){const a=r2(document.getElementById('xa').value);if(!a||a<=0)
 // ---------- 3) Reportes y PDF de Joe ----------
 function xRepCard(k){const H=xHist(k),P=xByPerson(k),tot=r2(H.reduce((a,h)=>a+h.total,0));
  return `<div class="card defcol" id="xpcard"><h2>💸 ${T('Enviado por persona')}<span>${f(tot)}</span></h2><div class="muted">${lbl(k)}</div>
- ${P.map(([n,v,c,cu])=>`<div class="row"><span class="n">${esc(n)}${c!=null?`<div class="muted">${fcup(c)} (≈ ${f(cu)})</div>`:''}</span><b>${f(v)}</b></div>`).join('')||`<div class="muted">${T('Sin envíos este mes.')}</div>`}
- ${H.length?`<h3 style="margin:12px 0 4px;font-size:15px">🧾 ${T('Historial de remesas')}</h3>`+H.map(h=>`<div class="xh" style="border-top:1px solid #e5e7eb;padding:6px 0"><div class="row" style="border:0;padding:0"><span class="n">${fdate(h.date)} · ${esc(DN(h.cat))}${h.desc?` · ${esc(h.desc)}`:''}${h.rate?` · ${T('Tasa {0}',h.rate)}`:''}</span><b>${f(h.total)}</b></div>
-  ${h.lines.map(l=>`<div class="muted" style="display:flex;justify-content:space-between;padding-left:10px"><span>→ ${esc(l.n?DN(l.n):T('Sin destinatario'))}</span><span>${l.cup!=null?fcup(l.cup)+' · ':''}${f(l.a)}</span></div>`).join('')}</div>`).join(''):''}</div>`}
+ ${P.map(([n,v,c,cu])=>`<div class="row"><span class="n">${esc(n)}</span><b>${f(v)}</b></div>`).join('')||`<div class="muted">${T('Sin envíos este mes.')}</div>`}
+ ${H.length?`<h3 style="margin:12px 0 4px;font-size:15px">🧾 ${T('Historial de remesas')}</h3>`+H.map(h=>`<div class="xh" style="border-top:1px solid #e5e7eb;padding:6px 0"><div class="row" style="border:0;padding:0"><span class="n">${fdate(h.date)} · ${esc(DN(h.cat))}${h.desc?` · ${esc(h.desc)}`:''}</span><b>${f(h.total)}</b></div>
+  ${h.lines.map(l=>`<div class="muted" style="display:flex;justify-content:space-between;padding-left:10px"><span>→ ${esc(l.n?DN(l.n):T('Sin destinatario'))}</span><span>${f(l.a)}</span></div>`).join('')}</div>`).join(''):''}</div>`}
 {const _r=rep;rep=function(){const h=_r(),c=xRepCard(S.cur);const i=h.indexOf('<div class="card defcol" id="acccard"');return i<0?h+c:h.slice(0,i)+c+h.slice(i)}}
 {const _p=pdfMine;pdfMine=function(D2,k){const r=_p.apply(this,arguments);const H=xHist(k);if(!H.length)return r;
- D2.h(T('Enviado por persona'));D2.table([T('Persona'),'CUP','USD'],xByPerson(k).map(([n,v,c,cu])=>[n,c!=null?fcup(c)+' (≈ '+f(cu)+')':'—',f(v)]),{ws:[256,140,120],tot:[T('Total'),'',f(r2(H.reduce((a,h)=>a+h.total,0)))]});
- D2.h(T('Historial de remesas'));D2.table([T('Fecha'),T('Persona'),T('Categoría'),'CUP',T('Tasa'),'USD'],H.flatMap(h=>h.lines.map(l=>[h.date?fdate(h.date):'',l.n?DN(l.n):T('Sin destinatario'),DN(h.cat).replace(/^\S+\s/,''),l.cup!=null?fcup(l.cup):'—',h.rate?String(h.rate):'—',f(l.a)])),{ws:[62,110,104,100,50,90]});return r}}
+ D2.h(T('Enviado por persona'));D2.table([T('Persona'),'USD'],xByPerson(k).map(([n,v])=>[n,f(v)]),{ws:[366,150],tot:[T('Total'),f(r2(H.reduce((a,h)=>a+h.total,0)))]});
+ D2.h(T('Historial de remesas'));D2.table([T('Fecha'),T('Persona'),T('Categoría'),'USD'],H.flatMap(h=>h.lines.map(l=>[h.date?fdate(h.date):'',l.n?DN(l.n):T('Sin destinatario'),DN(h.cat).replace(/^\S+\s/,''),f(l.a)])),{ws:[90,170,166,90]});return r}}

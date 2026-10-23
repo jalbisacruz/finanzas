@@ -79,10 +79,10 @@ for lang in ['es','en']:
     P={r[0]:r[1:] for r in E("xByPerson('2026-10')")};check(P.get('Mamá')==[290,48000,150] and P.get('Tía Rosa')==[150,48000,150],P)
     H=E("xHist('2026-10')");check([h['id'] for h in H][-1]=='old98' and [h['date'] for h in H]==sorted([h['date'] for h in H],reverse=True) and len(H)==3,'newest first')
     E("()=>{tab='rep';render()}");pg.wait_for_timeout(300)
-    t=pg.inner_text('#xpcard');check('Mamá' in t and 'Tía Rosa' in t and '$290.00' in t and '48,000 CUP' in t and ('Tasa 320' if lang=='es' else 'Rate 320') in t and ('Historial de remesas' if lang=='es' else 'Transfer history') in t and 'v98 vieja' in t,t)
+    t=pg.inner_text('#xpcard');check('Mamá' in t and 'Tía Rosa' in t and '$290.00' in t and '$150.00' in t and 'CUP' not in t and 'Tasa' not in t and 'Rate' not in t and ('Historial de remesas' if lang=='es' else 'Transfer history') in t and 'v98 vieja' in t,t)
     T3={k:pdft(pg,k) for k in ['mes','tony','carlos']}
     hh=('Historial de remesas' if lang=='es' else 'Transfer history')
-    check(hh.lower() in T3['mes'].lower() and 'Tía Rosa' in T3['mes'] and '$290.00' in T3['mes'] and '48,000 CUP' in T3['mes'] and '320' in T3['mes'],'joe pdf')
+    check(hh.lower() in T3['mes'].lower() and 'Tía Rosa' in T3['mes'] and '$290.00' in T3['mes'] and 'CUP' not in T3['mes'] and 'Tasa' not in T3['mes'] and 'Rate ' not in T3['mes'],'joe pdf')
     for k in ['tony','carlos']:check(hh.lower() not in T3[k].lower() and 'Tía Rosa' not in T3[k] and 'Mamá' not in T3[k],k)
     for w in ['Tony','Carlos']:o=json.dumps(E("w=>r3Data('2026-10',w)",w),ensure_ascii=False);check('Tía Rosa' not in o and 'Mamá' not in o,'r3Data '+w)
     E("()=>{tab='mov';render()}");pg.wait_for_timeout(200);check(any('Tía Rosa' in (x.get('desc') or '') for x in E('moves(L())')),'movimientos desc')
