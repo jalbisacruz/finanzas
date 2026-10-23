@@ -1,4 +1,4 @@
-"""v98 (made-up data): movimiento Transferencia (con selector de categoría) en el +."""
+"""v98 (adaptado en v99: el destinatario ahora es una línea de beneficiario) (made-up data): movimiento Transferencia (con selector de categoría) en el +."""
 import os,sys,json,base64,subprocess,tempfile,copy,re
 from harness import app,HERE,FIX
 ROOT=os.path.dirname(HERE);ok=0;FAKE=open(os.path.join(HERE,'fakefb.js')).read()
@@ -24,7 +24,7 @@ def pdft(pg,kind):
     p=tempfile.mktemp(suffix='.pdf');open(p,'wb').write(base64.b64decode(b));return subprocess.run(['pdftotext','-layout',p,'-'],capture_output=True,text=True).stdout
 
 S['budgets']={'🏠 Hogar':700,'🛒 Comida/Supermercado':400,'💸 Envíos a familia':300}
-SH=os.path.join(ROOT,'shots')
+SH=os.path.join(ROOT,'shots');import tempfile as _t;SH=_t.mkdtemp()  # v99: las fotos de v98 se conservan
 for lang in ['es','en']:
   with app(ROOT,now='2026-10-31T20:00:00',state=S,routes=R,init=("localStorage.setItem('finanzas-lang','en');" if lang=='en' else '')) as pg:
     E=pg.evaluate;pg.wait_for_timeout(1200)
@@ -32,23 +32,23 @@ for lang in ['es','en']:
     cats0=E("JSON.stringify(S.cats)")
     d0=E("debAvail()");sp0=E("miMes('2026-10').sp");n0=E("L().purchases.length")
     E("fabMenu()");pg.click("#fabxfer");pg.wait_for_timeout(150)
-    check(pg.locator('#xa').count()==1 and pg.locator('#xr').count()==1 and pg.locator('#xf').count()==1 and pg.locator('#xn').count()==1,'form fields')
+    check(pg.locator('#xa').count()==1 and pg.locator('#xbl .xbrow').count()==1 and pg.locator('#xf').count()==1 and pg.locator('#xn').count()==1,'form fields')
     check(pg.locator('dialog #qcats').count()==0,'no category/item chips in transfer form')
     check(E("document.getElementById('xc').value")=='💸 Envíos a familia','default category')
     opts=E("[...document.querySelectorAll('#xc option')].map(o=>o.value)");check('🤝 Tony' not in opts and '💸 Remesas' not in opts and '📦 Otros' in opts,opts)
-    pg.fill('#xa','250');pg.fill('#xr','Familia (Cuba)');pg.fill('#xf','2026-10-30');pg.fill('#xn','Remesa de octubre')
+    pg.fill('#xa','250');E("([n,a])=>{XB=[{n:'',nw:1,nn:n,a:a}];xbDraw()}",['Familia (Cuba)','250']);pg.fill('#xf','2026-10-30');pg.fill('#xn','Remesa de octubre')
     if lang=='es':pg.screenshot(path=os.path.join(SH,'v98-transferencia-form.png'))
     pg.click('#xsave');pg.wait_for_timeout(200)
     check(abs(E("debAvail()")-(d0-250))<0.01,'debit debited')
-    x=E("L().personal[0]");check(x['cat']=='💸 Envíos a familia' and x['recipient']=='Familia (Cuba)' and x['method']=='deb' and x['xfer'],x)
+    x=E("L().personal[0]");check(x['cat']=='💸 Envíos a familia' and x['benef']==[{'n':'Familia (Cuba)','a':250}] and x['method']=='deb' and x['xfer'],x)
     check(E("JSON.stringify(S.cats)")==cats0,'no new category');check(E("L().purchases.length")==n0,'not a shared purchase')
     check(abs(E("miMes('2026-10').sp")-(sp0+250))<0.01,'counts in budget spending')
     check(abs(E("budBy(L()).by['💸 Envíos a familia']")-250)<0.01,'budBy')
-    E("fabMenu()");pg.click("#fabxfer");pg.fill('#xa','40');pg.fill('#xr','Juan');pg.select_option('#xc','📦 Otros');pg.click('#xsave');pg.wait_for_timeout(150)
+    E("fabMenu()");pg.click("#fabxfer");pg.fill('#xa','40');E("([n,a])=>{XB=[{n:'',nw:1,nn:n,a:a}];xbDraw()}",['Juan','40']);pg.select_option('#xc','📦 Otros');pg.click('#xsave');pg.wait_for_timeout(150)
     check(E("L().personal[0].cat")=='📦 Otros' and E("L().personal[0].xfer"),'other category via selector')
     # blocked
     pg.errors.clear();d1=E("debAvail()");np=E("L().personal.length")
-    E("fabMenu()");pg.click("#fabxfer");pg.fill('#xa',str(d1+100));pg.fill('#xr','Familia')
+    E("fabMenu()");pg.click("#fabxfer");pg.fill('#xa',str(d1+100));E("([n,a])=>{XB=[{n:'',nw:1,nn:n,a:a}];xbDraw()}",['Familia',str(d1+100)])
     if lang=='es':
       pg.evaluate("()=>{window._al=window.alert;window.alert=m=>{window._msg=m;const b=document.createElement('div');b.id='fakealert';b.style='position:fixed;left:20px;right:20px;top:300px;background:#fff;border:2px solid #b91c1c;border-radius:12px;padding:18px;z-index:99999;font:16px system-ui;box-shadow:0 6px 30px #0006';b.innerHTML='<b>finanzas-joe-12ce2b.web.app</b><p>'+m+'</p><div style=\"text-align:right;color:#2563eb\">OK</div>';(document.querySelector('dialog[open]')||document.body).appendChild(b)}}")
       pg.click('#xsave');pg.wait_for_timeout(150);msg=E("window._msg")
