@@ -63,7 +63,8 @@ for lang in ['es','en']:
     # reports
     E("()=>{tab='rep';render()}");pg.wait_for_timeout(300);t=pg.inner_text('#subcard')
     check('Netflix' in t and '$15.49' in t and 'iCloud' in t and '$2.99' in t and 'Hulu' in t and '$7.99' in t and ('Cancelada' if lang=='es' else 'Cancelled') in t and 'Spotify' in t,t)
-    T3={k:pdft(pg,k) for k in ['tony','carlos']}
+    T3={k:pdft(pg,k) for k in ['mes','tony','carlos']}
+    mt=T3.pop('mes');check(('Suscripciones' if lang=='es' else 'Subscriptions') in mt and 'Netflix' in mt and '$15.49' in mt and 'Hulu' in mt and '$7.99' in mt and 'iCloud' in mt and ('Historial' if lang=='es' else 'History') in mt,'joe pdf subs')
     for k in T3:check('Netflix' not in T3[k] and 'iCloud' not in T3[k],k)
     for w in ['Tony','Carlos']:o=json.dumps(E("w=>r3Data('2026-10',w)",w),ensure_ascii=False);check('Netflix' not in o and 'iCloud' not in o,'r3Data '+w)
     check(any('Netflix' in (m.get('desc') or '') for m in E('moves(L())')),'movimientos desc')

@@ -4,7 +4,7 @@
 //    que ya existe («📺 Suscripciones»; se busca por nombre y solo se crea si no hay ninguna). Débito: bloqueo de negativo; tarjeta: sube su saldo.
 //    Se guarda como gasto personal {cat,sub:id,auto:true} → nunca compartido ni en los reportes de Tony/Carlos.
 // 3) Compra manual: la categoría de suscripciones no sale en sus chips.
-// 4) Reportes (solo Joe): «🔄 Suscripciones» con total del mes y acumulado por suscripción + historial.
+// 4) Reportes y MI PDF (solo Joe): «🔄 Suscripciones» con total del mes y acumulado por suscripción + historial.
 Object.assign(EN,{"🔄 Cobro automático":"🔄 Automatic charge","Cobro automático":"Automatic charge","Netflix, Spotify, iCloud…":"Netflix, Spotify, iCloud…",
  "Suscripciones":"Subscriptions","Suscripción":"Subscription","+ Nueva suscripción…":"+ New subscription…","Nombre de la suscripción":"Subscription name",
  "Cargado a":"Charged to","Elige la suscripción":"Pick the subscription","Cobro guardado":"Charge saved","Activa":"Active","Cancelada":"Cancelled",
@@ -59,3 +59,8 @@ function subRepCard(k){const A=subAll();if(!A.length&&!(S.subs||[]).length)retur
  ${rows.map(r=>`<div class="row"><span class="n">${esc(DN(r.s.name))}${r.s.active===false?` <span class="muted">· ${T('Cancelada')}</span>`:''}</span><b style="width:90px;text-align:right">${f(r.m)}</b><span style="width:90px;text-align:right">${f(r.t)}</span></div>`).join('')}
  ${A.length?`<h3 style="margin:12px 0 4px;font-size:15px">🧾 ${T('Historial')}</h3>`+A.map(x=>`<div class="muted" style="display:flex;justify-content:space-between;padding:3px 0"><span>${fdate(x.date)} · ${esc(subName(x.sub))} · ${methName(x.method)}</span><span>${f(x.amount)}</span></div>`).join(''):`<div class="muted">${T('Sin cobros automáticos.')}</div>`}</div>`}
 {const _r=rep;rep=function(){const h=_r(),c=subRepCard(S.cur);if(!c)return h;const i=h.indexOf('<div class="card defcol" id="acccard"');return i<0?h+c:h.slice(0,i)+c+h.slice(i)}}
+function subRows(k){const A=subAll(),by={};A.forEach(x=>{const o=by[x.sub]=by[x.sub]||{m:0,t:0};o.t=r2(o.t+(+x.amount||0));if(x.k===k)o.m=r2(o.m+(+x.amount||0))});
+ return {A,rows:(S.subs||[]).filter(s=>by[s.id]||s.active!==false).map(s=>({s,...(by[s.id]||{m:0,t:0})})).sort((a,b)=>b.m-a.m||b.t-a.t)}}
+{const _p=pdfMine;pdfMine=function(D2,k){const r=_p.apply(this,arguments);const {A,rows}=subRows(k);if(!A.length)return r;
+ D2.h(T('Suscripciones'));D2.table([T('Suscripción'),T('Este mes'),T('Acumulado')],rows.map(x=>[DN(x.s.name)+(x.s.active===false?' ('+T('Cancelada')+')':''),f(x.m),f(x.t)]),{ws:[276,120,120],tot:[T('Total'),f(r2(rows.reduce((a,x)=>a+x.m,0))),f(r2(rows.reduce((a,x)=>a+x.t,0)))]});
+ D2.h(T('Suscripciones')+' · '+T('Historial'));D2.table([T('Fecha'),T('Suscripción'),T('Cargado a'),T('Monto')],A.map(x=>[x.date?fdate(x.date):'',subName(x.sub),methName(x.method).replace(/^💳 /,'').replace(/&amp;/g,'&'),f(x.amount)]),{ws:[90,170,166,90]});return r}}
