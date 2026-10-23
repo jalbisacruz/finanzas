@@ -60,9 +60,9 @@ for lang in ['es','en']:
     pg.select_option('#sbs','sNet');check(E("document.getElementById('sba').value")=='22.99','prefill')
     pg.select_option('#sbs','sHulu');check(E("document.getElementById('sba').value")=='79.99','prefill 2')
     pg.select_option('#sbs','sNet')
-    if lang=='es':pg.screenshot(path=os.path.join(SH,'v101-cobro-prellenado.png'))
-    pg.fill('#sba','24.99');d0=E("debAvail()");pg.click('#sbsave');pg.wait_for_timeout(150)
-    x=E("L().personal[0]");check(x['sub']=='sNet' and x['amount']==24.99 and abs(E("debAvail()")-(d0-24.99))<0.01 and E("S.subs[0].amt")==22.99,'editable, default kept')
+    d0=E("debAvail()")  # v103: el monto sale de la suscripción
+    pg.click('#sbsave');pg.wait_for_timeout(150)
+    x=E("L().personal[0]");check(x['sub']=='sNet' and x['amount']==22.99 and abs(E("debAvail()")-(d0-22.99))<0.01 and E("S.subs[0].amt")==22.99,'editable, default kept')
     # sub without amount: no prefill
     E("fabMenu()");pg.click('#fabsub');pg.select_option('#sbs',E("S.subs[4].id"));check(E("document.getElementById('sba').value")=='','no prefill without amount');E("dlg().close()")
     E("save()");pg.reload();pg.wait_for_timeout(1000);check(E("S.subs[0].amt")==22.99 and E("S.subs[3].per")=='sem','persisted')

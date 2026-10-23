@@ -55,7 +55,7 @@ for lang in ['es','en']:
     E("fabMenu()");pg.click('#fabsub');pg.select_option('#sbs','__new');pg.fill('#sbnw','iCloud');pg.fill('#sba','2.99');pg.fill('#sbf','2026-10-20');pg.click('#sbsave');pg.wait_for_timeout(150)
     check(any(s['name']=='iCloud' for s in E("S.subs")) and abs(E("debAvail()")-(d0-2.99))<0.01,'inline new + debit')
     # negative block
-    d1=E("debAvail()");n1=E("L().personal.length");E("fabMenu()");pg.click('#fabsub');pg.select_option('#sbs','sNet');pg.fill('#sba',str(d1+10));pg.errors.clear();pg.click('#sbsave');pg.wait_for_timeout(100)
+    d1=E("debAvail()");n1=E("L().personal.length");E("a=>{S.subs.find(s=>s.id==='sNet').amt=a}",d1+10);E("fabMenu()");pg.click('#fabsub');pg.select_option('#sbs','sNet');pg.errors.clear();pg.click('#sbsave');pg.wait_for_timeout(100)
     check(any('negativ' in e for e in pg.errors) and E("L().personal.length")==n1 and abs(E("debAvail()")-d1)<0.01,'negative blocked');E("dlg().close()")
     check(E("JSON.stringify(S.cats)")==cats0,'no new category (reused)')
     check(E("L().purchases.length")==7,'not shared')
