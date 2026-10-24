@@ -49,7 +49,7 @@ for who,doc in [('tony',DOCT),('carlos',DOCC)]:
     pg.goto(pg.url.split('/')[0]+'//'+pg.url.split('/')[2]+'/v.html?t=AAAAAAAAAAAAAAAAAAAAAA');pg.wait_for_timeout(500)
     # v76: summary only on open; details collapsed; icon buttons in header
     tx=pg.inner_text('main');check('Quién transfiere a quién' in tx and 'Aldi' not in tx and pg.locator('#vdetb').is_hidden(),'collapsed on open '+tx)
-    keys=['Joe le transfiere a Tony','Carlos le transfiere a Joe','Su parte de las compras']  # v95: resumen de la casa (igual para los dos)
+    keys=(['Joe le transfiere a Tony'] if who=='tony' else ['Carlos le transfiere a Joe'])+['Su parte de las compras']  # v104: solo sus parejas
     check(all(k in pg.inner_text('#vsum') for k in keys),'key totals %s'%pg.inner_text('#vsum'))
     if who=='tony':check('Total cuentas' not in tx and 'Comida' not in tx,'bills list hidden')
     for bid,cap,lab in [('#vreg','Registrar','Registrar compra'),('#vdl','PDF','Descargar PDF')]:

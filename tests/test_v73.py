@@ -52,7 +52,7 @@ for who,doc,debtor in [('tony',SNT,True),('carlos',SNC,False)]:
     base='/'.join(pg.url.split('/')[:3]);pg.goto(base+'/v.html?t=TokTokTokTokTokTokTok1');pg.wait_for_timeout(500);E=pg.evaluate
     tx=pg.inner_text('main');check('Tony le transfiere a Carlos' in tx and '$15.00' in tx,tx[:400])
     check(pg.locator('#vtcpay').count()==0 and pg.locator('#vrem').count()==0,'v95: no Ya pagué / reminder (the app does not track Tony-Carlos)')
-    pg.click('#vdet');pg.wait_for_timeout(50);check('Parte de Joe en compras que pagó Carlos' in pg.inner_text('main') and 'Parte de Tony en compras que pagó Carlos' in pg.inner_text('main'),'v95: pair detail')
+    pg.click('#vdet');pg.wait_for_timeout(50);check(('Parte de Joe en compras que pagó Carlos' in pg.inner_text('main'))==(who=='carlos') and 'Parte de Tony en compras que pagó Carlos' in pg.inner_text('main'),'v104: own pair detail')
     if False:
         check(pg.locator('#vrem').count()==1,'reminder banner')
         sb=pg.locator('#vdet').bounding_box();check(sb['y']+sb['height']<=844 and pg.locator('#vsum #vtcpay').count()==1,'v76: reminder + Ya pagué in summary, fits iPhone %s'%sb)

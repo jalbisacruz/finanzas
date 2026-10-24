@@ -22,16 +22,16 @@ with app(ROOT,init="localStorage.setItem('finanzas-sync-uid','u1');",routes=R) a
     st=lambda d:[p['s'] for p in d['months'][0]['purchases']]
     check('CarlosSoloShop' not in st(DT) and 'JoeSoloShop' not in st(DT),'tony doc hides uninvolved %s'%st(DT))
     check('TonySoloShop' in st(DT) and 'AriannaShop' in st(DT),'tony doc shows involved + Arianna-bought')
-    check('TonySoloShop' in st(DC) and 'AriannaShop' not in st(DC) and 'JoeSoloShop' not in st(DC) and 'CarlosSoloShop' in st(DC),'carlos doc %s'%st(DC))
+    check('TonySoloShop' not in st(DC) and 'AriannaShop' not in st(DC) and 'JoeSoloShop' not in st(DC) and 'CarlosSoloShop' in st(DC),'carlos doc %s'%st(DC))
     check(abs(DT['months'][0]['pending']-c['tonyDue'])<1e-9 and abs(DC['months'][0]['pending']-c['carlosDue'])<1e-9 and abs(DC['months'][0]['share']-c['carlos'])<1e-9,'totals = calc')
     for k in ('tony','carlos'):
         t=pdft(pg,k);own='TonySoloShop' if k=='tony' else 'CarlosSoloShop';other='CarlosSoloShop' if k=='tony' else 'TonySoloShop'
-        check(own in t and ('CarlosSoloShop' not in t if k=='tony' else 'TonySoloShop' in t) and 'JoeSoloShop' not in t,'%s pdf filtered (v95: shared Joe+Tony visible to Carlos)'%k)
+        check(own in t and ('CarlosSoloShop' not in t if k=='tony' else 'TonySoloShop' not in t) and 'JoeSoloShop' not in t,'%s pdf filtered (v104: Joe+Tony not visible to Carlos)'%k)
         if k=='tony':check('AriannaShop' in t,'tony pdf Arianna')
     tm=pdft(pg,'mes');check(all(s in tm for s in ['CarlosSoloShop','TonySoloShop','JoeSoloShop']),'monthly PDF keeps all')
     E("p=>window.__docs=p",[DT,DC])
 # shared page
-for who,doc,shown,hidden in [('tony',DT,['TonySoloShop','AriannaShop'],['CarlosSoloShop','JoeSoloShop']),('carlos',DC,['CarlosSoloShop','TonySoloShop'],['AriannaShop','JoeSoloShop'])]:
+for who,doc,shown,hidden in [('tony',DT,['TonySoloShop','AriannaShop'],['CarlosSoloShop','JoeSoloShop']),('carlos',DC,['CarlosSoloShop'],['AriannaShop','JoeSoloShop','TonySoloShop'])]:
   with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps(doc),width=390,height=844) as pg:
     pg.goto(pg.url.split('/')[0]+'//'+pg.url.split('/')[2]+'/v.html?t=AAAAAAAAAAAAAAAAAAAAAA');pg.wait_for_timeout(500);pg.click('#vdet');pg.wait_for_timeout(200)
     tx=pg.inner_text('main');check(all(s in tx for s in shown) and not any(s in tx for s in hidden),'%s page %s'%(who,tx[:300]))

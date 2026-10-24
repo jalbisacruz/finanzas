@@ -48,7 +48,7 @@ with app(ROOT,now='2026-10-31T20:00:00',state=S,init="localStorage.setItem('fina
     for r in rows:
         check(abs(sum(l['a'] for l in r['lines'])-r['t'])<0.005,'lines = total %s'%r['s'])
         for x in ['Yo','Tony','Carlos']:check(abs(sum(l['sh'][x] for l in r['lines'])-r['sh'][x])<0.005,'%s %s lines = share'%(r['s'],x))
-    for k in ['mes','tony','carlos']:check(money(tl(dt))==money(tl(T3[k])),'detail month total = %s %s %s'%(k,tl(dt),tl(T3[k])))
+    for k in ['mes']:check(money(tl(dt))==money(tl(T3[k])),'detail month total = %s %s %s'%(k,tl(dt),tl(T3[k])))
     check(money(tl(dt))==['$%.2f'%D['Yo']['totAll']]+['$%.2f'%D['Yo']['tot'][x] for x in ['Yo','Tony','Carlos']],tl(dt))
     # 5) button opens directly (desktop: new tab with application/pdf)
     E("()=>{tab='rep';render()}");pg.wait_for_timeout(200)
@@ -66,9 +66,9 @@ for who,doc,mine,others in [('tony',DT,'Walmart A',['Walmart Licuadora','CVS Car
     check(pg.locator('#vpdet').count()==1 and pg.locator('#vdl').count()==1,'link has PDF + Detalle buttons')
     with pg.expect_download(timeout=15000) as dd: pg.click('#vpdet')
     p=tempfile.mktemp(suffix='.pdf');dd.value.save_as(p);lt=subprocess.run(['pdftotext','-layout',p,'-'],capture_output=True,text=True).stdout
-    check(mine in lt and all(o not in lt for o in others) and 'Otras compras personales (2)' in lt,'%s privacy %s'%(who,lt[:300]))
+    check(mine in lt and all(o not in lt for o in others) and 'Otras compras personales' not in lt,'%s privacy %s'%(who,lt[:300]))
     check('Shampoo Carlos' in lt and 'Pasta Tony' in lt,'shared purchase items visible')
-    check(money(tl(lt))==money(tl(T3['det'])),'link detail month total %s'%tl(lt))
+    check(money(tl(lt))==money(tl(T3[who])),'link detail month total %s'%tl(lt))
     check(not [e for e in pg.errors if not e.startswith('DIALOG')],pg.errors)
 # iPhone: in-app viewer
 with app(ROOT,now='2026-10-31T20:00:00',state=S,expand=False,browser='webkit',width=390,height=844,ctx_opts={'user_agent':IPH,'is_mobile':True,'has_touch':True},init="Object.defineProperty(navigator,'standalone',{get:()=>true});") as pg:
