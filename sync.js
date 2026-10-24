@@ -3,7 +3,12 @@ const V='11.10.0',B=`https://www.gstatic.com/firebasejs/${V}/`;
 const cfg=window.FB_CONFIG&&{...window.FB_CONFIG};
 if(cfg&&/\.web\.app$/.test(location.hostname))cfg.authDomain=location.hostname;
 // En Firebase Hosting usamos el mismo dominio para el login (más fiable en iPhone/PWA)
-const CLIENT_V=2;let blocked=false;
+// v106: CLIENT_V 3 = sincronización segura (base + cambios pendientes). Al escribir ver:3 en la nube, una copia vieja de la app
+// (caché de otro dispositivo, CLIENT_V 2) se bloquea y ya no puede sobrescribir la nube.
+const CLIENT_V=3;let blocked=false;let ready=false,conflictOpen=false,needStamp=false;
+const BASE_K='finanzas-sync-base',DIRTY_K='finanzas-sync-dirty';
+const getBase=()=>{const v=localStorage.getItem(BASE_K);return v==null||v===''?null:+v},setBase=v=>localStorage.setItem(BASE_K,String(+v||0)),isDirty=()=>localStorage.getItem(DIRTY_K)==='1',clearDirty=()=>localStorage.removeItem(DIRTY_K);
+const setReady=v=>{ready=v;window.__syncReady=v};window.__syncReady=false;
 let status='off',user=null,pushT=null,applying=false,unsub=null,fs=null,api=null,lastRemote=0;
 const LB={off:'',out:'☁️ Sin sesión',pend:'⏳ Sincronización pendiente',ok:'☁️ Sincronizado',offline:'📴 Sin conexión (se sincroniza al volver)',err:'⚠️ Error de sincronización'};
 const LBL=new Proxy(LB,{get:(o,k)=>o[k]?T(o[k]):''});
@@ -43,9 +48,13 @@ if(cfg){
  const tooNew=d=>{let v=+d.ver||0;try{v=Math.max(v,+JSON.parse(d.state).version||0)}catch(e){}return v>CLIENT_V};
  function block(){if(blocked)return;blocked=true;setS('err');setTimeout(()=>alert(T('Hay una versión más nueva de la app en otro dispositivo. Cierra y vuelve a abrir la app para actualizar; no se guardará nada hasta entonces.')),100)}
  async function push(){if(!user||blocked)return;clearTimeout(pushT);try{await migBackup()}catch(e){console.warn('migBackup',e);setS('err');return}const S=getState();
-  try{const cur=await F.getDoc(ref()).catch(()=>null);if(cur&&cur.exists()&&tooNew(cur.data()))return block();
+  if(!ready||conflictOpen){setS('pend');return}
+  try{const cur=await F.getDoc(ref()).catch(()=>null);if(!cur||(cur.metadata&&cur.metadata.fromCache)){setS(navigator.onLine?'err':'offline');clearTimeout(pushT);pushT=setTimeout(push,30000);return}
+   if(cur.exists()&&tooNew(cur.data()))return block();
+   // v106: si la nube cambió desde la última vez que este dispositivo sincronizó, NO se sobrescribe: se reconcilia (nube por defecto)
+   if(cur.exists()){const cu=+cur.data().updatedAt||0,b=getBase();if(cu!==(+S.updatedAt||0)&&(b==null||cu!==b))return reconcile(cur.data())}
    if(cur&&cur.exists()&&(+S.version||1)>=2&&!(+cur.data().ver>=2)&&localStorage.getItem('finanzas-cloud-v1-saved')!==user.uid){await bkId(cur.data().state);localStorage.setItem('finanzas-cloud-v1-saved',user.uid)}
-   await F.setDoc(ref(),{state:JSON.stringify(S),updatedAt:S.updatedAt||Date.now(),ver:+S.version||1,device:navigator.userAgent.slice(0,80)});setS(navigator.onLine?'ok':'offline');window.linksSync&&linksSync()}
+   const u=S.updatedAt||Date.now();await F.setDoc(ref(),{state:JSON.stringify(S),updatedAt:u,ver:CLIENT_V,device:navigator.userAgent.slice(0,80)});setBase(u);clearDirty();setS(navigator.onLine?'ok':'offline');window.linksSync&&linksSync()}
   catch(e){console.warn(e);setS('err')}}
  // Respaldos: users/{uid}/backups/{YYYY-MM-DD_HH-MM-SS} (hora local; los antiguos YYYY-MM-DD siguen válidos), se conservan los 20 últimos
  const bcol=()=>F.collection(fs,'users',user.uid,'backups');
@@ -88,31 +97,56 @@ if(cfg){
  window.fbSafetyBackup=async()=>{if(!user)throw new Error('no user');const S=getState();const d=new Date(),p=n=>String(n).padStart(2,'0'),id=d.toLocaleDateString('en-CA')+'_'+p(d.getHours())+'-'+p(d.getMinutes())+'-'+p(d.getSeconds())+'_antes-de-restaurar';
   await F.setDoc(F.doc(bcol(),id),{state:JSON.stringify(S),createdAt:Date.now(),updatedAt:S.updatedAt||0,label:'Antes de restaurar · '+d.toLocaleString('es-US')});return id};
  window.fbRestore=async id=>{const sn=await F.getDoc(F.doc(bcol(),id));if(!sn.exists())throw new Error('missing');const st=JSON.parse(sn.data().state);st.updatedAt=Date.now();
-  applying=true;try{setState(st)}finally{applying=false}await push()};
- window.onLocalSave=()=>{if(!user||applying)return;setS('pend');clearTimeout(pushT);pushT=setTimeout(push,1500)};
+  applying=true;window.__syncApplying=true;try{setState(st)}finally{applying=false;window.__syncApplying=false}localStorage.setItem(DIRTY_K,'1');await push()};
+ window.onLocalSave=()=>{if(!user||applying)return;setS('pend');if(!ready)return;clearTimeout(pushT);pushT=setTimeout(push,1500)};
  window.fbSyncNow=async()=>{await pull(true);await push();rerender()};
- function applyRemote(d){if(!d)return;if(tooNew(d))return block();const S=getState();if((d.updatedAt||0)>(S.updatedAt||0)){applying=true;try{setState(JSON.parse(d.state))}finally{applying=false}}}
- async function pull(){if(!user)return;try{const sn=await F.getDoc(ref());if(sn.exists())applyRemote(sn.data())}catch(e){console.warn(e)}}
- async function firstLink(){const key='finanzas-sync-uid';if(localStorage.getItem(key)===user.uid)return;
-  const sn=await F.getDoc(ref());if(sn.exists()&&tooNew(sn.data()))return block();
-  if(!sn.exists()){await push()}
-  else if(hasUserData()){
-   const d=sn.data(),when=new Date(d.updatedAt||0).toLocaleString(LOC());
-   if(confirm(T('Ya hay datos en la nube (guardados {0}).\n\nAceptar = usar los datos de la NUBE (reemplaza los de este dispositivo).\nCancelar = usar los datos de ESTE DISPOSITIVO (reemplaza la nube).',when))){applying=true;try{setState(JSON.parse(d.state))}finally{applying=false}}
-   else await push()}
-  else{applying=true;try{setState(JSON.parse(sn.data().state))}finally{applying=false}}
-  localStorage.setItem(key,user.uid)}
+ // v106: reconciliación. base = updatedAt de la nube con el que este dispositivo quedó igual la última vez; dirty = hay cambios locales sin subir.
+ function useCloud(d){applying=true;window.__syncApplying=true;try{setState(JSON.parse(d.state))}finally{applying=false;window.__syncApplying=false}setBase(+d.updatedAt||0);clearDirty();rerender();if((+d.ver||0)<CLIENT_V){if(ready)push();else needStamp=true}}
+ async function keepCopy(st,label){try{if(!user||!st)return;const d=new Date(),p=n=>String(n).padStart(2,'0'),id=d.toLocaleDateString('en-CA')+'_'+p(d.getHours())+'-'+p(d.getMinutes())+'-'+p(d.getSeconds())+'_antes-de-'+label;
+  await F.setDoc(F.doc(bcol(),id),{state:typeof st==='string'?st:JSON.stringify(st),createdAt:Date.now(),updatedAt:(typeof st==='string'?JSON.parse(st):st).updatedAt||0,label:(label==='nube'?'Antes de usar la nube':'Antes de usar este dispositivo')+' · '+d.toLocaleString('es-US')})}catch(e){console.warn('keepCopy',e)}}
+ function reconcile(d){if(!d)return;if(tooNew(d))return block();if(conflictOpen)return;
+  const S=getState(),cu=+d.updatedAt||0,lu=+S.updatedAt||0,b=getBase(),dirty=isDirty();
+  if(cu===lu){setBase(cu);clearDirty();if((+d.ver||0)<CLIENT_V){if(ready)push();else needStamp=true}return}
+  const changed=b==null||cu!==b;
+  if(!changed){if(dirty||lu!==cu)push();return}
+  if(!dirty&&(b!=null||cu>lu))return useCloud(d);
+  return conflictDlg(d)}
+ function conflictDlg(d){conflictOpen=true;const S=getState(),fmt=x=>x?new Date(x).toLocaleString(LOC()):'—',D=document.createElement('dialog');D.id='syncconf';
+  D.style.cssText='max-width:420px;border:0;border-radius:14px;padding:18px;box-shadow:0 10px 40px #0004';
+  D.innerHTML=`<h2 style="margin-top:0">⚠️ ${T('Datos distintos en la nube')}</h2><p>${T('La nube tiene cambios de otro dispositivo y este dispositivo tiene datos distintos. ¿Cuáles quieres usar?')}</p>
+  <div class="muted">☁️ ${T('Nube: guardado {0}',fmt(+d.updatedAt))}</div><div class="muted" style="margin-bottom:12px">💻 ${T('Este dispositivo: guardado {0}',fmt(+S.updatedAt))}</div>
+  <button id="sc-cloud" autofocus style="width:100%;min-height:52px;font-size:17px">☁️ ${T('Usar la nube (recomendado)')}</button>
+  <button id="sc-local" class="sec" style="width:100%;margin-top:8px">💻 ${T('Usar este dispositivo (reemplaza la nube)')}</button>
+  <div class="muted" style="margin-top:10px">${T('Se guarda una copia de la otra versión en Configuración › Respaldo.')}</div>`;
+  document.body.appendChild(D);setS('pend');
+  const done=async ch=>{if(D.dataset.done)return;D.dataset.done='1';try{D.close()}catch(e){}D.remove();
+   if(ch==='local'){if(!confirm(T('¿Seguro? Los datos de la nube se reemplazan por los de este dispositivo (queda una copia en Respaldo).'))){D.dataset.done='';conflictOpen=false;return conflictDlg(d)}
+    await keepCopy(d.state,'dispositivo');setBase(+d.updatedAt||0);conflictOpen=false;localStorage.setItem(DIRTY_K,'1');await push()}
+   else{await keepCopy(getState(),'nube');conflictOpen=false;useCloud(d)}};
+  D.querySelector('#sc-cloud').onclick=()=>done('cloud');D.querySelector('#sc-local').onclick=()=>done('local');D.addEventListener('cancel',e=>{e.preventDefault();done('cloud')});
+  D.showModal()}
+ window.fbReconcile=reconcile;
+ function applyRemote(d){reconcile(d)}
+ async function pull(){if(!user||!ready)return;try{const sn=await F.getDoc(ref());if(sn.exists()&&!(sn.metadata&&sn.metadata.fromCache))reconcile(sn.data())}catch(e){console.warn(e)}}
+ async function firstLink(){const key='finanzas-sync-uid';
+  const sn=await F.getDoc(ref());
+  if(localStorage.getItem(key)!==user.uid){localStorage.removeItem(BASE_K);localStorage.setItem(key,user.uid);if(hasUserData())localStorage.setItem(DIRTY_K,'1')}
+  if(sn.metadata&&sn.metadata.fromCache&&!navigator.onLine)return;
+  if(!sn.exists()){setReady(true);if(hasUserData())await push();return}
+  reconcile(sn.data())}
  A.onAuthStateChanged(auth,async u=>{user=u;unsub&&unsub();unsub=null;
-  if(!u){setS('out');rerender();return}
+  if(!u){setReady(true);setS('out');rerender();return}
   setS('pend');rerender();
   try{await migBackup()}catch(e){console.warn('migBackup',e)}
-  try{if(localStorage.getItem('finanzas-force-push')){localStorage.setItem('finanzas-sync-uid',u.uid);await push();localStorage.removeItem('finanzas-force-push')}else await firstLink()}catch(e){console.warn(e);setS('err');return}
+  setReady(false);
+  try{if(localStorage.getItem('finanzas-force-push')){localStorage.setItem('finanzas-sync-uid',u.uid);const c=await F.getDoc(ref());if(c.exists())setBase(+c.data().updatedAt||0);setReady(true);localStorage.setItem(DIRTY_K,'1');await push();localStorage.removeItem('finanzas-force-push')}else await firstLink()}catch(e){console.warn(e);setS('err');setReady(true);return}
+  setReady(true);if((isDirty()||needStamp)&&!conflictOpen){needStamp=false;push()}
   unsub=F.onSnapshot(ref(),{includeMetadataChanges:true},sn=>{if(!sn.exists())return;
-   if(!sn.metadata.hasPendingWrites)applyRemote(sn.data());
+   if(!sn.metadata.hasPendingWrites&&!sn.metadata.fromCache&&ready)reconcile(sn.data());
    setS(sn.metadata.hasPendingWrites?'pend':sn.metadata.fromCache&&!navigator.onLine?'offline':'ok')},e=>{console.warn(e);setS('err')});
   rerender();setTimeout(autoBackup,5000);setTimeout(()=>window.fbScanWarm&&fbScanWarm(),1500)});
  addEventListener('focus',()=>pull());document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
- addEventListener('online',()=>{if(status==='offline'||status==='pend')push()});addEventListener('offline',()=>user&&setS('offline'));
+ addEventListener('online',()=>{if(status==='offline'||status==='pend'||isDirty())push()});addEventListener('offline',()=>user&&setS('offline'));
  // Primera vez después del PIN: ofrecer iniciar sesión
  window.afterUnlock=()=>{if(user||localStorage.getItem('finanzas-sync-asked'))return;localStorage.setItem('finanzas-sync-asked','1');
   setTimeout(()=>{if(!auth.currentUser&&confirm(T('¿Quieres guardar tus datos en la nube con tu cuenta de Google?\n(Puedes hacerlo luego en Ajustes)')))fbSignIn()},400)};

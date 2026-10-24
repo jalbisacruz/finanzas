@@ -13,11 +13,11 @@ export const doc=(base,...s)=>({path:base&&base.path?P([base.path,...s]):P(s)});
 export const collection=(fs,...s)=>({path:P(s)});
 export const query=c=>c;export const orderBy=()=>0;export const limit=()=>0;
 const snap=(path)=>{const d=W.__fs.docs[path];return{id:path.split('/').pop(),exists:()=>!!d,data:()=>d&&JSON.parse(JSON.stringify(d)),metadata:{hasPendingWrites:false,fromCache:false}}};
-export const getDoc=async r=>snap(r.path);
+export const getDoc=async r=>{if(W.__getDelay)await new Promise(z=>setTimeout(z,W.__getDelay));if(W.__offline)throw Object.assign(new Error('unavailable'),{code:'unavailable'});return snap(r.path)};
 export const setDoc=async(r,d)=>{W.__fs.docs[r.path]=JSON.parse(JSON.stringify(d));W.__fs.log.push(r.path)};
 export const deleteDoc=async r=>{delete W.__fs.docs[r.path];W.__fs.log.push('DEL '+r.path)};
 export const getDocs=async c=>({docs:Object.keys(W.__fs.docs).filter(k=>k.startsWith(c.path+'/')&&!k.slice(c.path.length+1).includes('/')).map(snap)});
-export const onSnapshot=(r,o,cb)=>{setTimeout(()=>cb(snap(r.path)),30);return()=>{}};
+export const onSnapshot=(r,o,cb)=>{setTimeout(()=>cb(snap(r.path)),W.__snapDelay||30);return()=>{}};
 // App Check + AI Logic stand-ins (v63). window.__aiFail = list of errors to throw on successive calls.
 export const initializeAppCheck=()=>({});export class ReCaptchaEnterpriseProvider{constructor(k){W.__ackey=k}}
 export const getAI=()=>({});export class GoogleAIBackend{}

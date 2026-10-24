@@ -22,7 +22,7 @@ with run({'state':json.dumps(src),'updatedAt':1}) as pg:
     bks=[p for p in log if 'antes-de-v2' in p]
     check(len(bks)>=2,f'two antes-de-v2 backups (local + cloud v1): {log}')
     check(log.index('users/u1/data/state')>max(log.index(b) for b in bks),'backups written before the v2 state')
-    check(st['ver']==2 and json.loads(st['state'])['version']==2,'cloud now v2')
+    check(st['ver']==3 and json.loads(st['state'])['version']==2,'cloud now v2 (client protocol 3)')
     for b in bks:
         d=E(f"__fs.docs['{b}']");check(json.loads(d['state']).get('version') is None,'backup holds v1 data')
     check(E("localStorage.getItem('finanzas-mig-pending')") is None,'pending cleared')
@@ -36,12 +36,12 @@ with run({'state':json.dumps(src),'updatedAt':1}) as pg:
     check(all(E(f"!!__fs.docs['{b}']") for b in bks),'antes-de-v2 kept by retention')
     check([e for e in pg.errors if not e.startswith('DIALOG')]==[],pg.errors)
 # 2) guard: cloud written by a newer app version -> this client refuses to save
-newer=json.loads(json.dumps(src));newer['version']=3
-with run({'state':json.dumps(newer),'updatedAt':9e12,'ver':3}) as pg:
+newer=json.loads(json.dumps(src));newer['version']=4
+with run({'state':json.dumps(newer),'updatedAt':9e12,'ver':4}) as pg:
     E=pg.evaluate;pg.wait_for_timeout(1500)
     E("save()");pg.wait_for_timeout(3000)
     st=E("__fs.docs['users/u1/data/state']")
-    check(st['ver']==3 and 'users/u1/data/state' not in E("__fs.log"),'newer cloud not overwritten')
+    check(st['ver']==4 and 'users/u1/data/state' not in E("__fs.log"),'newer cloud not overwritten')
     check(any('versión más nueva' in e for e in pg.errors),'user told to reload')
     check(E("S.version")==2,'local not replaced by unknown format')
 # 3) v1 cloud doc newer than local (written by an old client) -> migrated on arrival
