@@ -3,12 +3,12 @@
 (function(){
 const L3={es:{title:'Cuentas de la casa · {0}',sub:'Resumen de {0} · De {1} · {2}',xfer:'Quién transfiere a quién',x1:'{0} le transfiere a {1}',ok:'Todo al día: nadie le debe a nadie.',
  pays:'Paga',gets:'Recibe',even:'Al día',part:'Su parte de las compras',you:'TÚ',how:'Cómo se calcula',between:'{0} y {1}',owes:'{0} le debe a {1}',paid:'Ya pagado',pend:'Falta',
- tcNote:'Entre Tony y Carlos: la app no lleva cuándo se pagan; esta cifra es lo que se deben este mes.',purch:'Compras del mes',date:'Fecha',store:'Tienda',by:'Pagó',tot:'Total',
+ tcNote:'Entre Tony y Carlos: la app no lleva cuándo se pagan; esta cifra es lo que se deben este mes.',purch:'Compras del mes',cob:'Cobros',cobW:'Quién pagó',cobP:'Compras saldadas',cobT:'Total cobrado',date:'Fecha',store:'Tienda',by:'Pagó',tot:'Total',
  mtot:'Total del mes',hid:'Otras compras personales ({0})',only:'solo {0}',none:'Sin compras este mes.',bills:'Cuentas de Tony',bill:'Cuenta',amt:'Monto',st:'Estado',
  paidB:'pagada',pendB:'pendiente',billsT:'Total cuentas',pnote:'Cada compra se divide según su parte. Quien la pagó recibe de los demás su parte (ver Cómo se calcula).',zero:'nada',mm:'Mi mes',mbud:'Presupuesto',msp:'Gastado',mpct:'{0}% del presupuesto',minc:'Ingresos recibidos',msav:'Ahorrado',mnote:'Gastado = categorías con presupuesto (de las compras compartidas solo tu parte). Ahorrado = ingresos recibidos - gastado.'},
  en:{title:'Household accounts · {0}',sub:'Summary for {0} · From {1} · {2}',xfer:'Who transfers to whom',x1:'{0} transfers {1}',ok:'All settled: nobody owes anybody.',
  pays:'Pays',gets:'Receives',even:'Settled',part:'Share of purchases',you:'YOU',how:'How it is calculated',between:'{0} and {1}',owes:'{0} owes {1}',paid:'Already paid',pend:'Left',
- tcNote:'Between Tony and Carlos: the app does not track when they pay; this is what they owe each other this month.',purch:'Purchases this month',date:'Date',store:'Store',by:'Paid by',tot:'Total',
+ tcNote:'Between Tony and Carlos: the app does not track when they pay; this is what they owe each other this month.',purch:'Purchases this month',cob:'Collected payments',cobW:'Paid by',cobP:'Purchases settled',cobT:'Total collected',date:'Date',store:'Store',by:'Paid by',tot:'Total',
  mtot:'Month total',hid:'Other personal purchases ({0})',only:'only {0}',none:'No purchases this month.',bills:"Tony's bills",bill:'Bill',amt:'Amount',st:'Status',
  paidB:'paid',pendB:'pending',billsT:'Bills total',pnote:'Each purchase is split by share. Whoever paid gets the others\' shares back (see How it is calculated).',zero:'nothing',mm:'My month',mbud:'Budget',msp:'Spent',mpct:'{0}% of budget',minc:'Income received',msav:'Saved',mnote:'Spent = budgeted categories (only your share of shared purchases). Saved = income received - spent.'}};
 const P3=['Yo','Tony','Carlos'];
@@ -74,6 +74,8 @@ function rep3PDF(R,extra){const t=L3[R.lang==='en'?'en':'es'],N=x=>(R.names||{})
   if(sp){ln(pr.paidL||t.paid,'- '+fm(pr.paid));ln(t.pend+': '+s(pr.pend),fm(Math.abs(pr.pend)),true,[30,64,175])}
   if(pr.tc){d.setFont('helvetica','italic');d.setFontSize(8.5);d.setTextColor(100,116,139);d.text(pt(t.tcNote),X+14,y);y+=14}
   o.y=o.y-12+bh+14});
+ // v105: Cobros (pagos parciales a Joe)
+ if(R.cobros&&R.cobros.length){o.h(t.cob);o.table([t.date,t.cobW,t.cobP,t.amt],R.cobros.map(c=>[c.dl,N(c.who),c.s.join(', '),fm(c.a)]),{ws:[70,80,266,100],left:[1,2],tot:['','',t.cobT,fm(R.cobros.reduce((s,c)=>s+c.a,0))]})}
  // 4) Compras del mes: una fila por compra; columnas de los tres SIEMPRE completas
  o.page();o.h(t.purch);const P=R.purchases||[];
  if(!P.length&&!(R.hid&&R.hid.n))o.note(t.none);else{
