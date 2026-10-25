@@ -68,7 +68,7 @@ for who,doc in [('tony',DOCT),('carlos',DOCC)]:
     with pg.expect_download(timeout=15000) as d: pg.click('#vdl')
     check(re.search(r'-(Octubre|October)-2026-\d{1,2}[a-z]+-\d{1,2}-\d\d(am|pm)\.pdf$',d.value.suggested_filename),d.value.suggested_filename)
   if who=='carlos':
-    with app(ROOT,routes=R,init="window.__SHARE_DOC=%s;"%json.dumps({**doc,'lang':'en'}),width=390,height=844) as pg:
+    with app(ROOT,routes=R,init="localStorage.setItem('v-lang','en');window.__SHARE_DOC=%s;"%json.dumps({**doc,'lang':'en'}),width=390,height=844) as pg:
       pg.goto(pg.url.split('/')[0]+'//'+pg.url.split('/')[2]+'/v.html?t=AAAAAAAAAAAAAAAAAAAAAA');pg.wait_for_timeout(500)
       check(pg.inner_text('#vreg').split()[-1]=='Add' and pg.get_attribute('#vreg','aria-label')=='Record purchase' and pg.inner_text('#vdl').split()[-1]=='PDF' and 'See details' in pg.inner_text('#vdet'),'EN captions')
       if '--shots' in sys.argv:pg.screenshot(path=os.path.join(ROOT,'shots','140-enlace-carlos-en.png'))

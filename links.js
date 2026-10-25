@@ -24,8 +24,10 @@ function snapMonth(k,who){const m=S.months[k];if(!m)return null;const c=calc(m),
   Object.assign(o,{billsTotal:r2(c.bills),share:r2(c.tony),toTransfer:r2(c.toTony),paid:r2(c.xfer||0),pending:r2(c.tonyDue)})}
  else Object.assign(o,{share:r2(c.carlos),joeShare:r2(c.joeCS||0),joeOwes:r2(c.joeOwesCarlos||0),paid:r2(c.recv||0),pending:r2(c.carlosDue)});
  if(typeof tcOf==='function'){const x=tcOf(m);if(x)o.tc={from:x.from,to:x.to,amount:x.amount,settled:x.settled}}o.nf=1;return o}
-function snapFor(who){const ks=keys(),i=ks.indexOf(S.cur),cur=S.cur,prev=i>0?ks[i-1]:null;
- return {v:1,who,lang:LANG,buyers:who==='Tony'?['Tony','Arianna']:['Carlos'],cats:pCats().map(c=>({v:c,l:DN(c)})),names:{Yo:'Joe',Tony:DN('Tony'),Carlos:DN('Carlos')},from:(window.fbName&&fbName())||'Joe Albisa Cruz',months:[snapMonth(cur,who),prev&&snapMonth(prev,who)].filter(Boolean)}}
+// v109: el enlace de Tony y Carlos siempre se publica en español (aunque mi app esté en inglés); ellos pueden cambiarlo en su página
+function snapFor(who){const _L=LANG;LANG='es';try{return snapFor0(who)}finally{LANG=_L}}
+function snapFor0(who){const ks=keys(),i=ks.indexOf(S.cur),cur=S.cur,prev=i>0?ks[i-1]:null;
+ return {v:1,who,lang:'es',buyers:who==='Tony'?['Tony','Arianna']:['Carlos'],cats:pCats().map(c=>({v:c,l:DN(c)})),names:{Yo:'Joe',Tony:DN('Tony'),Carlos:DN('Carlos')},from:(window.fbName&&fbName())||'Joe Albisa Cruz',months:[snapMonth(cur,who),prev&&snapMonth(prev,who)].filter(Boolean)}}
 // escritura automática (solo si cambió)
 let lnT=null;
 window.linksSync=function(force){clearTimeout(lnT);lnT=setTimeout(()=>linksWrite(force),force?0:800)};

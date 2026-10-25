@@ -57,7 +57,7 @@ with page(docs['Tony']) as pg:
 # inglés
 de={**docs['Carlos'],'lang':'en'}
 with page(de,IOS) as pg:
-    base='/'.join(pg.url.split('/')[:3]);pg.goto(base+'/v.html?t='+TOK);pg.wait_for_timeout(500)
+    base='/'.join(pg.url.split('/')[:3]);pg.goto(base+'/v.html?t='+TOK+'&lang=en');pg.wait_for_timeout(500)
     h=pg.inner_text('#a2hs');check('Share' in h and 'Add to Home Screen' in h,'EN hint '+h)
     check(pg.evaluate("document.querySelector('meta[name=apple-mobile-web-app-title]').content")=='Carlos bills','EN title')
     if SH:pg.screenshot(path=os.path.join(ROOT,'shots','147-pista-iphone-en.png'))
