@@ -122,7 +122,7 @@ for lang in ['es','en']:
     cd=E("carlosData(S.cur).pur.map(o=>o.p.date)");check(cd==sorted(cd,reverse=True),'Carlos message list newest first')
     E("()=>{M().purchases=M().purchases.filter(p=>p.id!=='q3')}")
     # inbox (Compras por revisar): newest first by arrival
-    E("""async()=>{window._lk=S.links;S.links={Tony:{on:true,t:'tk'}};window._fu=window.fbUser;window._fi=window.fbInbox;window.fbUser=()=>true;
+    E("""async()=>{window._lk=S.links;S.links={Tony:{on:true,t:'tk'}};window._fu=window.fbUser;window._fi=window.fbInbox;window.fbUser=()=>true;window.__syncReady=true;
       window.fbInbox=async t=>[{t,id:'a',at:{seconds:100},store:'Viejo',date:'2026-10-09'},{t,id:'b',at:{toMillis:()=>300000},store:'Nuevo',date:'2026-10-01'},{t,id:'c',at:{seconds:200},store:'Medio',date:'2026-10-05'}];
       await inboxLoad(true)}""")
     check(E("INBOX.map(x=>x.id).join()")=='b,c,a','inbox newest first '+E("INBOX.map(x=>x.id).join()"))

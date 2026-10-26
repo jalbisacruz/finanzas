@@ -59,7 +59,7 @@ with app(ROOT,routes=R,init=init) as pg:
     check(not E("M().bills.some(isLegacyTF)") and E("M().bills.filter(isComidaBill).length")==1,'one Comida line, no separate line')
     c1=E("calc(M())");check(abs(c1['tony']-c0['tony'])<1e-9 and abs(c1['carlos']-c0['carlos'])<1e-9,'por cobrar unchanged')
     check(abs(c1['toTony']-c0['toTony']-16.05)<1e-9,'A transferirte +16.05 %s %s'%(c0['toTony'],c1['toTony']))
-    check(('shares/%s/inbox/%s'%(TT,ia['id'])) not in E("window.__fs.docs"),'inbox doc deleted')
+    check(('shares/%s/inbox/%s'%(TT,ia['id'])) in E("window.__fs.docs") and not E("id=>INBOX.some(x=>x.id===id)",ia['id']),'v110: inbox doc kept in the cloud, hidden while the purchase exists')
     E("()=>{tab='ini';render()}");pg.wait_for_timeout(100);ow=pg.inner_text('#owecard');check('Carlos le debe a Tony' in ow and '$58.85' in ow,ow)
     # Carlos buys
     E("()=>inboxOpen('c1')");pg.wait_for_timeout(50);E("saveP()");pg.wait_for_timeout(100)

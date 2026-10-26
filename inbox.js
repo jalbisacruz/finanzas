@@ -9,15 +9,17 @@ Object.assign(EN,{"📥 Compras por revisar ({0})":"📥 Purchases to review ({0
  "Pagada por otra persona: no entra en el Total del mes. Si compró Tony o Arianna, la parte de Joe va a las Cuentas de Tony (Comida).":"Paid by someone else: not in the Month total. If Tony or Arianna bought it, Joe's share goes to Tony's bills (Food).",
  "Revisar":"Review","Pendiente entre Tony y Carlos ({0})":"Pending between Tony and Carlos ({0})","✅ Marcar pagado":"✅ Mark paid","Marcado como pagado":"Marked as paid","{0} dice que ya pagó a {1}":"{0} says they paid {1}","− Mi parte de tus compras":"− My share of your purchases","Te debo":"I owe you","− Parte de Joe en compras de Carlos":"− Joe's share of Carlos's purchases","Le debes a Carlos (neto)":"You owe Carlos (net)","Le debes a {0}":"You owe {0}","{0} le debe a {1}":"{0} owes {1}","entre ellos":"between them","Comida: {0} escrito + {1} de compras de Tony/Arianna = {2}":"Food: {0} typed + {1} from Tony/Arianna purchases = {2}","incl. {0} de compras de Tony/Arianna":"incl. {0} from Tony/Arianna purchases","🛒 Comida (compras de Tony/Arianna)":"🛒 Food (Tony/Arianna purchases)","🧾 Deudas de compras":"🧾 Purchase debts","Sin compras por revisar.":"Nothing to review."});
 let INBOX=[],inboxAt=0;
+const inbHave=()=>new Set(Object.values((S&&S.months)||{}).flatMap(m=>(m.purchases||[]).map(p=>p.inboxId).filter(Boolean)));
 const inbAt=x=>{const a=x&&x.at;return !a?0:typeof a.toMillis==='function'?a.toMillis():a.seconds?a.seconds*1000:+a||0}; // v79: lo más nuevo primero
-async function inboxLoad(force){if(!(window.fbUser&&fbUser())||!window.fbInbox)return;if(!force&&Date.now()-inboxAt<60000)return;inboxAt=Date.now();
+async function inboxLoad(force){if(!(window.fbUser&&fbUser())||!window.fbInbox||!window.__syncReady)return;if(!force&&Date.now()-inboxAt<60000)return;inboxAt=Date.now();
  const L=S.links||{},out=[];for(const w of ['Tony','Carlos']){const x=L[w];if(!x||!x.on||!x.t)continue;try{(await fbInbox(x.t)).forEach(d=>out.push({...d,link:w}))}catch(e){console.warn('inbox',e)}}
+ {const have=inbHave(),old=Date.now()-60*864e5;for(let i=out.length-1;i>=0;i--){const d=out[i];if(d.kind!=='settle'&&have.has(d.id)){out.splice(i,1);if(inbAt(d)&&inbAt(d)<old&&window.fbInboxDel)fbInboxDel(d.t,d.id).catch(e=>console.warn(e))}}}
  out.sort((a,b)=>inbAt(b)-inbAt(a)||String(b.date||'').localeCompare(String(a.date||'')));const ch=JSON.stringify(out.map(x=>x.id))!==JSON.stringify(INBOX.map(x=>x.id));INBOX=out;if(ch&&typeof tab!=='undefined'&&(tab==='ini'||tab==='mov'))render()}
 const inbStr=(v,n)=>String(v??'').slice(0,n);
 function inboxOpen(id){const x=INBOX.find(y=>y.id===id);if(!x)return;editP();const cats=pCats(),ok3=['Yo','Tony','Carlos'];
  D.store=inbStr(x.store,60)||D.store;if(/^\d{4}-\d{2}-\d{2}$/.test(x.date||''))D.date=x.date;D.total=r2(+x.total||0);if(+x.tax>0&&+x.tax<D.total)D.tax=r2(+x.tax);
  D.list=(Array.isArray(x.items)?x.items:[]).slice(0,50).filter(i=>+i.a>0).map(i=>{const own=(Array.isArray(i.own)?i.own:[]).filter(w=>ok3.includes(w));const c=cats.includes(i.c)?i.c:null;return {a:r2(i.a),n:inbStr(i.n,40),own:own.length?own:ok3,...(c?{c}:{})}});
- D._io=D.list.length>0;D.paidBy=inbStr(x.by,20);D.method='';D._inbox={t:x.t,id:x.id,link:x.link};recomputeEq();drawP()}
+ D._io=D.list.length>0;D.paidBy=inbStr(x.by,20);D.method='';D._inbox={t:x.t,id:x.id,link:x.link};D.inboxId=inbStr(x.id,60);recomputeEq();drawP()}
 const _drawPV72=drawP;drawP=function(){_drawPV72();if(!D||!D.paidBy)return;D.method='';
  const sel=[...dlg().querySelectorAll('select')].find(s=>[...s.options].some(o=>o.value==='deb'));if(sel){sel.value='';sel.disabled=true;sel.style.opacity=.5}
  dlg().querySelector('h2').insertAdjacentHTML('afterend',`<div id="inbbox" style="background:#fef9c3;border:1px solid #facc15;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:14px">
@@ -27,7 +29,9 @@ async function inboxSettle(id,ok){const x=INBOX.find(y=>y.id===id);if(!x)return;
 async function inboxReject(){if(!D||!D._inbox||!confirm(T('¿Rechazar esta compra? Se borra del buzón.')))return;const x=D._inbox;try{await fbInboxDel(x.t,x.id)}catch(e){console.warn(e)}
  INBOX=INBOX.filter(y=>y.id!==x.id);dlg().close();toast(T('Compra rechazada'));render()}
 const _savePV72=saveP;saveP=function(){const ib=D&&D._inbox;if(D){if(D.paidBy)D.method='';delete D._inbox}const r=_savePV72();if(!dlg().open){syncAllTFood();render()}
- if(ib){if(dlg().open&&D)D._inbox=ib;else{fbInboxDel(ib.t,ib.id).catch(e=>console.warn(e));INBOX=INBOX.filter(y=>y.id!==ib.id);render()}}return r};
+ // v110: NO se borra del buzón al guardar. Se queda en la nube y se oculta mientras la compra exista en mis datos (p.inboxId).
+ // Si la compra desaparece (p. ej. otro dispositivo pone datos más viejos en la nube), vuelve a salir en 📥 en vez de perderse.
+ if(ib){if(dlg().open&&D)D._inbox=ib;else{INBOX=INBOX.filter(y=>y.id!==ib.id);render()}}return r};
 // Por cobrar: las compras que pagó otra persona no se cobran desde las cuentas de Joe
 // Decisión de Joe: si compra Tony o Arianna, la parte de Joe va a las Cuentas de Tony como "Comida" (sube lo que Joe le transfiere); la parte de Tony es suya.
 // Si compra Carlos: la parte de Joe es "Le debes a Carlos". Lo que Carlos/Tony se deben entre ellos solo se muestra (decisión pendiente).
@@ -85,7 +89,7 @@ const _calcV72=calc;calc=function(m){const r=_calcV72(m);const P=paidOther(m);if
 function tcOf(m){const P=paidOther(m),cT=r2(P.filter(p=>TFAM.includes(p.paidBy)).reduce((s,p)=>s+(+(p.shares||{}).Carlos||0),0)),tC=r2(P.filter(p=>p.paidBy==='Carlos').reduce((s,p)=>s+(+(p.shares||{}).Tony||0),0)),n=r2(cT-tC);
  if(Math.abs(n)<0.005)return null;return {from:n>0?'Carlos':'Tony',to:n>0?'Tony':'Carlos',amount:Math.abs(n),settled:!!(m.tcSettled&&Math.abs(+m.tcSettled.amount-Math.abs(n))<0.005),st:m.tcSettled||null}}
 function tcSettle(k,by){const m=S.months[k],x=tcOf(m);if(!x)return;m.tcSettled={amount:x.amount,from:x.from,to:x.to,at:Date.now(),by:by||'Joe'};save();render();toast(T('Marcado como pagado'))}
-const _delPV72=delP;delP=function(){_delPV72();syncAllTFood();render()};
+const _delPV72=delP;delP=function(){const ib=D&&D.inboxId,L=S.links||{};_delPV72();if(ib&&!dlg().open&&window.fbInboxDel)['Tony','Carlos'].forEach(w=>{const t=L[w]&&L[w].t;if(t)fbInboxDel(t,ib).catch(()=>{})});syncAllTFood();render()};
 function owesBy(m){const o=[],c=calc(m);if(c.joeOwesCarlos>0.004)o.push({a:'Yo',b:'Carlos',v:c.joeOwesCarlos});const x=tcOf(m);if(x)o.push({a:x.from,b:x.to,v:x.amount,tc:1});return o}
 function inboxList(){dlg().innerHTML=`<h2>${T('📥 Compras por revisar ({0})',INBOX.length)}</h2>${INBOX.length?INBOX.map(x=>x.kind==='settle'?`<div class="row"><span class="n">✅ ${T('{0} dice que ya pagó a {1}',esc(inbStr(x.by,20)),esc(DN(x.by==='Carlos'?'Tony':'Carlos')))}<div class="muted">${esc(S.months[x.month]?lbl(x.month):inbStr(x.month,7))}</div></span><b>${f(+x.amount||0)}</b><button class="sec" onclick="inboxSettle('${esc(x.id)}',true)">${T('Confirmar')}</button><button class="del" onclick="inboxSettle('${esc(x.id)}',false)">✕</button></div>`:`<div class="row"><span class="n">${esc(inbStr(x.store,60))}<div class="muted">${esc(fdate(x.date))} · ${T('Compró: {0}',esc(inbStr(x.by,20)))}</div></span><b>${f(+x.total||0)}</b><button class="sec" onclick="inboxOpen('${esc(x.id)}')">${T('Revisar')}</button></div>`).join(''):`<div class="muted">${T('Sin compras por revisar.')}</div>`}
  <div class="grid" style="margin-top:10px"><button class="sec" onclick="dlg().close()">${T('Cerrar')}</button></div>`;if(!dlg().open)dlg().showModal()}
