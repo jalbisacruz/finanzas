@@ -39,7 +39,7 @@ for lang in ['es','en']:
     pg.click('#fabcob');pg.wait_for_timeout(100);pg.click('#cbw-Tony');pg.wait_for_timeout(100)
     ids=E("[...document.querySelectorAll('.cbx')].map(b=>b.dataset.id)");check('pw' in ids and 'p5' not in ids and 'p3' not in ids,ids)  # p5 paid by Tony, p3 Joe-only
     pg.check('.cbx[data-id="pw"]');check('$200.00' in pg.inner_text('#cbt'),'amount shown')
-    check(pg.locator('#cba').count()==0 and pg.locator('#cbl input[type=number]').count()==0,'amount not typed')
+    check(pg.input_value('.cba[data-id="pw"]')=='200','v111 box defaults to full share')
     pg.fill('#cbf','2026-10-24')
     if lang=='es':E(REAL);pg.screenshot(path=os.path.join(SH,'v105-cobro-tony.png'))
     pg.click('#cbsave');pg.wait_for_timeout(150)
