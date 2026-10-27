@@ -5,7 +5,7 @@ if(cfg&&/\.web\.app$/.test(location.hostname))cfg.authDomain=location.hostname;
 // En Firebase Hosting usamos el mismo dominio para el login (más fiable en iPhone/PWA)
 // v106: CLIENT_V 3 = sincronización segura (base + cambios pendientes). Al escribir ver:3 en la nube, una copia vieja de la app
 // (caché de otro dispositivo, CLIENT_V 2) se bloquea y ya no puede sobrescribir la nube.
-const CLIENT_V=3;let blocked=false;let ready=false,conflictOpen=false,needStamp=false;
+const CLIENT_V=3;let blocked=false,allowOlder=false;let ready=false,conflictOpen=false,needStamp=false;
 const BASE_K='finanzas-sync-base',DIRTY_K='finanzas-sync-dirty';
 const getBase=()=>{const v=localStorage.getItem(BASE_K);return v==null||v===''?null:+v},setBase=v=>localStorage.setItem(BASE_K,String(+v||0)),isDirty=()=>localStorage.getItem(DIRTY_K)==='1',clearDirty=()=>localStorage.removeItem(DIRTY_K);
 const setReady=v=>{ready=v;window.__syncReady=v};window.__syncReady=false;
@@ -52,7 +52,9 @@ if(cfg){
   try{const cur=await F.getDoc(ref()).catch(()=>null);if(!cur||(cur.metadata&&cur.metadata.fromCache)){setS(navigator.onLine?'err':'offline');clearTimeout(pushT);pushT=setTimeout(push,30000);return}
    if(cur.exists()&&tooNew(cur.data()))return block();
    // v106: si la nube cambió desde la última vez que este dispositivo sincronizó, NO se sobrescribe: se reconcilia (nube por defecto)
-   if(cur.exists()){const cu=+cur.data().updatedAt||0,b=getBase();if(cu!==(+S.updatedAt||0)&&(b==null||cu!==b))return reconcile(cur.data())}
+   // v112: además, NUNCA se sube una versión local más vieja que la de la nube (salvo elección explícita «usar este dispositivo»)
+   if(cur.exists()){const cu=+cur.data().updatedAt||0,b=getBase(),lu=+S.updatedAt||0;if(cu>lu&&!allowOlder)return reconcile(cur.data());if(cu!==lu&&(b==null||cu!==b)&&!allowOlder)return reconcile(cur.data())}
+   allowOlder=false;
    if(cur&&cur.exists()&&(+S.version||1)>=2&&!(+cur.data().ver>=2)&&localStorage.getItem('finanzas-cloud-v1-saved')!==user.uid){await bkId(cur.data().state);localStorage.setItem('finanzas-cloud-v1-saved',user.uid)}
    const u=S.updatedAt||Date.now();await F.setDoc(ref(),{state:JSON.stringify(S),updatedAt:u,ver:CLIENT_V,device:navigator.userAgent.slice(0,80)});setBase(u);clearDirty();setS(navigator.onLine?'ok':'offline');window.linksSync&&linksSync()}
   catch(e){console.warn(e);setS('err')}}
@@ -108,20 +110,24 @@ if(cfg){
   const S=getState(),cu=+d.updatedAt||0,lu=+S.updatedAt||0,b=getBase(),dirty=isDirty();
   if(cu===lu){setBase(cu);clearDirty();if((+d.ver||0)<CLIENT_V){if(ready)push();else needStamp=true}return}
   const changed=b==null||cu!==b;
-  if(!changed){if(dirty||lu!==cu)push();return}
-  if(!dirty&&(b!=null||cu>lu))return useCloud(d);
+  // v112: la versión más nueva gana. Nube más nueva y sin cambios locales -> nube. Local más nuevo y la nube no cambió -> subir.
+  // Cualquier otro caso (ambos cambiaron, o la nube cambió pero es MÁS VIEJA) -> preguntar, por defecto la nube; nunca en silencio.
+  if(cu>lu){if(!dirty||!changed)return useCloud(d);return conflictDlg(d)}
+  if(!changed){push();return}
   return conflictDlg(d)}
  function conflictDlg(d){conflictOpen=true;const S=getState(),fmt=x=>x?new Date(x).toLocaleString(LOC()):'—',D=document.createElement('dialog');D.id='syncconf';
   D.style.cssText='max-width:420px;border:0;border-radius:14px;padding:18px;box-shadow:0 10px 40px #0004';
   D.innerHTML=`<h2 style="margin-top:0">⚠️ ${T('Datos distintos en la nube')}</h2><p>${T('La nube tiene cambios de otro dispositivo y este dispositivo tiene datos distintos. ¿Cuáles quieres usar?')}</p>
   <div class="muted">☁️ ${T('Nube: guardado {0}',fmt(+d.updatedAt))}</div><div class="muted" style="margin-bottom:12px">💻 ${T('Este dispositivo: guardado {0}',fmt(+S.updatedAt))}</div>
   <button id="sc-cloud" autofocus style="width:100%;min-height:52px;font-size:17px">☁️ ${T('Usar la nube (recomendado)')}</button>
+  ${(+S.updatedAt||0)<(+d.updatedAt||0)?`<div id="sc-old" style="background:#fef3c7;border-radius:10px;padding:8px;margin:0 0 10px">⚠️ ${T('Los datos de este dispositivo son MÁS VIEJOS que los de la nube.')}</div>`:''}
   <button id="sc-local" class="sec" style="width:100%;margin-top:8px">💻 ${T('Usar este dispositivo (reemplaza la nube)')}</button>
   <div class="muted" style="margin-top:10px">${T('Se guarda una copia de la otra versión en Configuración › Respaldo.')}</div>`;
   document.body.appendChild(D);setS('pend');
   const done=async ch=>{if(D.dataset.done)return;D.dataset.done='1';try{D.close()}catch(e){}D.remove();
-   if(ch==='local'){if(!confirm(T('¿Seguro? Los datos de la nube se reemplazan por los de este dispositivo (queda una copia en Respaldo).'))){D.dataset.done='';conflictOpen=false;return conflictDlg(d)}
-    await keepCopy(d.state,'dispositivo');setBase(+d.updatedAt||0);conflictOpen=false;localStorage.setItem(DIRTY_K,'1');await push()}
+   if(ch==='local'){const older=(+getState().updatedAt||0)<(+d.updatedAt||0);
+    if(!confirm(older?T('⚠️ CUIDADO: los datos de este dispositivo son MÁS VIEJOS que los de la nube. Si sigues, se BORRAN de la nube los cambios más nuevos (por ejemplo, lo que guardaste en el móvil). Queda una copia en Respaldo. ¿Reemplazar la nube con los datos viejos?'):T('¿Seguro? Los datos de la nube se reemplazan por los de este dispositivo (queda una copia en Respaldo).'))){D.dataset.done='';conflictOpen=false;return conflictDlg(d)}
+    await keepCopy(d.state,'dispositivo');setBase(+d.updatedAt||0);conflictOpen=false;localStorage.setItem(DIRTY_K,'1');allowOlder=true;await push()}
    else{await keepCopy(getState(),'nube');conflictOpen=false;useCloud(d)}};
   D.querySelector('#sc-cloud').onclick=()=>done('cloud');D.querySelector('#sc-local').onclick=()=>done('local');D.addEventListener('cancel',e=>{e.preventDefault();done('cloud')});
   D.showModal()}
@@ -139,7 +145,9 @@ if(cfg){
   setS('pend');rerender();
   try{await migBackup()}catch(e){console.warn('migBackup',e)}
   setReady(false);
-  try{if(localStorage.getItem('finanzas-force-push')){localStorage.setItem('finanzas-sync-uid',u.uid);const c=await F.getDoc(ref());if(c.exists())setBase(+c.data().updatedAt||0);setReady(true);localStorage.setItem(DIRTY_K,'1');await push();localStorage.removeItem('finanzas-force-push')}else await firstLink()}catch(e){console.warn(e);setS('err');setReady(true);return}
+  try{if(localStorage.getItem('finanzas-force-push')){localStorage.setItem('finanzas-sync-uid',u.uid);const c=await F.getDoc(ref());localStorage.removeItem('finanzas-force-push');localStorage.setItem(DIRTY_K,'1');
+   // v112: restaurar un archivo ya no pisa a ciegas la nube: si la nube es más nueva que el archivo, se pregunta (por defecto la nube)
+   if(c.exists()&&(+c.data().updatedAt||0)>(+getState().updatedAt||0)){localStorage.removeItem(BASE_K);setReady(true);reconcile(c.data())}else{if(c.exists())setBase(+c.data().updatedAt||0);setReady(true);await push()}}else await firstLink()}catch(e){console.warn(e);setS('err');setReady(true);return}
   setReady(true);if((isDirty()||needStamp)&&!conflictOpen){needStamp=false;push()}
   unsub=F.onSnapshot(ref(),{includeMetadataChanges:true},sn=>{if(!sn.exists())return;
    if(!sn.metadata.hasPendingWrites&&!sn.metadata.fromCache&&ready)reconcile(sn.data());
