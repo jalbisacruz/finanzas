@@ -24,7 +24,7 @@ const viaSel=(id,cur)=>`<select id="${id}" aria-label="${T('Cómo')}">${VIAS.map
 const _calcV87=calc;calc=function(m){const r=_calcV87(m);if(m&&m===L()){const h=heldPend();if(h>0.004){r.held=h;r.debt=r2(r.debt+h);r.bal=r2(r.bal-h)}}return r};
 // Mi balance (detalle): línea propia bajo «Lo que debo»
 const _balBoxV87=balBox;balBox=function(){let o=_balBoxV87();const c=calc(L());if(c.held&&o.includes('id="baldet"')){
- o=o.replace(/(<div class="row bsub"><span class="n">[^<]*<\/span><span>[^<]*<\/span><\/div>)(?![\s\S]*<div class="row bsub">)/,`$1<div class="row bsub" id="balheld"><span class="n">${T('Dinero de terceros')}</span><span>${f(c.held)}</span></div>`)}return o};
+ const hr=`<div class="row bsub" id="balheld"><span class="n">${T('Dinero de terceros')}</span><span>${f(c.held)}</span></div>`;o=o.replace(/(<div class="row bsub"><span class="n">[^<]*<\/span><span>[^<]*<\/span><\/div>)(?![\s\S]*<div class="row bsub">)/,m=>m+hr)}return o};
 // Disponible ahora: sin lo de terceros (la línea de cuentas sigue mostrando lo que hay en el banco)
 // v88: el número grande es lo REAL en tu cuenta (incluye terceros); debajo, lo que es tuyo
 const _heroV87=hero;hero=function(){let o=_heroV87();const h=heldPend();if(!(h>0.004))return o;const m=L(),disp=r2(sum(m.income,x=>x.amount)),mine=r2(disp-h);
