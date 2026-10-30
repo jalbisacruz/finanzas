@@ -1,4 +1,4 @@
-"""v114 (made-up data): alertas de presupuesto en 1 línea, atajos por pestaña, secciones cerradas, Walmart."""
+"""v114 (actualizado en v116: Walmart quincenal) (made-up data): alertas de presupuesto en 1 línea, atajos por pestaña, secciones cerradas, Walmart."""
 import os,copy
 from harness import app,HERE,FIX
 ROOT=os.path.dirname(HERE);ok=0;SH=os.path.join(ROOT,'shots')
@@ -24,9 +24,9 @@ with app(ROOT,now='2026-10-30T18:00:00',state=S,expand=False,new_look=True) as p
         pg.click('#budchip');pg.wait_for_timeout(200);pg.screenshot(path=os.path.join(SH,'v114-presupuesto.png'));E("dlg().close()")
     pg.click('#wmcard>h2');pg.wait_for_timeout(150);pg.locator('#wmcard').screenshot(path=os.path.join(SH,'v114-walmart.png'))
     pg.click('#sc-ini-2');pg.wait_for_timeout(150);pg.fill('#wma','500');pg.click('#wmsave');pg.wait_for_timeout(150)
-    check(E("S.wm.weeks['2026-10-30']")==500,'guardar semana')
+    check(E("S.wm.est")==500,'guardar estimado (v116: cheque quincenal)')
     E("if(!S.months['2026-11'])S.months['2026-11']=JSON.parse(JSON.stringify({...S.months[S.cur],purchases:[],personal:[],events:[]}))")
-    P=E("planNums()");check(P['k']=='2026-11' and P.get('wm')==1500,'plan nov suma walmart '+str(P.get('wm')))
+    P=E("planNums()");check(P['k']=='2026-11' and P.get('wm')==1000,'plan nov suma walmart '+str(P.get('wm')))
     pg.wait_for_timeout(3000)
     for t in ['mov','rep','cfg']:
         E(f"tab='{t}';render()");pg.wait_for_timeout(200)
@@ -36,7 +36,7 @@ with app(ROOT,now='2026-10-30T18:00:00',state=S,expand=False,new_look=True) as p
     check(not pg.errors,str(pg.errors))
 with app(ROOT,now='2026-11-05T18:00:00',state=S) as pg:
     E=pg.evaluate;pg.wait_for_timeout(500);d0=E("debE(L()).amount")
-    pg.click('#wmgot');pg.wait_for_timeout(150);pg.fill('#wmg','470');pg.click('#wmgok');pg.wait_for_timeout(150)
+    pg.wait_for_selector('#wmconf');pg.wait_for_timeout(150);pg.fill('#wmg','470');pg.click('#wmgok');pg.wait_for_timeout(150)
     check(E("S.wm.paid['2026-11-05']")==470 and abs(E("debE(L()).amount")-d0-470)<.01,'deposito walmart')
     check(E("wmNext()")=='2026-11-19','siguiente')
     check(not pg.errors,str(pg.errors))
