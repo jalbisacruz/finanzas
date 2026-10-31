@@ -18,7 +18,7 @@ with app(ROOT,now='2026-10-26T20:00:00',state=S) as pg:
     check('TOTAL QUE CARLOS TE DEBE  $19.59' in tt,'tony total')  # 22.5+7.09-10
     check('Total  $29.59' in tt and 'Parte de Carlos' in tt,'subtotal')
     t=E("msgShort('carlos','2026-10')");check('TOTAL QUE LE DEBES A TONY  $19.59' in t,'carlos total')
-    check(E("CODE_V")=='v119','ver')
+    check(E("CODE_V")>='v119','ver')
     for w in ['tony','carlos']:
         E(f"shareMsg('{w}','2026-10','txt')");pg.wait_for_timeout(200)
         E("(()=>{const a=document.getElementById('msgt');a.rows=24;a.scrollTop=1e5})()");pg.wait_for_timeout(150)

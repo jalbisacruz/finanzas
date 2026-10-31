@@ -106,5 +106,17 @@ function rep3Det(R){const t=L3[R.lang==='en'?'en':'es'],u=LD[R.lang==='en'?'en':
  o.h(u.mtot+' · '+fill(u.n,D.rows.length+((R.hid&&R.hid.n)||0)));
  o.table(['',t.tot,...P3.map(N)],[],{ws:[166,70,70,70,70],hi,tot:[u.mtot,fm(R.totAll),...P3.map(x=>fm(R.tot[x]))]});
  return o.out()}
-window.R3Doc=R3Doc;window.rep3PDF=rep3PDF;window.rep3Det=rep3Det;window.R3L=L3;
+// v120: detalle de compras compartidas añadido al final de los PDF de Tony/Carlos
+const LD120={es:{h:'Detalle de compras compartidas',n:'{0} compras compartidas',none:'Sin compras compartidas este mes.'},en:{h:'Shared purchase detail',n:'{0} shared purchases',none:'No shared purchases this month.'}};
+function r3DetInto(o,R){const lg=R.lang==='en'?'en':'es',u=LD[lg],v=LD120[lg],N=x=>(R.names||{})[x]||x,d=o.d,X=o.X,RR=o.R;
+ const on=s=>P3.filter(x=>Math.abs(+(s||{})[x]||0)>0.004),rows=((R.det&&R.det.rows)||[]).filter(p=>on(p.sh).length>=2&&on(p.sh).includes(R.who));
+ const hi=P3.includes(R.who)?2+P3.indexOf(R.who):undefined,ws=[236,70,70,70,70],cols=[u.art,u.pr,...P3.map(N)],sh=s=>P3.map(x=>Math.abs(+s[x]||0)>0.004?fm(s[x]):'-');
+ o.page();o.h(v.h+' · '+fill(v.n,rows.length));if(!rows.length)return o.note(v.none);
+ rows.forEach(p=>{o.need(16*(p.lines.length+2)+40);const y=o.y;
+  d.setFillColor(239,246,255);d.setDrawColor(191,219,254);d.setLineWidth(0.8);d.roundedRect(X-6,y-13,RR-X+12,22,5,5,'FD');
+  d.setFont('helvetica','bold');d.setFontSize(11);d.setTextColor(15,23,42);d.text(pt((p.dl?p.dl+'  ·  ':'')+p.s),X+2,y+2);
+  d.setFont('helvetica','normal');d.setFontSize(9.5);d.setTextColor(71,85,105);d.text(pt(fill(u.paid,N(p.by))),RR-90,y+2,{align:'right'});
+  d.setFont('helvetica','bold');d.setFontSize(11);d.setTextColor(15,23,42);d.text(fm(p.t),RR-2,y+2,{align:'right'});o.y=y+24;
+  o.table(cols,p.lines.map(l=>[l.k==='rest'?u.rest:l.k==='all'?u.all:l.k==='tax'?u.tax:l.n,fm(l.a),...sh(l.sh)]),{ws,hi,tot:[u.ptot,fm(p.t),...sh(p.sh)]});o.y+=8})}
+window.r3DetInto=r3DetInto;window.R3Doc=R3Doc;window.rep3PDF=rep3PDF;window.rep3Det=rep3Det;window.R3L=L3;
 })();

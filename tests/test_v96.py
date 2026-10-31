@@ -34,7 +34,7 @@ with app(ROOT,now='2026-10-31T20:00:00',state=S,init="localStorage.setItem('fina
     T3={k:pdft(pg,k) for k in ['mes','tony','carlos','det']}
     # 1) summaries: one line per purchase, no items / tax / rest lines
     for k in ['mes','tony','carlos']:
-        cp=T3[k].split('Compras del mes')[1]
+        cp=T3[k].split('Compras del mes')[1].split('Detalle de compras compartidas')[0]  # v120: el detalle va al final
         for w in ['Shampoo','Pasta Tony','Vino Joe','Impuesto','proporcional','Resto de la compra']:check(w not in cp,'%s summary has no item line %s'%(k,w))
         check(all('it' not in p for p in D['Yo']['purchases']),'no it in data')
     # 2) detail lists every purchase with its items, newest first, Arianna by name
