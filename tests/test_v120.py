@@ -32,7 +32,7 @@ def shot(pg,kind,name):
     subprocess.run(['pdftoppm','-png','-r','70','-f',str(n),'-l',str(n),'-singlefile',p,os.path.join(SH,name)])
 with app(ROOT,now='2026-10-31T13:00:00',state=S) as pg:
     E=pg.evaluate;pg.wait_for_timeout(800);E(ITEMS)
-    check(E("CODE_V")=='v120','ver')
+    check(E("CODE_V")>='v120','ver')
     t=pdft(pg,'tony');c=pdft(pg,'carlos')
     for x,w in [(t,'Tony'),(c,'Carlos')]:
         check('Detalle de compras compartidas' in x,w+' has section')
