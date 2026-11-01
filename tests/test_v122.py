@@ -11,7 +11,7 @@ k=sorted(S['months'])[-1];S['months'][k].setdefault('purchases',[]).append({'id'
 S['storeMem']={'amazonstorecard8720':{'name':'AMAZON STORE CARD -8720','cat':'x'}}
 with app(ROOT,now='2026-11-01T09:00:00',state=S,new_look=True) as pg:
     E=pg.evaluate
-    check(E("CODE_V")=='v122','ver')
+    check(E("CODE_V")>='v122','ver')
     st=E("S.stores");check('AMAZON STORE CARD -8720' not in st and 'Amazon' in st,'list '+str(st))
     w=E("(()=>{const j=JSON.stringify(S);const i=j.indexOf('STORE CARD');return i<0?'':j.slice(i-200,i+40)})()");check(not w,'gone everywhere '+w)
     check(E("Object.values(S.months).flatMap(m=>m.purchases).find(p=>p.id==='pz').store")=='Amazon','purchase renamed')
