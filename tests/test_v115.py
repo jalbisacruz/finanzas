@@ -18,7 +18,7 @@ with app(ROOT,state=S) as pg:
         check(not E(f"v115Junk({n!r})"),'real '+n)
     check(not E("v115Junk('Mobil',{items:[{name:'Unleaded',category:'⛽ Gasolina'}]})"),'Mobil gasolinera')
     E("scanApply({isReceipt:true,store:'AMAZON STORE CARD -8720',date:'2026-10-28',total:19.23,tax:1.26,items:[{name:'Leche',amount:17.97,category:'x',confident:true}]})")
-    check(E("D.store")!='AMAZON STORE CARD -8720' and 'store' in E("D._scan.u"),'scan no usa tarjeta')
+    check(E("D.store")=='Amazon','scan no usa tarjeta (v122: → Amazon)')
     pg.wait_for_timeout(200);pg.screenshot(path=os.path.join(SH,'v115-tarjeta-bloqueada.png'),full_page=True)
     E("dlg().close()")
     E("scanApply({isReceipt:true,store:'Kangaroo Express',date:'2026-10-28',total:19.23,tax:1.26,items:[{name:'Leche',amount:17.97,category:'x',confident:true}]})")
