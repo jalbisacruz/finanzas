@@ -7,7 +7,7 @@ S['months']['2026-11']={'income':[{'id':'i1','name':'Débito','amount':1200,'rol
 S['checks']=[{'id':'c1','amount':531.60,'date':'2026-11-05','status':'deposited'},{'id':'c2','amount':0,'amtPending':True,'date':'2026-11-12','status':'pending'}]
 S['wm']={'weeks':{'2026-10-30':226.51},'paid':{'2026-11-05':226.51},'chk':{'2026-11-19':0}}
 with app(ROOT,now='2026-11-05T10:00:00',state=S,new_look=True) as pg:
-    E=pg.evaluate;pg.wait_for_timeout(600);assert E('CODE_V')=='v133'
+    E=pg.evaluate;pg.wait_for_timeout(600);assert E('CODE_V')=='v134'
     L=E("depChecks().map(c=>[c.date,c.amount,c.src])");print(L)
     assert len(L)==2 and {x[2] for x in L}=={'💼 YoWash','🏪 Walmart'},L
     E("()=>{tab='mov';render()}");pg.wait_for_timeout(300)
