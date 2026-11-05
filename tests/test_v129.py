@@ -30,7 +30,7 @@ def nov_base():
 S=nov_base()
 with app(ROOT,now='2026-11-05T10:00:00',state=S,new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(600)
-    assert E('CODE_V')=='v129'
+    assert E('CODE_V') in ('v129','v130')
     P=E('planNums()');print('CON',json.dumps({k:P[k] for k in ['inc','n','ywGot','wmGot','ywEst','wmEst','plan']},indent=2))
     # YoWash left: 12,19,26 → 3×531.60=1594.80; Walmart left: 19 → 1×226.51
     assert abs(P['ywGot']-531.60)<0.01 and abs(P['wmGot']-226.51)<0.01,P
