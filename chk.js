@@ -24,7 +24,7 @@ const _setCheckV60=setCheck;setCheck=function(){const p=document.getElementById(
   chkEdit=false;save();render();toast(T('Próximo cheque guardado'));return}
  const pc0=pendingCheck();_setCheckV60();const pc=pendingCheck();if(pc&&pc===pc0&&pc.amtPending&&+pc.amount>0){delete pc.amtPending;save();render()}};
 // aviso discreto + diálogo rápido
-const chkDue=c=>c&&c.date&&new Date(c.date+'T05:00:00')<=new Date();
+const chkDue=c=>c&&c.date&&new Date(c.date+'T04:00:00')<=new Date();
 function chkAmtNote(){const pc=pcAmtPend();if(!pc)return'';const due=chkDue(pc);
  return `<div class="card" id="chkamtnote"${due?' data-due="1"':''} style="padding:10px 12px;${due?'border:2px solid #f59e0b':'background:#f8fafc;border:1px dashed #cbd5e1'}"><div style="display:flex;gap:8px;align-items:center"><span style="flex:1;font-size:14px">${due?'💵 '+T('Llegó el cheque del {0}: ¿cuánto fue?',wd(pc.date)):'⏳ '+T('Pon el monto del cheque cuando llegue el email')}</span><button id="chkamtbtn" class="${due?'':'sec'}" style="min-height:34px;padding:2px 12px;font-size:14px" onclick="chkAmtDlg()">${T('Poner monto')}</button></div></div>`}
 function chkAmtDlg(){const pc=pcAmtPend();if(!pc)return;const due=chkDue(pc);
@@ -38,7 +38,7 @@ function chkAmtSave(){const pc=pcAmtPend(),a=r2(document.getElementById('cka2').
  save();dlg().close();render();toast(T('Monto guardado'))}
 const _iniV60=ini;ini=function(){const h=_iniV60(),n=chkAmtNote();if(!n)return h;const i=h.indexOf('<div class="card hero"');return i<0?n+h:h.slice(0,i)+n+h.slice(i)};
 // depósito automático del jueves: si el monto sigue pendiente, NO deposita un estimado; pide el monto (aviso en Hoy)
-autoDeposit=function(){if(!S.checks)return;const now=new Date(),all=S.checks.filter(c=>c.status==='pending'&&c.date&&new Date(c.date+'T05:00:00')<=now).sort((a,b)=>a.date<b.date?-1:1),dueL=all.filter(c=>!c.amtPending&&+c.amount>0);
+autoDeposit=function(){if(!S.checks)return;const now=new Date(),all=S.checks.filter(c=>c.status==='pending'&&c.date&&new Date(c.date+'T04:00:00')<=now).sort((a,b)=>a.date<b.date?-1:1),dueL=all.filter(c=>!c.amtPending&&+c.amount>0);
  if(!dueL.length){if(all.length&&unlocked&&tab==='ini'&&!dlg().open&&!document.querySelector('#chkamtnote[data-due]'))render();return}
  let tot=0;const m=L();
  dueL.forEach(c=>{c.status='deposited';c.auto=true;c.depositedOn=today();debE(m).amount=r2((+debE(m).amount||0)+c.amount);tot+=c.amount;
