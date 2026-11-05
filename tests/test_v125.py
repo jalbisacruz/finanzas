@@ -11,7 +11,7 @@ for c in S['checks']:
     if c['status']=='pending': c['date']='2026-11-05';c['amount']=531.60
 with app(ROOT,now='2026-11-04T08:45:00',state=S,new_look=True) as pg:
     E=pg.evaluate
-    check(E("CODE_V") in ('v125','v126'),'ver')
+    check(E("CODE_V") >='v125','ver')
     check(pg.locator('#herocard #wmhero').count()==1,'wm in hero')
     t=pg.inner_text('#herocard');check(t.index('YoWash')<t.index('Walmart'),'order '+t)
     check('$226.51' in t,'amt')

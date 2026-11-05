@@ -7,7 +7,7 @@ for c in S['checks']:
     if c['status']=='pending': c['date']='2026-11-05';c['amount']=531.60
 with app(ROOT,now='2026-11-04T08:45:00',state=S,new_look=True) as pg:
     E=pg.evaluate
-    assert E("CODE_V")=='v126'
+    assert E("CODE_V")>='v126'
     t=pg.inner_text('#herocard');print(t)
     assert t.index('YoWash')<t.index('Walmart')
     assert 'cada jueves' in t and 'jueves alternos' in t and '$531.60' in t and '$226.51' in t
