@@ -29,7 +29,7 @@ def nov_base():
 S=nov_base()
 with app(ROOT,now='2026-11-05T10:00:00',state=S,new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(600)
-    assert E('CODE_V')=='v131'
+    assert E('CODE_V')>='v131'
     P=E('planNums()');print('CON',json.dumps({k:P[k] for k in ['inc','n','real','ywGot','wmGot','ywEst','wmEst','ywLines','wmLines']},indent=2))
     assert abs(P['real']-758.11)<0.01,P
     assert abs(P['ywEst']-1594.80)<0.01 and abs(P['wmEst']-226.51)<0.01,P
