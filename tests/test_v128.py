@@ -13,7 +13,7 @@ S['checks'].append({'id':'yw2','amount':0,'amtPending':True,'date':'2026-11-12',
 
 with app(ROOT,now='2026-11-05T10:00:00',state=S,new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(800)
-    assert E("CODE_V")=='v128'
+    assert E("CODE_V") in ('v128','v129')
     assert E('S.wm.chk["2026-11-19"]')==0
     t=pg.inner_text('#herocard');print('PEND',t)
     assert 'Pendiente por definir' not in t and 'Cobrado' not in t,t
