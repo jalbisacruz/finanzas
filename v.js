@@ -99,18 +99,24 @@ const vPdf=file=>new Promise((ok,ko)=>{if(file.size>15*1024*1024)return ko(new E
 function vPrompt(){return `Eres un lector de recibos de compra (tiendas de EE.UU.). Lee la foto, captura o PDF y responde SOLO con JSON:
 {"isReceipt":true,"store":"nombre corto","date":"AAAA-MM-DD o null","total":0.00,"tax":0.00,"items":[{"name":"nombre corto en español","amount":0.00,"category":"una de la lista"}]}
 "total" es el total pagado (con impuestos); "tax" la suma del sales tax (0 si no hay); los "amount" son ANTES de impuesto. No incluyas subtotal, impuestos ni pagos como ítems.
-Categorías permitidas (texto exacto): ${JSON.stringify((DOC.cats||[]).map(c=>c.v))}.`}
+Categorías permitidas (texto exacto): ${JSON.stringify((DOC.cats||[]).map(c=>c.v))}.
+Publix (supermercado, comida) NUNCA es gasolina: usa la categoría «Compras» si existe en la lista, si no «🛒 Comida/Supermercado». «⛽ Gasolina» solo si el recibo es combustible / Publix Fuel.`}
 window.vAI=window.vAI||(async(b64,mime)=>{const L=await fsLib(),[AC,AI]=await Promise.all([import(L.B+'firebase-app-check.js'),import(L.B+'firebase-ai.js')]);
  if(!L.ac){try{L.ac=AC.initializeAppCheck(L.app,{provider:new AC.ReCaptchaEnterpriseProvider('6LczjvEtAAAAAEaAHmwLEj2DUiWYY--kne8BH3ei'),isTokenAutoRefreshEnabled:true})}catch(e){console.warn(e)}}
  const ai=AI.getAI(L.app,{backend:new AI.GoogleAIBackend()});let last;
  for(let tr=0;tr<3;tr++){if(tr)await new Promise(r=>setTimeout(r,800*tr));for(const name of ['gemini-3.5-flash','gemini-3.8-flash']){try{const m=AI.getGenerativeModel(ai,{model:name,generationConfig:{responseMimeType:'application/json',temperature:0}});
   return (await m.generateContent([vPrompt(),{inlineData:{mimeType:mime,data:b64}}])).response.text()}catch(e){last=e;if(/404|not found/i.test(String(e&&e.message)))continue;if(/\[?4\d\d\b/.test(String(e&&e.message)))throw e;break}}}throw last});
+function vPickCat(store,cat,cv){const L=cv||[];const isPub=/\bpublix\b/i.test(store||'');const isFuel=/fuel|gas\s*station|gasolina/i.test(store||'');
+ const compras=L.find(c=>/compras/i.test(String(c).replace(/^\S+\s/,'')))||L.find(c=>/comida\/supermercado|food\/grocer/i.test(String(c)))||L[0]||'';
+ const gas=L.find(c=>/gasolina|gasoline/i.test(String(c).replace(/^\S+\s/,'')));
+ if(isPub&&!isFuel){if(cat&&L.includes(cat)&&!/gasolina|gasoline/i.test(String(cat)))return cat;return compras}
+ if(cat&&L.includes(cat))return cat;return compras}
 window.vScan=()=>{const i=document.createElement('input');i.type='file';i.accept='image/*,application/pdf';i.style.display='none';
  i.onchange=async()=>{const file=i.files&&i.files[0];i.remove();if(!file)return;const btn=$('vscan'),e=$('rerr');btn.disabled=true;btn.textContent=t('reading');
   try{const pdf=/pdf$/i.test(file.type)||/\.pdf$/i.test(file.name);const b64=pdf?await vPdf(file):await vResize(file);let s=String(await vAI(b64,pdf?'application/pdf':'image/jpeg')).trim().replace(/^```(?:json)?\s*|\s*```$/g,'');
    const o=JSON.parse(s.slice(s.indexOf('{'),s.lastIndexOf('}')+1));if(o.isReceipt===false)throw new Error('notreceipt');const cv=(DOC.cats||[]).map(c=>c.v);
    Object.assign(REG,{store:String(o.store||'').slice(0,60),date:/^\d{4}-\d{2}-\d{2}$/.test(o.date||'')?yfix(o.date):REG.date,total:+o.total>0?r2(o.total):'',tax:+o.tax>0&&+o.tax<+o.total?r2(o.tax):'',scan:true,
-    items:(Array.isArray(o.items)?o.items:[]).filter(x=>+x.amount>0).slice(0,60).map(x=>({n:String(x.name||'').slice(0,40),a:r2(x.amount),own:['Yo','Tony','Carlos'],c:cv.includes(x.category)?x.category:(cv[0]||'')}))});regDraw()}
+    items:(Array.isArray(o.items)?o.items:[]).filter(x=>+x.amount>0).slice(0,60).map(x=>({n:String(x.name||'').slice(0,40),a:r2(x.amount),own:['Yo','Tony','Carlos'],c:vPickCat(o.store,x.category,cv)}))});regDraw()}
   catch(x){console.warn('scan',x);regDraw();$('rerr').textContent=String(x&&x.message)==='pdfsize'?t('pdfBig'):t('scanErr')}};
  document.body.appendChild(i);i.click()};
 const pt=s=>String(s??'').replace(/[−–—]/g,'-').replace(/[^\x00-\xff]/g,'').replace(/\s+/g,' ').trim();
