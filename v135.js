@@ -2,7 +2,9 @@
 // 1) Bajo el próximo cheque Walmart en la caja azul: línea «EarlyPay» con el total del mes.
 // 2) Esos OnePay del ciclo (después del último Walmart cobrado, hasta el próximo) bajan el
 //    próximo cheque (caja azul, plan, proyectado y depósito auto a las 4:00 AM). No baja de $0.
-// 3) Si el próximo está Pendiente (sin monto), la caja sigue en Pendiente; el plan estima con
+// 3) EarlyPay entra en «Real cobrado» (YoWash + Walmart cobrados + OnePay del mes).
+//    Ingresos esperados = real + estimados restantes (sin sumar EarlyPay otra vez).
+// 4) Si el próximo está Pendiente (sin monto), la caja sigue en Pendiente; el plan estima con
 //    (último cobrado − EarlyPay del ciclo). Tras cobrar, los EarlyPay nuevos van al ciclo siguiente.
 Object.assign(EN,{
  "EarlyPay":"EarlyPay",
@@ -31,8 +33,11 @@ wmUnitNet=function(){const nx=wmNext(),g=nx?_wmAmtV135(nx):0;if(g>0)return wmAmt
  const left=(P.wmLines||[]).slice();
  if(left.length){const u=wmUnitNet(),g=nx?_wmAmtV135(nx):0;const full=g>0?g:(()=>{const p=(S.wm||{}).paid||{},ks=Object.keys(p).filter(x=>+p[x]>0).sort();return ks.length?r2(+p[ks.at(-1)]):0})();
   left[0]={d:left[0].d,a:u};for(let i=1;i<left.length;i++)left[i]={d:left[i].d,a:full>0?r2(full):left[i].a}}
- const wmEst=r2(sum(left,x=>x.a)),inc=r2((P.real||0)+ep+(P.ywEst||0)+wmEst);
- return {...P,wmLines:left,wmEst,ep,inc,plan:r2(inc-P.bud)}}
+ const wmEst=r2(sum(left,x=>x.a)),real=r2((P.real||0)+ep),inc=r2(real+(P.ywEst||0)+wmEst);
+ return {...P,wmLines:left,wmEst,real,ep,inc,plan:r2(inc-P.bud)}}
 }
 {const _pv=planV78;planV78=function(){const h=_pv(),ep=epMonthSum(S.cur);if(!(ep>0.004))return h;
- return h.replace(/(<div id="pl-inc-break">)/,'$1'+`<div class="row pl-ib real"><span class="n">⚡ ${T('EarlyPay')}</span><b>${f(ep)}</b></div>`)}}
+ // EarlyPay como desglose bajo Real cobrado (ya incluido en ese total; no es ingreso extra).
+ const row=`<div class="row pl-ib d" id="pl-ep"><span class="n">⚡ ${T('EarlyPay')}</span><span>${f(ep)}</span></div>`;
+ if(/pl-ib real/.test(h))return h.replace(/(<div class="row pl-ib real">[\s\S]*?<\/div>)/,'$1'+row);
+ return h.replace(/(<div id="pl-inc-break">)/,'$1'+`<div class="row pl-ib real"><span class="n">${T('Real cobrado')}</span><b>${f(planNums().real)}</b></div>`+row)}}

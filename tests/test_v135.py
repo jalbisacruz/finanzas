@@ -7,6 +7,7 @@ def base():
     S=copy.deepcopy(FIX);S['cur']='2026-11'
     S['months']['2026-11']={'income':[{'id':'i1','name':'Débito','amount':1500,'role':'debit'}],'cards':copy.deepcopy(S['months']['2026-10'].get('cards') or []),'bills':[],'personal':[],'purchases':[],
       'events':[
+        {'id':'w1','type':'income','date':'2026-11-05','amount':226.51,'concept':'🏪 Walmart','desc':'Walmart','method':'deb'},
         {'id':'e1','type':'income','date':'2026-11-06','amount':40,'concept':'OnePay','desc':'EarlyPay 1','method':'deb'},
         {'id':'e2','type':'income','date':'2026-11-08','amount':25.5,'concept':'⚡ OnePay','desc':'EarlyPay 2','method':'deb'},
       ]}
@@ -28,8 +29,10 @@ with app(ROOT,now='2026-11-09T15:00:00',state=base(),new_look=True) as pg:
     w=pg.inner_text('#wmhero');assert '$134.50' in w or '~$134.50' in w,w
     E("document.getElementById('wmhero').scrollIntoView({block:'center'})");pg.wait_for_timeout(150)
     pg.screenshot(path=os.path.join(SH,'v135-hoy-earlypay.png'))
-    P=E("planNums()");print('plan',P.get('ep'),P.get('wmEst'),P.get('wmLines'),P.get('real'))
-    assert abs(P['ep']-65.5)<0.01 and abs(P['wmEst']-134.5)<0.01 and abs(P['inc']-(P.get('real') or 0)-65.5-P.get('ywEst',0)-134.5)<0.05
+    P=E("planNums()");print('plan',P.get('ep'),P.get('wmEst'),P.get('wmLines'),P.get('real'),P.get('inc'),P.get('ywEst'))
+    assert abs(P['ep']-65.5)<0.01 and abs(P['wmEst']-134.5)<0.01
+    assert abs(P['real']-292.01)<0.02,P  # 226.51 wm + 65.50 EarlyPay
+    assert abs(P['inc']-P['real']-P.get('ywEst',0)-P['wmEst'])<0.05  # no double-count EarlyPay
     E("()=>{tab='ini';render();document.getElementById('plancard')?.scrollIntoView({block:'start'})}");pg.wait_for_timeout(300)
     pg.screenshot(path=os.path.join(SH,'v135-plan-earlypay.png'))
 
