@@ -20,7 +20,7 @@ function draw(){const box=$('vbills');if(!box||!ST)return;const per={Joe:0,Tony:
  ST.rows.forEach(r=>{if(!has(r))return;const s=BS.split(+r.total,r.alloc);if(s.err)return;any=1;BS.PEOPLE.forEach(p=>per[p]+=s[p])});
  const groups=BS.GROUPS.map(([g,l])=>`<div class="bsg">${l}</div>`+ST.rows.map((r,i)=>r.group===g?rowHtml(r,i):'').join('')).join('');
  box.innerHTML=`<div class="card" id="bsform"><h2>🧾 Cuentas de ${esc(ST.label)}</h2>
- <div class="muted" style="margin-bottom:8px">${ST.from&&ST.from!==ST.k?'Vienen los montos del mes anterior. Revisa los variables.':'Pon el total y marca Fija o Variable. El reparto ya viene listo.'}</div>
+ <div class="muted" style="margin-bottom:8px">${ST.from&&ST.from!==ST.k?'Vienen los últimos montos aprobados. Revisa los variables.':'Pon el total y marca Fija o Variable. El reparto ya viene listo.'}</div>
  ${groups}<div id="bstot" class="muted" style="margin-top:8px">${any?`Joe ${money(per.Joe)} · Tony ${money(per.Tony)} · Carlos ${money(per.Carlos)} · Arianna ${money(per.Arianna)} <span>(lo paga Tony)</span>`:'Los totales por persona aparecen cuando pongas los montos.'}</div>
  <div id="bserr" class="err2"></div><button type="button" class="dl" id="bssend" style="margin-top:10px" onclick="vbSend()">Enviar a Joe para revisar</button>
  <div id="bsok" class="muted" style="text-align:center;margin-top:6px">${ST.sent?'✅ Enviado. Joe lo revisa antes de aplicar.':''}</div></div>`}

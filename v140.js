@@ -27,7 +27,7 @@ function bsBill(m,key,create){if(!key||key==='comida')return null;const R=bsRow(
  if(b&&bsIsFood(b))return null;
  if(!b&&create){b={id:uid(),name:R.name,amount:0,fixed:false,cat:R.group==='auto'?'🚗 Transporte':'🏠 Hogar'};m.bills.push(b)}
  if(b&&!b.sheetKey)b.sheetKey=key;return b}
-// lo que ve Tony: este mes si ya tiene datos aprobados; si no, lo último que Tony envió y Joe aprobó (meses anteriores); si no, en blanco
+// Prefill del mes siguiente: últimos montos APROBADOS (no un envío pendiente ni uno rechazado). Interpretación segura de «los últimos datos que Tony puso».
 function bsSheetFor(k){const B=bsS(),cur=B.months[k];let src=null,from=null;
  if(cur&&Object.keys(cur.rows||{}).length){src=cur.rows;from=k}
  else{const ks=Object.keys(B.months).filter(x=>x<k&&Object.keys(B.months[x].rows||{}).length).sort();if(ks.length){from=ks.at(-1);src=B.months[from].rows}}
