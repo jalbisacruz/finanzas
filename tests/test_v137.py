@@ -36,7 +36,7 @@ with app(ROOT,now='2026-11-09T23:00:00',state=base(),new_look=True) as pg:
     E("document.getElementById('plancard')?.scrollIntoView({block:'start'})");pg.wait_for_timeout(200)
     pg.screenshot(path=os.path.join(SH,'v137-plan-earlypay-ciclo.png'))
     br=E("document.getElementById('pl-inc-break')?.innerText||''");print(br)
-    assert '65.50' in br and '174.50' in br
+    assert '25.50' in br and '174.50' in br  # v138: EarlyPay por fecha
 
 # Con paid también: mismo recorte (solo el EP de después)
 S=base();S['wm']['paid']={'2026-11-05':226.51}
