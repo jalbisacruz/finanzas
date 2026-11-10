@@ -18,6 +18,17 @@ service cloud.firestore {
       // v72: buzón de compras enviadas desde el enlace. Cualquiera con el token puede CREAR (no leer, no listar, no editar).
       // Solo Joe (dueño del enlace) puede leer y borrar.
       match /inbox/{id} {
+        // v140 (LOCAL, sin desplegar): hoja de cuentas de Tony. Solo el enlace de Tony, solo crear, campos fijos.
+        allow create: if exists(/databases/$(database)/documents/shares/$(token))
+          && get(/databases/$(database)/documents/shares/$(token)).data.who == 'Tony'
+          && request.resource.data.keys().hasOnly(['kind','by','month','rev','rows','at'])
+          && request.resource.data.keys().hasAll(['kind','by','month','rev','rows','at'])
+          && request.resource.data.kind == 'bills'
+          && request.resource.data.by == 'Tony'
+          && request.resource.data.month is string && request.resource.data.month.matches('^[0-9]{4}-[0-9]{2}$')
+          && request.resource.data.rev is int && request.resource.data.rev >= 0
+          && request.resource.data.rows is list && request.resource.data.rows.size() > 0 && request.resource.data.rows.size() <= 20
+          && request.resource.data.at == request.time;
         // v73: confirmación "Ya pagué" entre Tony y Carlos
         allow create: if exists(/databases/$(database)/documents/shares/$(token))
           && request.resource.data.keys().hasOnly(['kind','by','month','amount','at'])

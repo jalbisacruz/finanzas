@@ -64,7 +64,7 @@ function draw(){setLangV(VL);(DOC.months||[]).forEach(m=>{if(m&&/^\d{4}-\d\d$/.t
   ${p.rows.map(r=>`<tr><td>${esc(r.n)}</td><td class="l cat">${esc(r.c)}</td><td>${f(r.a)}</td><td class="l">${esc(r.sh)}</td>${P3.map(x=>`<td${hc(x)}>${r.v[x]?f(r.v[x]):'—'}</td>`).join('')}</tr>`).join('')}
   <tr class="tot"><td colspan="2" class="l">${t('ptot')}</td><td class="cat"></td><td></td>${P3.map(x=>`<td${hc(x)}>${f(p.tot[x])}</td>`).join('')}</tr></table></div></div>`}).join('')+
   (mo.r3?r3Tot(mo.r3,hc):`<div class="wrap"><table style="margin-top:12px"><tr class="tot"><td>${t('mtot')}</td>${P3.map(x=>`<td${hc(x)}>${f(mt[x])}</td>`).join('')}</tr></table></div>`):`<div class="muted">${t('none')}</div>`)+`</div>`;
- h+=`${mo.purchases.some(p=>p.by)?`<div class="muted" style="margin:-6px 4px 12px">* ${esc(t('byNote'))}</div>`:''}</div><div class="muted" style="text-align:center;margin:12px 0 30px">Finanzas · ${esc(d.from)}</div>`;$('m').innerHTML=h;if(REG)regDraw();a2hsHint()}
+ h+=`${mo.purchases.some(p=>p.by)?`<div class="muted" style="margin:-6px 4px 12px">* ${esc(t('byNote'))}</div>`:''}</div><div class="muted" style="text-align:center;margin:12px 0 30px">Finanzas · ${esc(d.from)}</div>`;$('m').innerHTML=h;window.__DOC=DOC;window.__TOK=tok;if(window.vBillsDraw)try{vBillsDraw()}catch(e){console.warn('vbills',e)}if(REG)regDraw();a2hsHint()}
 window.pick=i=>{MI=i;draw()};let DET=false;window.togDet=()=>{DET=!DET;draw()};
 window.REG=null;let FS=null;const today=()=>new Date().toLocaleDateString('en-CA');
 const r2=n=>Math.round((+n||0)*100)/100;
@@ -84,7 +84,7 @@ window.regDraw=regDraw;function regDraw(){const b=$('regbox');if(!b)return;if(!R
  <div id="rerr" class="err2"></div><div class="g2" style="margin-top:10px"><button type="button" class="chip" style="min-height:46px" onclick="REG=null;regDraw()">${t('cancel')}</button><button type="button" class="dl" id="rsend" onclick="regSend()">${t('send')}</button></div></div>`}
 window.tcPaid=async()=>{const mo=DOC.months[MI],x=mo.tc,b=$('vtcpay');if(!x)return;b.disabled=true;try{const{F,db}=await fsLib();await F.addDoc(F.collection(db,'shares',tok,'inbox'),{kind:'settle',by:x.from,month:mo.k,amount:x.amount,at:F.serverTimestamp()});localStorage.setItem('vtc-'+tok+'-'+mo.k,'1');draw()}catch(e){console.error(e);b.disabled=false;alert(t('sendErr'))}};
 window.regOwn=(i,k)=>{const o=REG.items[i].own;const j=o.indexOf(k);if(j>=0){if(o.length>1)o.splice(j,1)}else o.push(k);regDraw()};
-async function fsLib(){if(FS)return FS;const V='11.10.0',B=`https://www.gstatic.com/firebasejs/${V}/`;const [A,F]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-firestore-lite.js')]);
+window.vFsLib=()=>fsLib();async function fsLib(){if(FS)return FS;const V='11.10.0',B=`https://www.gstatic.com/firebasejs/${V}/`;const [A,F]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-firestore-lite.js')]);
  const app=A.getApps().length?A.getApp():A.initializeApp(window.FB_CONFIG);FS={A,F,app,db:F.getFirestore(app),B};return FS}
 window.regSend=async()=>{const R=REG,e=$('rerr'),tot=r2(R.total),tax=r2(R.tax),items=R.items.filter(x=>+x.a>0).map(x=>({n:String(x.n||'').slice(0,40),a:r2(x.a),own:x.own.filter(k=>P3.includes(k)).slice(0,3),c:String(x.c||'').slice(0,60)}));
  if(!R.store.trim()||!(tot>0)){e.textContent=t('needT');return}if(r2(items.reduce((s,x)=>s+x.a,0)+tax)>tot+0.004){e.textContent=t('over');return}
