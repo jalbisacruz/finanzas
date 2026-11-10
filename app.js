@@ -69,7 +69,7 @@ Object.entries(S.months).forEach(([k,m])=>{m.income=m.income.filter(x=>{const mt
  return false})});
 if(Object.values(S.months).some(m=>'carlosAdj'in m)){Object.values(S.months).forEach(m=>delete m.carlosAdj);localStorage.setItem(K,JSON.stringify(S))}
 Object.values(S.months).forEach(m=>{
- m.bills.forEach(b=>{if(b.fixed===undefined)b.fixed=!VAR.test(b.name)});
+ // v140: Fija/Variable ya no se usa. No rellenar b.fixed; el campo legado se ignora y no se borra.
  m.personal=m.personal||[];m.events=m.events||[];
  // Débito se identifica por role:'debit' (no por nombre). Respeta las líneas del usuario (no re-agrega 'Efectivo').
  if(!m.income.some(x=>x.role==='debit')){const d=m.income.find(x=>/d[eé]bit/i.test(x.name||''))||m.income[0];if(d)d.role='debit';else m.income.unshift({id:uid(),name:'Débito',amount:0,role:'debit'})}
@@ -212,12 +212,12 @@ function res(){const c=calc(M());return `<div class="card"><div class="muted">${
  <div class="row"><span class="n"><b>${T('Lo que tengo − lo que debo')}</b></span><b class="${c.bal>=0?'pos':'neg'}">${f(c.bal)}</b></div>
  <div class="muted" style="margin-top:10px;font-size:12px">${T('Gastos registrados del mes')}: ${f(spent(M()).total)} · ${T('no entra en el balance')}</div></div>`}
 function list(key,title,hint){const m=M(),t=sum(m[key],x=>x.amount);return `<div class="card"><h2>${title}<span><button class="add" onclick="addItem('${key}')" title="${T('+ Añadir')}" aria-label="${T('+ Añadir')}">+</button><button class="rm" onclick="delDlg('${key}')" title="${T('Eliminar')}" aria-label="${T('Eliminar')}">−</button></span></h2>${hint?`<div class="muted">${hint}</div>`:''}
- ${m[key].map(x=>`<div class="row">${key==='bills'?`<button class="tcat" title="${esc(DN(billCat(x)))}" onclick="catPick('${x.id}')">${esc(billCat(x).split(' ')[0])}</button>`:''}<input class="name n" value="${esc(DN(x.name))}" onchange="upd('${key}','${x.id}','name',this.value)">${key==='bills'?`<input type="number" inputmode="decimal" step="0.01" value="${typeof billInVal==='function'?billInVal(x):(x.amount||'')}" placeholder="0" onchange="upd('${key}','${x.id}','amount',this.value)">`:`<span class="amt ro" style="min-width:84px;text-align:right;font-weight:600">${f(+x.amount||0)}</span><button class="sec adj" onclick="adjDlg('${key}','${x.id}')">${T('Ajustar')}</button>`}${key==='income'&&x!==debE(m)?`<button class="pay dep" ${+x.amount>0?'':'disabled'} onclick="depDlg('${x.id}')">${T('Depositar')}</button>`:''}${key==='cards'?`<button class="pay" ${+x.amount>0?'':'disabled'} onclick="cardPayDlg('${x.id}')">${T('PAGAR')}</button>`:''}${key==='bills'?billSt(x):''}${key==='bills'?`<button class="chip ${x.fixed?'on':''}" style="min-width:56px" onclick="tgFix('${x.id}')">${x.fixed?T('Fija'):T('Var.')}</button>`:''}</div>${key==='bills'&&typeof tfNote==='function'?tfNote(x):''}`).join('')}
+ ${m[key].map(x=>`<div class="row">${key==='bills'?`<button class="tcat" title="${esc(DN(billCat(x)))}" onclick="catPick('${x.id}')">${esc(billCat(x).split(' ')[0])}</button>`:''}<input class="name n" value="${esc(DN(x.name))}" onchange="upd('${key}','${x.id}','name',this.value)">${key==='bills'?`<input type="number" inputmode="decimal" step="0.01" value="${typeof billInVal==='function'?billInVal(x):(x.amount||'')}" placeholder="0" onchange="upd('${key}','${x.id}','amount',this.value)">`:`<span class="amt ro" style="min-width:84px;text-align:right;font-weight:600">${f(+x.amount||0)}</span><button class="sec adj" onclick="adjDlg('${key}','${x.id}')">${T('Ajustar')}</button>`}${key==='income'&&x!==debE(m)?`<button class="pay dep" ${+x.amount>0?'':'disabled'} onclick="depDlg('${x.id}')">${T('Depositar')}</button>`:''}${key==='cards'?`<button class="pay" ${+x.amount>0?'':'disabled'} onclick="cardPayDlg('${x.id}')">${T('PAGAR')}</button>`:''}${key==='bills'?billSt(x):''}</div>${key==='bills'&&typeof tfNote==='function'?tfNote(x):''}`).join('')}
  <div class="tot"><span>${T('Subtotal')}</span><span>${f(t)}</span></div></div>`}
 function billSt(b){const p=+b.paid||0,a=+b.amount||0;if(!p)return'';return a-p>0.005?`<span class="muted" title="${T('pendiente')}" style="white-space:nowrap">+${f(a-p)}</span>`:'<span title="'+T('pagado')+'">✅</span>'}
 function cue(){const m=M();return list('income',T('Mi dinero'),T('La primera línea es tu débito. Las demás (efectivo…) se pueden depositar al débito. Los cheques se registran en Inicio.')+' '+T('Los saldos cambian solo con ingresos, gastos y pagos. Usa Ajustar para corregir.'))+
  
- list('cards',T('Tarjetas de crédito'),T('Los saldos cambian solo con ingresos, gastos y pagos. Usa Ajustar para corregir.'))+list('bills',T('Cuentas para Tony'),T('“Fija” pasa su monto al mes siguiente; “Var.” empieza en 0'))+dueCard()+
+ list('cards',T('Tarjetas de crédito'),T('Los saldos cambian solo con ingresos, gastos y pagos. Usa Ajustar para corregir.'))+list('bills',T('Cuentas para Tony'),T('Los montos se pueden cambiar cuando haga falta. Al crear un mes se copian los últimos.'))+dueCard()+
  `<div class="card"><h2>${T('Cheques depositados ({0})',lbl(S.cur))}<span>${f(sum(depChecks(),c=>c.amount))}</span></h2>${depChecks().map(c=>`<div class="row"><span class="n">${wd(c.date)}<div class="muted">✅ ${T('Depositado')}${c.src?' · '+c.src:''}${c.legacy?' · '+T('importado'):''}</div></span>${f(c.amount)}</div>`).join('')||'<div class="muted">'+T('Aún no hay cheques depositados este mes. Se agregan al confirmar el depósito en Inicio.')+'</div>'}</div>`}
 let depChecks=()=>byNew(S.checks.filter(c=>c.status==='deposited'&&(c.legacy?c.month===S.cur:(c.date||'').startsWith(S.cur))).reverse());
 function com(){const m=M(),c=calc(m);return `<div class="card"><button style="width:100%" onclick="editP()">${T('+ Nueva compra compartida')}</button>
@@ -274,8 +274,8 @@ ${budCfg()}${goalCfg()}${bkCfg()}
  <div class="card"><h2>${T('Mes')}</h2><button class="del" style="width:100%" onclick="if(confirm('${T('¿Borrar {0}?',lbl(S.cur))}')){delete S.months[S.cur];S.cur=keys().at(-1)||'';save();render()}">${T('Borrar este mes')}</button></div>`}
 // ---------- acciones ----------
 function toast(t){const d=document.createElement('div');d.textContent=t;d.className='toast';document.body.appendChild(d);setTimeout(()=>d.remove(),1800)}
-function tgFix(id){const b=M().bills.find(x=>x.id===id);b.fixed=!b.fixed;save();render()}
-function addItem(k){if(k!=='bills')return newLineDlg(k);M()[k].push({id:uid(),name:'',amount:0,...(k==='bills'?{fixed:false}:{})});save();render()}
+function tgFix(id){/* v140: Fija/Variable ya no se usa */}
+function addItem(k){if(k!=='bills')return newLineDlg(k);M()[k].push({id:uid(),name:'',amount:0});save();render()}
 function upd(k,id,fld,val){const x=M()[k].find(x=>x.id===id);x[fld]=fld==='amount'?r2(val):fld==='name'?DNrev(val):val;save();render()}
 function delDlg(k){const m=M(),d=debE(m),L=m[k].filter(x=>!(k==='income'&&x===d));
  dlg().innerHTML=`<h2>${T('¿Qué línea quieres eliminar?')}</h2>${L.length?L.map(x=>`<div class="row"><span class="n">${esc(DN(x.name)||'—')}</span><b>${f(+x.amount||0)}</b><button class="sec" onclick="delAsk('${k}','${x.id}')">${T('Eliminar')}</button></div>`).join(''):`<div class="muted">${T('Nada aquí.')}</div>`}${k==='income'?`<div class="muted">${T('La línea de débito no se puede eliminar.')}</div>`:''}
@@ -430,7 +430,7 @@ document.getElementById('newm').onclick=()=>{
  const cl=a=>a.map(x=>({id:uid(),name:x.name,amount:0}));
  const inc=prev?prev.income.filter(x=>!/^cheque/i.test(x.name)&&!(isTipLine(x)&&Math.abs(+x.amount||0)<0.005)).map(x=>({id:uid(),name:x.name,amount:+x.amount||0,...(debE(prev)===x?{role:'debit'}:{})})):[{id:uid(),name:'Débito',amount:0,role:'debit'},{id:uid(),name:'Efectivo',amount:0}];
  S.months[k]={income:inc,cards:prev?prev.cards.map(x=>({id:uid(),name:x.name,amount:+x.amount||0})):[{id:uid(),name:'BOA',amount:0},{id:uid(),name:'Amazon',amount:0},{id:uid(),name:'Capital One',amount:0}],
-  bills:prev?prev.bills.map(x=>({id:uid(),name:x.name,cat:billCat(x),fixed:!!x.fixed,amount:x.fixed?x.amount:0})):[],purchases:[],personal:[],events:[],carlosPaid:0,tonyPaid:0,tonyBase:0,carlosBase:0};
+  bills:prev?prev.bills.map(x=>{const food=typeof isComidaBill==='function'?isComidaBill(x):/^(food|comida)$/i.test(String(x.name||'').replace(/^[^\p{L}\p{N}]+/u,'').trim());return {id:uid(),name:x.name,cat:billCat(x),amount:food?0:(+x.amount||0)}}):[],purchases:[],personal:[],events:[],carlosPaid:0,tonyPaid:0,tonyBase:0,carlosBase:0};
  S.cur=k;save();tab='ini';render()};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;filt='';render();scrollTo(0,0)});
 document.getElementById('fab').onclick=quick;

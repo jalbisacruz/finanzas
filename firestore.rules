@@ -32,11 +32,11 @@ service cloud.firestore {
         }
         function billsRowOk(r) {
           return r is map
-            && r.keys().hasOnly(['key','total','fixed','alloc'])
-            && r.keys().hasAll(['key','total','fixed','alloc'])
+            && r.keys().hasOnly(['key','total','alloc','fixed'])
+            && r.keys().hasAll(['key','total','alloc'])
             && r.key is string && r.key.matches('^(renta|ventanas|agua|luz|gas|telefono|internet|purificador|seguro|letra)$')
             && r.total is number && r.total >= 0 && r.total <= 100000
-            && r.fixed is bool
+            && (!('fixed' in r) || r.fixed is bool)
             && billsAllocOk(r.alloc);
         }
         function billsRowsOk(rows) {

@@ -14,7 +14,10 @@ with app(ROOT,now='2026-11-10T16:00:00',state=S,new_look=True,routes=R) as pg:
     pg.goto(base+'/v.html?t='+TOK);pg.wait_for_timeout(800)
     E("()=>{localStorage.removeItem('vbills-%s-2026-11')}"%TOK);pg.reload();pg.wait_for_timeout(800)
     assert pg.locator('#bsform').count()==1,pg.inner_text('main')[:300]
-    assert pg.locator('#bst-renta').input_value()=='' and pg.locator('#bsr-renta .chip.on').count()==0,'blank, no Fija/Variable'
+    assert pg.locator('#bst-renta').input_value()==''
+    form=pg.inner_text('#bsform')
+    assert 'Fija' not in form and 'Variable' not in form and 'Var.' not in form,'no type UI on Tony form: '+form[:400]
+    assert pg.locator('#bsr-renta .chip').count()==0,'no Fija/Variable chips'
     sub=pg.inner_text('#sub');assert 'Invalid Date' not in sub and 'Invalid Date' not in pg.inner_text('body')
     assert 'Actualizado' in sub and '2026' in sub,'expected a real date in header: '+sub
     E("()=>{DOC.updatedAt=undefined;vRedraw()}");pg.wait_for_timeout(200)
@@ -26,12 +29,10 @@ with app(ROOT,now='2026-11-10T16:00:00',state=S,new_look=True,routes=R) as pg:
     assert 'Tony 50%' in pg.inner_text('#bsr-renta') and 'Joe 100%' in pg.inner_text('#bsr-seguro')
     E("document.getElementById('bsform').scrollIntoView({block:'start'})");pg.wait_for_timeout(150)
     pg.screenshot(path=os.path.join(SH,'v140-tony-hoja-en-blanco.png'), full_page=True)
-    # enviar sin Fija/Variable → error
-    pg.fill('#bst-renta','1000');pg.click('#bssend');pg.wait_for_timeout(100)
-    assert 'Fija o Variable' in pg.inner_text('#bserr')
-    pg.click('#bsr-renta [data-fx="true"]');pg.wait_for_timeout(50)
+    # se puede enviar solo con el total (ya no hace falta Fija/Variable)
+    pg.fill('#bst-renta','1000')
     # editor de reparto: Gas entre Tony, Arianna y Joe, iguales
-    pg.fill('#bst-gas','40');pg.click('#bsr-gas [data-fx="false"]')
+    pg.fill('#bst-gas','40')
     pg.click('#bsr-gas .bsch');pg.wait_for_timeout(100)
     pg.click("#vbed .chip:text-is('Carlos')");pg.click("#vbed .chip:text-is('Arianna')");pg.click("#vbed .chip:text-is('Iguales')");pg.wait_for_timeout(100)
     t=pg.inner_text('#vbsum');assert 'Arianna $13.33' in t or 'Arianna $13.34' in t,t

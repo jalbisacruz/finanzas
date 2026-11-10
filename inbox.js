@@ -44,7 +44,7 @@ const LEGACY_TF=/compras de Tony\/Arianna|Tony\/Arianna purchases/i;
 const isLegacyTF=b=>!!b&&(b.id==='_tfood'||LEGACY_TF.test(String(b.name||'')));
 const nmPlain=s=>String(s||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();
 const isComidaBill=b=>!!b&&!isLegacyTF(b)&&(/^(food|comida)$/i.test(nmPlain(b.name))||/^(food|comida)$/i.test(nmPlain(DN(b.name))));
-function comidaBill(m,create){if(!m||!m.bills)return null;let b=m.bills.find(isComidaBill)||m.bills.find(x=>!isLegacyTF(x)&&!x.fixed&&billCat(x)==='🛒 Comida/Supermercado');
+function comidaBill(m,create){if(!m||!m.bills)return null;let b=m.bills.find(isComidaBill)||m.bills.find(x=>!isLegacyTF(x)&&billCat(x)==='🛒 Comida/Supermercado');
  if(!b&&create){b={id:uid(),name:'Food',amount:0,fixed:false,cat:'🛒 Comida/Supermercado'};m.bills.push(b)}return b||null}
 const tfManual=b=>r2((+b.amount||0)-(+b.tfood||0));
 function syncTFood(m){if(!m||!m.bills)return false;const a=tonyFood(m),b=comidaBill(m,a>0.004);if(!b)return false;

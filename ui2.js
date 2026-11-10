@@ -18,7 +18,7 @@ Object.assign(EN,{"Hoy":"Today","Transferir":"Transfer","Cobrar":"Collect","No s
 "Hola Carlos, tu parte de las compras de {0}:":"Hi Carlos, your share of purchases for {0}:","Total":"Total","− Ya pagado":"− Already paid","Pendiente":"Pending",
 "Tony – {0}":"Tony – {0}","Carlos – {0}":"Carlos – {0}","{0} vence en {1} días":"{0} due in {1} days","{0} vence hoy":"{0} due today","{0} vence mañana":"{0} due tomorrow","{0} venció hace {1} días":"{0} was due {1} days ago",
 "+ Próximo cheque":"+ Next check","Saldos":"Balances","Los nombres se cambian en Configuración › Cuentas.":"Names are changed in Settings › Accounts.","Los nombres se cambian en Configuración › Tarjetas.":"Names are changed in Settings › Cards.",
-"Cheques depositados":"Deposited checks","Buscar":"Search","Cuentas de Tony del mes":"Tony's bills this month","Los nombres, Fija/Var. y categorías se cambian en Configuración › Cuentas de Tony.":"Names, Fixed/Var. and categories are changed in Settings › Tony's bills.",
+"Cheques depositados":"Deposited checks","Buscar":"Search","Cuentas de Tony del mes":"Tony's bills this month","Los nombres, Fija/Var. y categorías se cambian en Configuración › Cuentas de Tony.":"Names, Fixed/Var. and categories are changed in Settings › Tony's bills.","Los nombres y categorías se cambian en Configuración › Cuentas de Tony.":"Names and categories are changed in Settings › Tony's bills.","Los montos se pueden cambiar cuando haga falta. Al crear un mes se copian los últimos.":"Amounts can be changed whenever needed. They carry over when you add a month.",
 "Gasto y presupuesto por categoría":"Spending and budget by category","Más":"More","Ingresos del mes":"Income this month",
 "Catálogos":"Catalogs","Categorías y presupuesto":"Categories and budget","Cuentas (dinero)":"Accounts (money)","Tarjetas":"Cards","Destinatarios de envíos":"Remittance recipients",
 "Elige cuál editar":"Pick one to edit","Elige cuál eliminar":"Pick one to remove","Nuevo":"New","Ya existe":"It already exists","Guardado":"Saved","Eliminado":"Removed",
@@ -102,8 +102,8 @@ function chkCard(){const L2=depChecks();return `<div class="card defcol" id="chk
 function mov(){return balCard('income')+balCard('cards')+com().replace('<div class="card">','<div class="card" id="comcard"><h2>🛒 '+T('Compras compartidas')+'</h2>')+movList()+chkCard()}
 // ---------- Mes ----------
 function billsMonth(){const m=M();return `<div class="card" id="billsm"><h2>🧾 ${T('Cuentas de Tony del mes')}<span>${f(sum(m.bills,x=>x.amount))}</span></h2>
- ${m.bills.map(x=>`<div class="row"><button class="tcat" title="${esc(DN(billCat(x)))}" onclick="catPick('${x.id}')">${esc(billCat(x).split(' ')[0])}</button><span class="n">${esc(DN(x.name)||'—')} <span class="muted">${x.fixed?T('Fija'):T('Var.')}</span></span><input type="number" inputmode="decimal" step="0.01" value="${typeof billInVal==='function'?billInVal(x):(x.amount||'')}" placeholder="0" style="max-width:110px" onchange="upd('bills','${x.id}','amount',this.value)">${billSt(x)}</div>${typeof tfNote==='function'?tfNote(x):''}`).join('')}
- <div class="muted">${T('Los nombres, Fija/Var. y categorías se cambian en Configuración › Cuentas de Tony.')}</div></div>`}
+ ${m.bills.map(x=>`<div class="row"><button class="tcat" title="${esc(DN(billCat(x)))}" onclick="catPick('${x.id}')">${esc(billCat(x).split(' ')[0])}</button><span class="n">${esc(DN(x.name)||'—')}</span><input type="number" inputmode="decimal" step="0.01" value="${typeof billInVal==='function'?billInVal(x):(x.amount||'')}" placeholder="0" style="max-width:110px" onchange="upd('bills','${x.id}','amount',this.value)">${billSt(x)}</div>${typeof tfNote==='function'?tfNote(x):''}`).join('')}
+ <div class="muted">${T('Los nombres y categorías se cambian en Configuración › Cuentas de Tony.')}</div></div>`}
 const _res=res;res=function(){const o=_res(),i=o.lastIndexOf('<div class="card"><h2>'+T('Detalle'));return i<0?o+billsMonth():o.slice(0,i)+billsMonth()+o.slice(i)};
 // ---------- Reportes ----------
 rep=function(){const m=M(),sp=spent(m),{by:bb,t}=budBy(m),lim=S.budgets,er=earned(m),all=keys().map(k=>[k,spent(S.months[k]).total,earned(S.months[k]).total]),acc=all.reduce((a,[,x])=>a+x,0),accI=all.reduce((a,[,,i])=>a+i,0);
@@ -171,15 +171,14 @@ function lineCtl(kind){return {title:()=>kind==='cards'?'💳 '+T('Tarjetas'):'�
  del(i){S.cur=keys().at(-1);const x=L()[kind][i];if(!x)return;if(kind==='income'&&x===debE(L()))return alert(T('Esta línea no se puede eliminar.'));delAsk(kind,x.id)}}}
 CTL.money=lineCtl('income');CTL.cards=lineCtl('cards');
 // 4) cuentas de Tony (plantilla = mes vivo)
-function billExtra(b){const cur=b?billCat(b):'📦 Otros';return `<label style="display:flex;align-items:center;gap:8px;margin:6px 0"><input type="checkbox" id="ndf" style="width:auto;transform:scale(1.3)" ${b&&b.fixed?'checked':''}> ${T('Fija')} <span class="muted">(${T('“Fija” pasa su monto al mes siguiente; “Var.” empieza en 0')})</span></label>
- <div class="muted">${T('Categoría')}</div><div class="chips" id="ndc">${S.cats.filter(c=>c!=='🤝 Tony').map(c=>`<button class="chip ${c===cur?'on':''}" data-c="${esc(c)}" onclick="document.querySelectorAll('#ndc .chip').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${esc(DN(c))}</button>`).join('')}</div>`}
+function billExtra(b){const cur=b?billCat(b):'📦 Otros';return `<div class="muted">${T('Categoría')}</div><div class="chips" id="ndc">${S.cats.filter(c=>c!=='🤝 Tony').map(c=>`<button class="chip ${c===cur?'on':''}" data-c="${esc(c)}" onclick="document.querySelectorAll('#ndc .chip').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${esc(DN(c))}</button>`).join('')}</div>`}
 CTL.bills={title:()=>'🧾 '+T('Cuentas de Tony'),hint:()=>T('Los cambios de nombre se aplican a todos los meses.'),
- items:()=>L().bills.map(b=>({label:DN(b.name)||'—',sub:`${billCat(b).split(' ')[0]} ${DN(billCat(b)).replace(/^\S+\s/,'')} · ${b.fixed?T('Fija'):T('Var.')}`})),
+ items:()=>L().bills.map(b=>({label:DN(b.name)||'—',sub:`${billCat(b).split(' ')[0]} ${DN(billCat(b)).replace(/^\S+\s/,'')}`})),
  add(){nameDlg({title:T('Nuevo'),extra:billExtra(null),onOk:({n})=>{if(L().bills.some(x=>same(x.name,n)||same(DN(x.name),n))){alert(T('Ya existe'));return false}
-  L().bills.push({id:uid(),name:DNrev(n),amount:0,fixed:document.getElementById('ndf').checked,cat:document.querySelector('#ndc .chip.on')?.dataset.c||'📦 Otros'})}})},
+  L().bills.push({id:uid(),name:DNrev(n),amount:0,cat:document.querySelector('#ndc .chip.on')?.dataset.c||'📦 Otros'})}})},
  edit(i){const b=L().bills[i];if(!b)return;nameDlg({title:T('Editar'),name:DN(b.name),extra:billExtra(b),onOk:({n})=>{const nn=DNrev(n),old=b.name;
   if(nn!==old&&L().bills.some(x=>x!==b&&(same(x.name,n)||same(DN(x.name),n)))){alert(T('Ya existe'));return false}
-  const cat=document.querySelector('#ndc .chip.on')?.dataset.c,fx=document.getElementById('ndf').checked;b.fixed=fx;if(cat&&cat!==billCat(b))b.cat=cat;
+  const cat=document.querySelector('#ndc .chip.on')?.dataset.c;if(cat&&cat!==billCat(b))b.cat=cat;
   if(nn!==old)eachMonth(m=>m.bills.forEach(x=>{if(x.name===old){if(!x.cat)x.cat=billCat(x);x.name=nn}}))}})},
  del(i){const b=L().bills[i];if(!b)return;if((+b.amount||0)>0.004||(+b.paid||0)>0.004)return alert(T('{0} tiene monto este mes. Ponlo en 0 en Mes antes de eliminar.',DN(b.name)));
   if(!confirm(T('¿Eliminar {0}?',DN(b.name))))return;L().bills.splice(i,1);save();dlg().close();render()}};

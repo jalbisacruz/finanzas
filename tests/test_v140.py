@@ -27,7 +27,7 @@ with app(ROOT,now='2026-11-10T16:00:00',state=S,new_look=True) as pg:
     check(E("BS.split(90,{who:[],mode:'eq'}).err")=='nadie','nobody')
     check(E("BS.split(80,{who:['Arianna'],mode:'one'}).Arianna")==80,'one person')
     # ---- enlace: noviembre en blanco, sin saldos ----
-    d=E("snapFor('Tony')");bs=d['billSheet'];check(bs['k']=='2026-11' and all(r['total'] is None and r['fixed'] is None for r in bs['rows']),'blank sheet')
+    d=E("snapFor('Tony')");bs=d['billSheet'];check(bs['k']=='2026-11' and all(r['total'] is None and 'fixed' not in r and not r.get('review') for r in bs['rows']),'blank sheet %s'%bs['rows'][0])
     keys=[r['key'] for r in bs['rows']];check(keys[:2]==['renta','ventanas'] and 'comida' not in keys and any(r['name']=='Ventanas de impacto' for r in bs['rows']),'ventanas in, comida out %s'%keys)
     s=json.dumps(bs);check(all(k not in s for k in ['income','cards','balance','paid','events']),'no balances in sheet')
     check('billSheet' not in E("snapFor('Carlos')"),'carlos no sheet')
@@ -47,6 +47,7 @@ with app(ROOT,now='2026-11-10T16:00:00',state=S,new_look=True) as pg:
     t=pg.inner_text('#dlg');check('Te queda por pagar' in t and 'Ventanas de impacto' in t,t)
     check('Comida' not in t.split('Te queda')[0] or 'Abono de comida' not in t,'comida must not be a sheet row: %s'%t)
     check('Ya pagado' in t and '$80.00' in t,'xfer/abonos still in summary')
+    check('Fija' not in t and 'Var.' not in t,'no type labels in approval: %s'%t)
     pg.screenshot(path=os.path.join(SH,'v140-joe-aprobar.png'))
     c0=E("calc(M())")
     pg.click('#bsok');pg.wait_for_timeout(200)
@@ -67,6 +68,14 @@ with app(ROOT,now='2026-11-10T16:00:00',state=S,new_look=True) as pg:
     check('Pendiente' in card,'pending on card')
     E("()=>{document.querySelectorAll('.toast').forEach(x=>x.remove());document.getElementById('bscard').scrollIntoView({block:'center'})}");pg.wait_for_timeout(100)
     pg.screenshot(path=os.path.join(SH,'v140-deudas-actualizadas.png'))
+    # Cuentas: sin Fija/Var, montos editables
+    E("()=>{tab='res';render()}");pg.wait_for_timeout(200)
+    if pg.locator('#billsm').count()==0:
+        E("()=>{tab='mov';render()}");pg.wait_for_timeout(200)
+    tx=pg.inner_text('#billsm');check('Fija' not in tx and 'Var.' not in tx,'cuentas UI has no type: %s'%tx)
+    check(pg.locator('#billsm input[type=number]').count()==E("M().bills.length"),'all bills editable')
+    E("document.getElementById('billsm').scrollIntoView({block:'center'})");pg.wait_for_timeout(100)
+    pg.screenshot(path=os.path.join(SH,'v140-cuentas-sin-fija.png'))
     # idempotente
     b1=E("JSON.stringify(M().bills)");E("d=>{INBOX=[d]}",doc);r=E("bsApprove('x1')");check(r.get('done') and E("JSON.stringify(M().bills)")==b1,'idempotent')
     check(E("bsMonth('2026-11').rev")==1,'rev 1')
@@ -84,11 +93,27 @@ with app(ROOT,now='2026-11-10T16:00:00',state=S,new_look=True) as pg:
     F=E("comidaBill(M())");check(F['amount']==110 and F['tfood']==10 and F['paid']==80,'Food 100 + 10 recibos, abono 80; hoja no interviene %s'%F)
     # un envío viejo/malicioso con fila comida se ignora
     food=E("JSON.stringify(comidaBill(M()))");docF=dict(doc,id='xfood',rev=2,rows=[{'key':'comida','total':300,'fixed':False,'alloc':{'who':['Joe'],'mode':'one'}}]);E("d=>{INBOX=[d]}",docF);r=E("bsApprove('xfood')");check(E("JSON.stringify(comidaBill(M()))")==food and (r.get('err')=='empty' or r.get('ok') or r.get('err')),'comida row ignored, Food unchanged %s'%r)
-    # ---- mes siguiente: lo último que Tony puso, variables a revisar; noviembre aprobado intacto ----
-    E("()=>{S.months['2026-12']={income:[{id:'d',name:'Débito',amount:0,role:'debit'}],cards:[],bills:[],personal:[],purchases:[],events:[]};S.cur='2026-12';save()}")
+    # ---- + Mes: todos los montos (antes fijos o variables) se copian editables; Comida empieza en 0 (recibos); noviembre no se toca ----
+    nov=E("JSON.stringify(S.months['2026-11'].bills)")
+    foodNov=E("JSON.stringify(comidaBill(S.months['2026-11']))")
+    E("()=>{window.prompt=()=>'2026-12';window.confirm=()=>true;document.getElementById('newm').click()}")
+    pg.wait_for_timeout(300)
+    check(E("S.cur")=='2026-12','new month')
+    D={b['name']:b for b in E("M().bills")}
+    check(D['Rent House']['amount']==275,'renta carried %s'%D['Rent House'])
+    check(D['Ventanas de impacto']['amount']==30,'ventanas carried')
+    check(D['Electricity']['amount']==0,'luz 0 carried (was variable; not reset-by-type, already 0)')
+    g=D['Gas']['amount'];check(abs(g-13.33)<1e-9 or abs(g-13.34)<1e-9,'gas carried %s'%g)
+    check(D['Phone']['amount']==60 and not D['Phone'].get('paid'),'phone amount carried, paid is monthly')
+    check(D['Car Insurance']['amount']==150,'insurance carried')
+    check(D['Food']['amount']==0 and not D['Food'].get('tfood') and not D['Food'].get('paid'),'comida starts clean for receipts %s'%D['Food'])
+    check(E("JSON.stringify(S.months['2026-11'].bills)")==nov and E("JSON.stringify(comidaBill(S.months['2026-11']))")==foodNov,'nov history/abonos unchanged')
+    # editar diciembre no cambia noviembre
+    E("()=>{M().bills.find(b=>b.name==='Rent House').amount=999;save()}")
+    check(E("S.months['2026-11'].bills.find(b=>b.name==='Rent House').amount")==275,'editing dec leaves nov')
     d=E("snapFor('Tony')['billSheet']");R={r['key']:r for r in d['rows']}
-    check(d['k']=='2026-12' and R['renta']['total']==1100 and R['renta']['fixed'] is True and not R['renta']['review'],'fixed prefilled')
-    check(R['gas']['total']==40 and R['gas']['review'] is True and R['gas']['alloc']['mode']=='eq','variable prefilled + review, alloc kept')
+    check(d['k']=='2026-12' and R['renta']['total']==1100 and 'fixed' not in R['renta'] and not R['renta'].get('review'),'prefill last approved, no type')
+    check(R['gas']['total']==40 and not R['gas'].get('review') and R['gas']['alloc']['mode']=='eq','gas prefilled same as renta, no review flag')
     check(R['telefono']['total'] is None and 'comida' not in R,'never-entered stays blank; comida absent from prefill')
     check(E("bsMonth('2026-11').rev")==2 and len(E("bsMonth('2026-11').hist"))==2,'nov history kept')
 print('OK',ok)

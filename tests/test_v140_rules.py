@@ -11,7 +11,7 @@ assert 'allow create:' in block and 'allow update' not in block and 'allow delet
 assert "data.who == 'Tony'" in block
 assert "kind == 'bills'" in block
 assert "by == 'Tony'" in block
-assert "hasOnly(['kind','by','month','rev','rows','at'])" in block
+assert "hasOnly(['kind','by','month','rev','rows','at'])" in block  # doc-level
 assert "hasAll(['kind','by','month','rev','rows','at'])" in block
 assert 'request.time' in block
 assert 'rows.size() <= 20' in block
@@ -19,6 +19,9 @@ assert 'rev <= 10000' in block
 assert 'total <= 100000' in block
 assert "key.matches('^(renta|ventanas|agua|luz|gas|telefono|internet|purificador|seguro|letra)$')" in block
 assert 'comida' not in block.lower().split('key.matches')[1].split(')')[0]
+assert "hasAll(['key','total','alloc'])" in block and "hasOnly(['key','total','alloc','fixed'])" in block
+assert "(!('fixed' in r) || r.fixed is bool)" in block
+assert "r.fixed is bool\n" not in block.replace("(!('fixed' in r) || r.fixed is bool)",'')
 assert 'match /users/' not in block and 'allow write' not in block and 'allow update' not in block
 assert 'allow read, write: if request.auth != null && request.auth.uid == uid' in users
 assert 'allow list: if false' in rules

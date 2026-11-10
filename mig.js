@@ -76,7 +76,7 @@ CTL.people.edit=i=>{const p=S.people[i];nameDlg({title:T('Editar'),name:DN(p),on
    if(kind==='cards'){const d=+document.getElementById('ndd').value;if(d>=1&&d<=31)S.cardDue[x.name]=d;else delete S.cardDue[x.name]}}})}});
 CTL.bills.edit=i=>{const b=L().bills[i];if(!b)return;nameDlg({title:T('Editar'),name:DN(b.name),extra:billExtra(b),onOk:({n})=>{
  if(L().bills.some(x=>x!==b&&same(DN(x.name),n))){alert(T('Ya existe'));return false}
- const cat=document.querySelector('#ndc .chip.on')?.dataset.c;b.fixed=document.getElementById('ndf').checked;if(cat&&cat!==billCat(b))b.cat=cat;setLabel(['bill'],b.name,n)}})};
+ const cat=document.querySelector('#ndc .chip.on')?.dataset.c;if(cat&&cat!==billCat(b))b.cat=cat;setLabel(['bill'],b.name,n)}})};
 [['stores','store'],['recips','rec']].forEach(([k,t])=>{const key=k==='stores'?'stores':'recipients';CTL[k].edit=i=>{const s=S[key][i];
  nameDlg({title:T('Editar'),name:DN(s),onOk:({n})=>{if(S[key].some(x=>x!==s&&same(DN(x),n))){alert(T('Ya existe'));return false}setLabel([t],s,n)}})};
  const _it=CTL[k].items;CTL[k].items=()=>(S[key]||[]).map(s=>({label:DN(s)}))});
