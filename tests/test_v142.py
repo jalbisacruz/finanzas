@@ -28,7 +28,7 @@ def base():
 S=base()
 with app(ROOT,now='2026-11-11T10:00:00',state=S,new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(700)
-    check(E('CODE_V')=='v142','ver')
+    check(E('CODE_V')>='v142','ver')
     E("()=>{tab='ini';render()}");pg.wait_for_timeout(200)
     check(pg.locator('#ywearly').count()==1 and 'Ya se depositó' in pg.inner_text('#herocard'),'hero action')
     mark(pg);pg.locator('#herocard').scroll_into_view_if_needed();pg.wait_for_timeout(100)
@@ -108,48 +108,24 @@ with app(ROOT,now='2026-11-19T04:01:00',state=S3,new_look=True) as pg:
     E("autoDeposit()");check(abs(E("debE(L()).amount")-(deb+512.34))<0.001,'normal auto not twice')
     nx=E("pendingCheck()");check(nx and nx['date']=='2026-11-26' and nx.get('amtPending'),'next after auto is 26 %s'%nx)
 
-# month boundary: collect Oct 29 for scheduled Thu Nov 5
+# v143: Oct 29 is not the day before Thu Nov 5 (that's Wed Nov 4). Early save must not credit.
 Sb=copy.deepcopy(FIX);Sb['cur']='2026-10'
 if '2026-11' not in Sb['months']:
     Sb['months']['2026-11']={'income':[{'id':'n1','name':'Débito','amount':800,'role':'debit'}],'cards':[],'bills':[],'personal':[],'purchases':[],'events':[],'tonyBase':0}
-# debit lives on latest month (Nov)
 Sb['months']['2026-11']['income']=[{'id':'n1','name':'Débito','amount':800,'role':'debit'}]
 Sb['months']['2026-11'].setdefault('events',[])
 Sb['checks']=[{'id':'n05','amount':0,'amtPending':True,'date':'2026-11-05','status':'pending'}]
 with app(ROOT,now='2026-10-29T15:00:00',state=Sb,new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(700)
     E("()=>{tab='ini';S.cur='2026-10';render()}");pg.wait_for_timeout(150)
-    # pending is Nov 5 even if viewing October
     check(E("pendingCheck().date")=='2026-11-05','upcoming payday Nov 5')
-    E("""()=>{const d=document.createElement('dialog'); /* use API directly */
-      window.__deb=debE(L()).amount;
-      document.body.insertAdjacentHTML('beforeend','<input id="ywea" value="480"><input id="ywed" value="2026-10-29">');
-      ywEarlySave()}""");pg.wait_for_timeout(200)
+    check(pg.locator('#ywearly').count()==0,'no button on Oct 29 (not the day before)')
+    deb=E("debE(L()).amount")
+    E("""()=>{document.body.insertAdjacentHTML('beforeend','<input id="ywea" value="480"><input id="ywed" value="2026-10-29">');
+      ywEarlySave();ywEarlySave('n05')}""");pg.wait_for_timeout(200)
     c=E("S.checks.find(x=>x.id==='n05')")
-    check(c['status']=='deposited' and c['date']=='2026-11-05' and c['depositedOn']=='2026-10-29','boundary identity')
-    ev=E("Object.entries(S.months).map(([k,m])=>[k,(m.events||[]).filter(e=>e.checkId==='n05')])")
-    # event in October
-    byk={k:v for k,v in ev}
-    check(len(byk.get('2026-10') or [])==1 and len(byk.get('2026-11') or [])==0,'event in actual month Oct %s'%ev)
-    check(abs((E("earned(S.months['2026-10']).by['💼 Cheque']") or 0)-480)<0.01 or True, 'oct earned')
-    # earned Nov must not include this 480 (may include nothing)
-    check((E("earned(S.months['2026-11']).by['💼 Cheque']") or 0)<0.01,'not in Nov earned')
-    check(E("pendingCheck().date")=='2026-11-12','next after boundary is Nov 12')
-    E("()=>{S.cur='2026-10';render()}");pg.wait_for_timeout(150)
-    E("()=>{tab='mov';S.cur='2026-10';render()}");pg.wait_for_timeout(200)
-    t=pg.inner_text('#chkcard') if pg.locator('#chkcard').count() else ''
-    check('480' in t and ('29' in t or '28' in t),'Oct list uses actual date: '+t)
-    E("()=>{S.cur='2026-11';tab='ini';render()}");pg.wait_for_timeout(200)
-    left=E("planNums().ywLines.map(x=>x.d)")
-    check('2026-11-05' not in left and '2026-11-12' in left,'Nov plan skips collected slot %s'%left)
-    # 4am Nov 5 no duplicate
-    E("autoDeposit()");pg.wait_for_timeout(100)
-    # clock is still Oct 29 — force due by calling filter mentally: autoDeposit uses Date() which is clock Oct 29, so Nov 5 not due yet.
-    # jump clock
-    pg.clock.set_fixed_time('2026-11-05T04:01:00')
-    deb=E("debE(L()).amount");n=E("Object.values(S.months).reduce((n,m)=>n+(m.events||[]).filter(e=>e.checkId==='n05').length,0)")
-    E("autoDeposit()");pg.wait_for_timeout(200)
-    check(abs(E("debE(L()).amount")-deb)<0.001 and E("Object.values(S.months).reduce((n,m)=>n+(m.events||[]).filter(e=>e.checkId==='n05').length,0)")==n,'Nov 5 4am no duplicate after early Oct 29')
+    check(c['status']=='pending' and c['date']=='2026-11-05','ineligible day does not collect')
+    check(abs(E("debE(L()).amount")-deb)<0.001 and E("Object.values(S.months).reduce((n,m)=>n+(m.events||[]).filter(e=>e.checkId==='n05').length,0)")==0,'no debit/event on ineligible day')
 
 # unknown estimate: no prior deposited, must enter a positive amount
 Su=base();Su['checks']=[{'id':'c12','amount':0,'amtPending':True,'date':'2026-11-12','status':'pending'}]
