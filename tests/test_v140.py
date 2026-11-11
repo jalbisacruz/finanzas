@@ -16,7 +16,7 @@ S['months']['2026-11']={'income':[{'id':'i1','name':'Débito','amount':3000,'rol
           {'id':'b3','name':'Electricity','amount':95.4,'fixed':False},{'id':'b4','name':'Gas','amount':40,'fixed':False},
           {'id':'b5','name':'Car Insurance','amount':150,'fixed':True},{'id':'b6','name':'Food','amount':100,'fixed':False,'paid':80}]}
 with app(ROOT,now='2026-11-10T16:00:00',state=S,new_look=True) as pg:
-    E=pg.evaluate;pg.wait_for_timeout(700);check(E('CODE_V')=='v140','ver')
+    E=pg.evaluate;pg.wait_for_timeout(700);check(E('CODE_V')>='v140','ver')
     # ---- reparto puro ----
     sp=E("BS.split(1000,BS.def('renta'))");check(sp=={'Joe':250,'Tony':500,'Carlos':250,'Arianna':0},sp)
     sp=E("BS.split(100.01,BS.def('agua'))");check(abs(sum(sp.values())-100.01)<1e-9 and sp['Tony']==50.01,sp)       # centavo al mayor resto

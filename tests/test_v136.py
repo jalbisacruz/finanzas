@@ -9,7 +9,7 @@ if not any('Compras' in c for c in S['cats']):
 S['storeMem']={'publix':{'name':'Publix','cat':'⛽ Gasolina'},'walmart':{'name':'Walmart','cat':'🛒 Comida/Supermercado'}}
 S['months']['2026-11']={'income':[{'id':'i1','name':'Débito','amount':500,'role':'debit'}],'cards':copy.deepcopy(S['months']['2026-10'].get('cards') or []),'bills':[],'personal':[],'purchases':[],'events':[]}
 with app(ROOT,now='2026-11-09T16:00:00',state=S,new_look=True) as pg:
-    E=pg.evaluate;pg.wait_for_timeout(700);assert E('CODE_V')=='v136'
+    E=pg.evaluate;pg.wait_for_timeout(700);assert E('CODE_V')>='v136'
     # heal mem
     assert E("S.storeMem.publix.cat").find('Compras')>=0, E("S.storeMem.publix")
     assert abs(E("scanCat('Gas')")!='⛽ Gasolina' or True)

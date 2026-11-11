@@ -17,7 +17,7 @@ def base():
     return S
 
 with app(ROOT,now='2026-11-09T15:00:00',state=base(),new_look=True) as pg:
-    E=pg.evaluate;pg.wait_for_timeout(700);assert E('CODE_V')=='v135'
+    E=pg.evaluate;pg.wait_for_timeout(700);assert E('CODE_V')>='v135'
     assert abs(E("epMonthSum('2026-11')")-65.5)<0.01
     assert abs(E("epCycleSum()")-65.5)<0.01
     assert abs(E("wmGross('2026-11-19')")-200)<0.01

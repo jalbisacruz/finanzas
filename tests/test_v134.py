@@ -12,7 +12,7 @@ with app(ROOT,now='2026-11-05T03:59:00',state=st(),new_look=True) as pg:
     assert E("Object.keys(S.wm.paid).length")==0 and E("debE(L()).amount")==1200,'antes de 4AM nada'
 with app(ROOT,now='2026-11-05T04:01:00',state=st(),new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(800);E("autoDeposit()");pg.wait_for_timeout(300)
-    assert E('CODE_V')=='v134'
+    assert E('CODE_V')>='v134'
     assert E("S.wm.paid['2026-11-05']")==226.51,E("S.wm")
     assert abs(E("debE(L()).amount")-1958.11)<0.01,E("debE(L()).amount")
     assert E("wmNext()")=='2026-11-19' and E("wmAmt('2026-11-19')")==0

@@ -15,7 +15,7 @@ S['incCats']=list(S.get('incCats') or [])+['OnePay','🏪 Walmart']
 S['checks']=[{'id':'c1','amount':531.60,'date':'2026-11-05','status':'deposited'},{'id':'c2','amount':540,'date':'2026-11-12','status':'pending'}]
 S['wm']={'chk':{'2026-11-19':200},'paid':{'2026-11-05':176.51}}
 with app(ROOT,now='2026-11-09T23:00:00',state=S,new_look=True) as pg:
-    E=pg.evaluate;pg.wait_for_timeout(700);assert E('CODE_V')=='v138'
+    E=pg.evaluate;pg.wait_for_timeout(700);assert E('CODE_V')>='v138'
     P=E("planNums()");D=E("v138Data(planNums())")
     wm=[(x['t'],x['d']) for x in D['wm']];print('wm',wm);print('yw',[(x['t'],x['d'],x['a']) for x in D['yw']])
     assert wm==[('p','2026-11-02'),('p','2026-11-04'),('r','2026-11-05'),('p','2026-11-07'),('p','2026-11-09'),('e','2026-11-19')],wm
