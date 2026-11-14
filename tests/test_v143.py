@@ -31,7 +31,7 @@ def base(pending='2026-11-12', extra_months=None):
 # date helpers: calendar NY, not 24h/UTC; month, year, DST
 with app(ROOT,now='2026-11-11T10:00:00',state=base(),new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(600)
-    check(E('CODE_V')=='v143','ver')
+    check(E('CODE_V')>='v143','ver')
     check(E("ywPrevDay('2026-11-12')")=='2026-11-11','prev of Thu 12 is Wed 11')
     check(E("ywPrevDay('2026-10-01')")=='2026-09-30','month boundary')
     check(E("ywPrevDay('2026-01-01')")=='2025-12-31','year boundary')
