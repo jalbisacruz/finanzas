@@ -59,15 +59,18 @@ def snap(pg, E=None):
 # --- versión, fecha NY, sin tarjeta preelegida en el + ---
 with app(ROOT,now='2026-11-14T13:21:00',state=amazon_state(),new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(400)
-    check(E('CODE_V')=='v144','ver')
+    check(E('CODE_V')>='v144','ver')
     check(E('typeof rfDlg')=='function' and E('typeof _v144')=='object','api')
     check(E('_v144.rfToday()')=='2026-11-14','fecha default NY')
     E("()=>{tab='mov';render()}")
     pg.wait_for_timeout(200)
-    # fila de tarjeta trae Devolución
+    # v145: la fila de tarjeta no trae Devolución; el + sí
     check(E("!!document.querySelector(\"#balcard, #movcard, body\").innerText") or True,'render')
     html=E("document.body.innerHTML")
-    check('Devolución' in html and 'PAGAR' in html,'botón en la fila')
+    check('PAGAR' in html,'PAGAR sigue en la fila')
+    check(E("document.querySelectorAll(\"button[onclick*='rfDlg']\").length")==0,'sin botón Devolución en filas')
+    cards=E("document.getElementById('bal-cards')&&document.getElementById('bal-cards').innerText") or ''
+    check('PAGAR' in cards and 'Ajustar' not in cards and 'Devolución' not in cards,'fila de tarjeta solo PAGAR')
     pg.click('#fab');pg.wait_for_timeout(200)
     check(E("!!document.getElementById('fabrf')"),'entrada en el +')
     pg.click('#fabrf');pg.wait_for_timeout(250)
@@ -148,14 +151,15 @@ with app(ROOT,now='2026-11-14T13:21:00',state=amazon_state(),new_look=True) as p
     mark(pg)
     pg.screenshot(path=os.path.join(SH,'v144-gasto-rebajado.png'),full_page=True)
 
-# --- idempotencia, anular, preselección desde la fila, exceso, segunda parcial ---
+# --- idempotencia, anular, sin preselección, exceso, segunda parcial ---
 with app(ROOT,now='2026-11-14T13:21:00',state=amazon_state(),new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(300)
-    # preselección solo si entra desde esa fila
-    E("()=>{tab='mov';render();rfDlg('amz')}")
+    # el diálogo del + abre sin tarjeta preelegida (ya no hay botón en la fila)
+    E("()=>{tab='mov';render();rfDlg()}")
     pg.wait_for_timeout(200)
-    check(E("document.querySelector('#rfchips .pay')&&document.querySelector('#rfchips .pay').dataset.rfcard==='amz'"),'preelige la tarjeta de la fila')
-    check(E("document.querySelectorAll('[data-rfsrc]').length")>=2,'lista al abrir desde la fila')
+    check(E("!document.querySelector('#rfchips .pay')"),'sin tarjeta preelegida')
+    check(E("!document.querySelector('[data-rfsrc]')"),'sin lista hasta elegir tarjeta')
+    E("()=>{dlg()&&dlg().close()}")
 
     # doble tap del mismo guardado
     n=E("""()=>{
