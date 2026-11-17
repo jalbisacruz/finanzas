@@ -36,7 +36,7 @@ def state():
 
 with app(ROOT,now='2026-11-14T14:20:00',state=state(),new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(400)
-    check(E('CODE_V')=='v145','ver')
+    check(E('CODE_V')>='v145','ver')
     check(E('typeof rfAdjDlg')=='function' and E('typeof adjDlg')=='function' and E('typeof doAdj')=='function','api intacta')
     E("()=>{tab='mov';render()}")
     pg.wait_for_timeout(200)

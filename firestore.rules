@@ -18,9 +18,10 @@ service cloud.firestore {
       // v72: buzón de compras enviadas desde el enlace. Cualquiera con el token puede CREAR (no leer, no listar, no editar).
       // Solo Joe (dueño del enlace) puede leer y borrar.
       match /inbox/{id} {
-        // v140 (LOCAL, sin desplegar): hoja de cuentas de Tony.
+        // v146 (LOCAL, sin desplegar hasta que Joe lo autorice): hoja de cuentas de Tony.
         // Solo CREAR en el buzón del enlace de Tony (mismo modelo que purchase/settle).
         // No lee ni escribe users/{uid} ni el doc shares/{token} (saldos de Joe). No listar, no editar, no borrar desde el enlace.
+        // v146: keys fijas + c-[a-z0-9]{4,16} para cuentas nuevas; name/group opcionales (renombrar / nuevas).
         function billsAllocOk(a) {
           return a is map
             && a.keys().hasOnly(['who','mode','pct','amt'])
@@ -32,11 +33,13 @@ service cloud.firestore {
         }
         function billsRowOk(r) {
           return r is map
-            && r.keys().hasOnly(['key','total','alloc','fixed'])
+            && r.keys().hasOnly(['key','total','alloc','fixed','name','group'])
             && r.keys().hasAll(['key','total','alloc'])
-            && r.key is string && r.key.matches('^(renta|ventanas|agua|luz|gas|telefono|internet|purificador|seguro|letra)$')
+            && r.key is string && r.key.matches('^(renta|ventanas|agua|luz|gas|telefono|internet|purificador|seguro|letra|c-[a-z0-9]{4,16})$')
             && r.total is number && r.total >= 0 && r.total <= 100000
             && (!('fixed' in r) || r.fixed is bool)
+            && (!('name' in r) || (r.name is string && r.name.size() > 0 && r.name.size() <= 60))
+            && (!('group' in r) || r.group in ['casa','auto','otro'])
             && billsAllocOk(r.alloc);
         }
         function billsRowsOk(rows) {

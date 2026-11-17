@@ -13,16 +13,18 @@ const BS_ROWS=[
  {key:'purificador',name:'Purificador',group:'casa',re:/^(purifier|purificador)/i},
  {key:'seguro',name:'Seguro del carro',group:'auto',re:/car insurance|seguro/i},
  {key:'letra',name:'Letra del carro',group:'auto',re:/car letter|letra/i}];
-const GROUPS=[['casa','Casa y servicios'],['auto','Auto']];
+const GROUPS=[['casa','Casa y servicios'],['auto','Auto'],['otro','Otras']];
 const H5025={who:['Tony','Joe','Carlos'],mode:'pct',pct:{Tony:50,Joe:25,Carlos:25}};
 const J100={who:['Joe'],mode:'pct',pct:{Joe:100}};
-// Defaults acordados con Joe. Teléfono, Internet y Purificador: como hoy en la app (todo a Joe) hasta que se cambie el reparto.
-// Comida NO va en esta hoja: Tony ya no pasa factura; lo llevan los recibos (y los abonos) como hasta ahora.
-const BS_DEF={renta:H5025,ventanas:H5025,agua:H5025,luz:H5025,gas:H5025,seguro:J100,letra:J100,telefono:J100,internet:J100,purificador:J100};
-const DEF_NOTE={telefono:1,internet:1,purificador:1};
+// Defaults: solo Letra y Seguro del carro son Joe 100%. El resto (incl. Teléfono, Internet, Purificador y cuentas nuevas) es Tony 50 / Joe 25 / Carlos 25.
+// Comida NO va en esta hoja: lo llevan los recibos. Arianna no participa en la hoja (sí puede seguir en recibos); el cálculo aún acepta un reparto viejo que la incluya.
+const BS_DEF={renta:H5025,ventanas:H5025,agua:H5025,luz:H5025,gas:H5025,seguro:J100,letra:J100,telefono:H5025,internet:H5025,purificador:H5025};
+const DEF_NOTE={};
+const SHEET_WHO=['Joe','Tony','Carlos'];
+const STD_KEYS=['renta','ventanas','agua','luz','gas','telefono','internet','purificador','seguro','letra'];
 const cl=o=>JSON.parse(JSON.stringify(o));
 const cents=v=>Math.round((+v||0)*100);
-function bsDefault(key){return cl(BS_DEF[key]||J100)}
+function bsDefault(key){return cl(BS_DEF[key]||H5025)}
 // reparte total (en $) según alloc → {Joe,Tony,Carlos,Arianna} en $ (2 decimales) o {err}
 function bsSplit(total,alloc){const T=cents(total),out={Joe:0,Tony:0,Carlos:0,Arianna:0};const a=alloc||J100;
  const who=(a.who||[]).filter(p=>PEOPLE.includes(p));if(!who.length)return {err:'nadie'};
@@ -39,7 +41,10 @@ function bsSplit(total,alloc){const T=cents(total),out={Joe:0,Tony:0,Carlos:0,Ar
 function bsAllocTxt(a){a=a||J100;const who=a.who||[];if(a.mode==='eq')return who.join(' · ')+' (iguales)';
  if(a.mode==='amt')return who.map(p=>p+' $'+(+(a.amt||{})[p]||0).toFixed(2)).join(' · ');
  return who.map(p=>p+' '+(+((a.pct||{})[p])||0)+'%').join(' · ')}
+function bsIsStd(key){return STD_KEYS.includes(key)}
+function bsKeyOk(k){return bsIsStd(k)||/^c-[a-z0-9]{4,16}$/.test(k||'')}
+function bsFold(per){const o={Joe:+(per&&per.Joe)||0,Tony:+(per&&per.Tony)||0,Carlos:+(per&&per.Carlos)||0};o.Tony=Math.round((o.Tony+(+(per&&per.Arianna)||0))*100)/100;return o}
 // quién paga: la parte de Arianna la paga Tony
 const BS_PAYER={Arianna:'Tony'};
-G.BS={PEOPLE,ROWS:BS_ROWS,GROUPS,DEF:BS_DEF,DEF_NOTE,def:bsDefault,split:bsSplit,txt:bsAllocTxt,payer:BS_PAYER,cents};
+G.BS={PEOPLE,SHEET_WHO,ROWS:BS_ROWS,GROUPS,DEF:BS_DEF,DEF_NOTE,STD_KEYS,def:bsDefault,split:bsSplit,txt:bsAllocTxt,payer:BS_PAYER,cents,isStd:bsIsStd,keyOk:bsKeyOk,fold:bsFold,H5025,J100};
 })(typeof window!=='undefined'?window:globalThis);

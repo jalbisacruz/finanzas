@@ -31,11 +31,14 @@ with app(ROOT,now='2026-11-10T16:00:00',state=S,new_look=True,routes=R) as pg:
     pg.screenshot(path=os.path.join(SH,'v140-tony-hoja-en-blanco.png'), full_page=True)
     # se puede enviar solo con el total (ya no hace falta Fija/Variable)
     pg.fill('#bst-renta','1000')
-    # editor de reparto: Gas entre Tony, Arianna y Joe, iguales
+    # editor de reparto: Gas entre Joe, Tony y Carlos, iguales; Arianna ya no está en la hoja
     pg.fill('#bst-gas','40')
     pg.click('#bsr-gas .bsch');pg.wait_for_timeout(100)
-    pg.click("#vbed .chip:text-is('Carlos')");pg.click("#vbed .chip:text-is('Arianna')");pg.click("#vbed .chip:text-is('Iguales')");pg.wait_for_timeout(100)
-    t=pg.inner_text('#vbsum');assert 'Arianna $13.33' in t or 'Arianna $13.34' in t,t
+    ev=pg.inner_text('#vbed')
+    assert 'Arianna' not in ev,'Arianna must not appear in split editor: '+ev
+    pg.click("#vbed .chip:text-is('Iguales')");pg.wait_for_timeout(100)
+    t=pg.inner_text('#vbsum')
+    assert 'Arianna' not in t and 'Joe' in t and 'Tony' in t and 'Carlos' in t,t
     pg.screenshot(path=os.path.join(SH,'v140-tony-cambiar-reparto.png'))
     pg.click('#vbedok');pg.wait_for_timeout(100)
     # montos que no cuadran
@@ -43,7 +46,7 @@ with app(ROOT,now='2026-11-10T16:00:00',state=S,new_look=True,routes=R) as pg:
     pg.click('#vbed .chip:text-is("Cancelar")') if pg.locator('#vbed .chip:text-is("Cancelar")').count() else None
     # borrador guardado (parcial) sobrevive a recargar
     pg.reload();pg.wait_for_timeout(800)
-    assert pg.locator('#bst-renta').input_value()=='1000' and 'Arianna' in pg.inner_text('#bsr-gas')
+    assert pg.locator('#bst-renta').input_value()=='1000' and 'Arianna' not in pg.inner_text('#bsr-gas') and 'iguales' in pg.inner_text('#bsr-gas').lower()
     pg.click('#bssend');pg.wait_for_timeout(400)
     docs=E("window.__fs.docs");ib=[v for k,v in docs.items() if k.startswith('shares/%s/inbox/'%TOK)]
     assert len(ib)==1 and ib[0]['kind']=='bills' and ib[0]['month']=='2026-11',ib
