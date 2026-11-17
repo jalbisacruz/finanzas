@@ -53,12 +53,18 @@ if(typeof bsApplyTo==='function'){const _ap=bsApplyTo;bsApplyTo=function(m,rows)
     if(!STD.has(r.key)){b.cat=b.cat||extraCat(r.group);bsPutExtra({key:r.key,name:b.name,group:r.group||'otro',cat:b.cat})}
     else if(r.name){const R=BS.ROWS.find(x=>x.key===r.key);/* no mutar el nombre canónico de las fijas en BS.ROWS; solo la línea del mes */}})}}
 if(typeof bsApprove==='function'){const _ok=bsApprove;bsApprove=function(id,force){const r=_ok(id,force);if(r&&r.ok){/* extra ya en S.bsheet */}return r}}
+function bsPrevKey(k){const[y,m]=String(k||'').split('-').map(Number);if(!y||!m)return'';const d=new Date(y,m-2,15);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function bsMonthShort(k){const[y,m]=String(k||'').split('-');if(!y||!m)return k||'';const loc=typeof LOC==='function'?LOC():(typeof LANG!=='undefined'&&LANG==='en'?'en-US':'es-US');
+ const s=new Date(+y,m-1,15).toLocaleDateString(loc,{month:'short'}).replace('.','');return s?s[0].toUpperCase()+s.slice(1):k}
 if(typeof bsReview==='function'){const _rv=bsReview;bsReview=function(id,force){
   _rv(id,force);
   try{const x=INBOX.find(y=>y.id===id);if(!x)return;const V=bsPreview(x);if(!V||V.err)return;
     const root=dlg();
     (V.rows||[]).forEach(r=>{if(!r||r.err||!r.name)return;const R=(BS.ROWS||[]).find(z=>z.key===r.key);const old=R?R.name:r.key;if(old===r.name)return;
       (root.querySelectorAll('#bsdiff td')||[]).forEach(td=>{const n=td.firstChild;if(n&&n.nodeType===3&&n.textContent===old)n.textContent=r.name})});
+    const heads=root.querySelectorAll('#bsdiff tr.muted td');
+    if(heads[1])heads[1].textContent=bsMonthShort(bsPrevKey(V.k));
+    if(heads[2])heads[2].textContent=bsMonthShort(V.k);
     const el=[...((root&&root.querySelectorAll('#bssum .muted'))||[])].find(n=>/Arianna/.test(n.textContent||''));
     if(el){const p=BS.fold?BS.fold(V.sumP):V.sumP;
       el.textContent=`${T('Responsable')} (${T('solo lo enviado')}): Joe ${f(p.Joe)} · Tony ${f(p.Tony)} · Carlos ${f(p.Carlos)}`}
@@ -80,5 +86,5 @@ Object.assign(EN,{
 });
 
 try{if(typeof S!=='undefined'&&S)bsHydrate()}catch(e){}
-window._v146={bsHydrate,bsPutExtra,bsIsLegacy100,FLIP,STD};
+window._v146={bsHydrate,bsPutExtra,bsIsLegacy100,FLIP,STD,bsPrevKey,bsMonthShort};
 })();

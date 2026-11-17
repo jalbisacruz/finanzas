@@ -154,6 +154,13 @@ with app(ROOT,now='2026-11-17T11:50:00',state=S,new_look=True) as pg:
     t=pg.inner_text('#dlg')
     check('Teléfono casa' in t and 'Jardín' in t and 'nueva' in t,'review nombres')
     check('Arianna' not in t,'review sin Arianna')
+    heads=E("[...document.querySelectorAll('#bsdiff tr.muted td')].map(x=>x.textContent.trim())")
+    check(heads[1]=='Oct' and heads[2]=='Nov','columnas Oct / Nov (mes anterior y mes de la hoja) %s'%heads)
+    check('Tu parte antes' not in t and 'Tu parte ahora' not in t,'sin etiquetas antes/ahora')
+    check(E("_v146.bsPrevKey('2026-01')")=='2025-12' and E("_v146.bsMonthShort('2026-01')")=='Ene' and E("_v146.bsMonthShort('2025-12')")=='Dic','corte de año ES')
+    E("()=>{LANG='en'}")
+    check(E("_v146.bsMonthShort('2026-11')")=='Nov' and E("_v146.bsMonthShort('2026-10')")=='Oct' and E("_v146.bsMonthShort('2026-01')")=='Jan','nombres cortos EN')
+    E("()=>{LANG='es'}")
     # Joe 20 + 10 = 30 de lo enviado
     mark(pg)
     pg.screenshot(path=os.path.join(SH,'v146-joe-revisar.png'))
