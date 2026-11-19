@@ -24,43 +24,31 @@ def base():
     S['wm']={'est':200,'chk':{'2026-11-19':200},'paid':{}}
     return S
 
-# ---- 1. adelantado mié 11 ligado al jue 12, monto exacto, una sola vez ----
+# ---- 1. (v147: sin botón «Ya se depositó») un adelantado ya registrado mié 11 ligado al jue 12 se conserva y se cuenta una vez ----
 S=base()
+S['checks']=[{'id':'c05','amount':500,'date':'2026-11-05','status':'deposited','depositedOn':'2026-11-05'},
+             {'id':'c12','amount':512.34,'date':'2026-11-12','status':'deposited','depositedOn':'2026-11-11','early':True},
+             {'id':'c19','amount':0,'amtPending':True,'date':'2026-11-19','status':'pending'}]
+S['months']['2026-11']['events'].append({'id':'ee','type':'check','date':'2026-11-11','amount':512.34,'checkId':'c12','early':True,'payday':'2026-11-12','desc':'Cheque 11 nov (adelantado, cobro 12 nov)'})
+S['months']['2026-11']['income'][0]['amount']=1512.34
 with app(ROOT,now='2026-11-11T10:00:00',state=S,new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(700)
     check(E('CODE_V')>='v142','ver')
     E("()=>{tab='ini';render()}");pg.wait_for_timeout(200)
-    check(pg.locator('#ywearly').count()==1 and 'Ya se depositó' in pg.inner_text('#herocard'),'hero action')
-    mark(pg);pg.locator('#herocard').scroll_into_view_if_needed();pg.wait_for_timeout(100)
-    pg.screenshot(path=os.path.join(SH,'v142-yowash-ya-se-deposito-hero.png'))
-    pg.click('#ywearly');pg.wait_for_timeout(200)
-    check(pg.locator('#ywea').count()==1 and pg.locator('#ywed').input_value()=='2026-11-11','dlg date default today')
-    check(abs(float(pg.locator('#ywea').input_value() or 0)-500)<0.001,'prefill last/est 500')
-    pg.fill('#ywea','512.34');pg.wait_for_timeout(80)
-    note=pg.inner_text('#ywenote')
-    check('512.34' in note and 'débito' in note.lower() and '12' in note,'confirm text names debit + payday')
-    mark(pg);pg.screenshot(path=os.path.join(SH,'v142-yowash-ya-se-deposito-dialog.png'))
-    deb0=E("debE(L()).amount")
-    ev0=E("Object.values(S.months).reduce((n,m)=>n+(m.events||[]).filter(e=>e.type==='check').length,0)")
-    pg.click('#yweok');pg.wait_for_timeout(300)
+    check(pg.locator('#ywearly').count()==0 and 'Ya se depositó' not in pg.inner_text('#v'),'v147: sin botón')
+    deb0=E("debE(L()).amount")-512.34
     c=E("S.checks.find(x=>x.id==='c12')")
     check(c['status']=='deposited' and c['date']=='2026-11-12' and c['depositedOn']=='2026-11-11' and abs(c['amount']-512.34)<0.001,'same payday, actual date, exact amt %s'%c)
-    check(abs(E("debE(L()).amount")-(deb0+512.34))<0.001,'debit once')
     ev=E("Object.values(S.months).flatMap(m=>(m.events||[]).filter(e=>e.type==='check'&&e.checkId==='c12'))")
     check(len(ev)==1 and ev[0]['date']=='2026-11-11' and ev[0].get('payday')=='2026-11-12' and abs(ev[0]['amount']-512.34)<0.001,'one event actual date')
     inc=E("earned(S.months['2026-11']).by['💼 Cheque']||0")
     check(abs(inc-1012.34)<0.01,'income = Nov5 500 + early 512.34, not extra line: %s'%inc)
     nx=E("pendingCheck()")
     check(nx and nx['date']=='2026-11-19' and nx['status']=='pending' and nx.get('amtPending'),'next is Thu 19 pending %s'%nx)
-    # same check cannot be deposited again (stale dialog or second tap)
-    E("""()=>{
-      if(!document.getElementById('ywea')){const i=document.createElement('input');i.id='ywea';i.value='512.34';document.body.append(i)}
-      if(!document.getElementById('ywed')){const i=document.createElement('input');i.id='ywed';i.value='2026-11-11';document.body.append(i)}
-      ywEarlySave('c12');ywEarlySave('c12')}""")
+    E("ywEarlySave('c12');ywEarlySave('c12');ywEarlySave()")
     pg.wait_for_timeout(100)
-    check(E("S.checks.filter(x=>x.id==='c12').length")==1 and E("Object.values(S.months).reduce((n,m)=>n+(m.events||[]).filter(e=>e.checkId==='c12').length,0)")==1,'double tap no duplicate')
-    check(E("pendingCheck().date")=='2026-11-19','next payday still 19 after failed retap')
-    check(abs(E("debE(L()).amount")-(deb0+512.34))<0.001,'debit still once after second tap')
+    check(E("S.checks.filter(x=>x.id==='c12').length")==1 and E("Object.values(S.months).reduce((n,m)=>n+(m.events||[]).filter(e=>e.checkId==='c12').length,0)")==1,'no duplicate')
+    check(abs(E("debE(L()).amount")-(deb0+512.34))<0.001,'debit still once')
     # list + plan use actual date; next dates 19 (not 12 or Wed 18)
     E("()=>{tab='mov';S.cur='2026-11';render()}");pg.wait_for_timeout(200)
     t=pg.inner_text('#chkcard')
@@ -96,17 +84,19 @@ with app(ROOT,now='2026-11-12T04:01:00',state=S2,new_look=True) as pg:
     check(abs(E("debE(L()).amount")-amt)<0.001,'no extra YW debit at Thu 12 4am')
     check(E("pendingCheck().date")=='2026-11-19','still next 19 after auto')
 
-# normal Thursday auto later (Nov 19) still works once
+# v147: el jueves 19 NO entra solo; sale el aviso y al confirmar entra una sola vez
 S3=copy.deepcopy(S2)
-# pending 19 may be amtPending; set amount so auto can run
-with app(ROOT,now='2026-11-19T04:01:00',state=S3,new_look=True) as pg:
+with app(ROOT,now='2026-11-19T04:01:00',state=S3,new_look=True,ctx_opts={'timezone_id':'America/New_York'}) as pg:
     E=pg.evaluate;pg.wait_for_timeout(700)
     E("()=>{const p=pendingCheck();p.amount=512.34;delete p.amtPending;save()}");pg.wait_for_timeout(50)
     deb=E("debE(L()).amount");E("autoDeposit()");pg.wait_for_timeout(200)
-    check(abs(E("debE(L()).amount")-(deb+512.34))<0.001,'normal auto later credits once')
+    check(abs(E("debE(L()).amount")-deb)<0.001 and E("S.checks.find(c=>c.date==='2026-11-19').status")=='pending','19: no entra solo')
+    E("()=>{tab='ini';render()}");pg.wait_for_timeout(200)
+    check(pg.locator('#paynotice').count()==1,'aviso del 19')
+    pg.locator('#paynotice .pn[data-k^="yw:"] .pnok').click();pg.wait_for_timeout(200)
+    check(abs(E("debE(L()).amount")-(deb+512.34))<0.001,'confirmar entra una vez')
     check(E("S.checks.find(c=>c.date==='2026-11-19').status")=='deposited','19 deposited')
-    E("autoDeposit()");check(abs(E("debE(L()).amount")-(deb+512.34))<0.001,'normal auto not twice')
-    nx=E("pendingCheck()");check(nx and nx['date']=='2026-11-26' and nx.get('amtPending'),'next after auto is 26 %s'%nx)
+    nx=E("pendingCheck()");check(nx and nx['date']=='2026-11-26' and nx.get('amtPending'),'next after confirm is 26 %s'%nx)
 
 # v143: Oct 29 is not the day before Thu Nov 5 (that's Wed Nov 4). Early save must not credit.
 Sb=copy.deepcopy(FIX);Sb['cur']='2026-10'
@@ -127,16 +117,16 @@ with app(ROOT,now='2026-10-29T15:00:00',state=Sb,new_look=True) as pg:
     check(c['status']=='pending' and c['date']=='2026-11-05','ineligible day does not collect')
     check(abs(E("debE(L()).amount")-deb)<0.001 and E("Object.values(S.months).reduce((n,m)=>n+(m.events||[]).filter(e=>e.checkId==='n05').length,0)")==0,'no debit/event on ineligible day')
 
-# unknown estimate: no prior deposited, must enter a positive amount
+# v147: sin estimado previo, el aviso pide un monto positivo
 Su=base();Su['checks']=[{'id':'c12','amount':0,'amtPending':True,'date':'2026-11-12','status':'pending'}]
-with app(ROOT,now='2026-11-11T10:00:00',state=Su,new_look=True) as pg:
+with app(ROOT,now='2026-11-12T10:00:00',state=Su,new_look=True,ctx_opts={'timezone_id':'America/New_York'}) as pg:
     E=pg.evaluate;pg.wait_for_timeout(700)
-    pg.click('#ywearly');pg.wait_for_timeout(150)
-    val=pg.locator('#ywea').input_value()
+    E("()=>{tab='ini';render()}");pg.wait_for_timeout(200)
+    val=pg.locator('#paynotice .pn[data-k^="yw:"] .pnamt').input_value()
     check(val in ('','0'),'no invented prefill when no estimate: %r'%val)
-    pg.click('#yweok');pg.wait_for_timeout(100)
-    check(E("pendingCheck() && pendingCheck().date")== '2026-11-12' or E("pendingCheck().id")=='c12','rejected empty amount')
-    pg.fill('#ywea','400');pg.click('#yweok');pg.wait_for_timeout(250)
+    pg.locator('#paynotice .pn[data-k^="yw:"] .pnok').click();pg.wait_for_timeout(100)
+    check(E("S.checks.find(c=>c.id==='c12').status")=='pending','rejected empty amount')
+    pg.locator('#paynotice .pn[data-k^="yw:"] .pnamt').fill('400');pg.locator('#paynotice .pn[data-k^="yw:"] .pnok').click();pg.wait_for_timeout(250)
     check(E("S.checks.find(c=>c.id==='c12').status")=='deposited' and abs(E("S.checks.find(c=>c.id==='c12').amount")-400)<0.001,'entered exact 400')
     check(abs(E("debE(L()).amount")-1400)<0.001,'debit 1000+400')
 

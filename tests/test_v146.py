@@ -30,7 +30,7 @@ TOK='AAAAAAAAAAAAAAAAAAAAAA'
 # ---- defaults y compat en la app de Joe ----
 with app(ROOT,now='2026-11-17T11:50:00',state=base(),new_look=True) as pg:
     E=pg.evaluate;pg.wait_for_timeout(600)
-    check(E('CODE_V')=='v146','ver')
+    check(E('CODE_V')>='v146','ver')
     check(E("JSON.stringify(BS.SHEET_WHO)")=='["Joe","Tony","Carlos"]','sheet who')
     check(E("BS.PEOPLE").count('Arianna')==1 if False else E("BS.PEOPLE.includes('Arianna')"),'cálculo aún acepta Arianna (recibos / hojas viejas)')
     for k in ('renta','ventanas','agua','luz','gas','telefono','internet','purificador'):
