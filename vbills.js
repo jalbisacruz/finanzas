@@ -36,18 +36,44 @@ function draw(){const box=$('vbills');if(!box||!ST)return;const per={Joe:0,Tony:
 window.vbTot=(i,v)=>{ST.rows[i].total=v;keep();const t=$('bstot');const per={Joe:0,Tony:0,Carlos:0,Arianna:0};let any=0;ST.rows.forEach(r=>{if(!has(r))return;const s=BS.split(+r.total,r.alloc);if(s.err)return;any=1;(BS.PEOPLE||who()).forEach(p=>per[p]=(per[p]||0)+s[p])});
  if(t)t.innerHTML=totHtml(any,per)};
 window.vbEdit=i=>{const r=ST.rows[i];ED={i,a:JSON.parse(JSON.stringify(r.alloc||BS.def(r.key)))};edDraw()};
+const fmt=(s,...a)=>String(s).replace(/\{(\d)\}/g,(_,i)=>a[i]);
+const amtSum=a=>Math.round((a.who||[]).reduce((s,p)=>s+(isFinite(+(a.amt||{})[p])?+(a.amt||{})[p]:0),0)*100)/100;
+function lastRemainder(a,T){if(a.mode!=='amt'||!(T>0)||!a.who||!a.who.length)return null;
+ const last=a.who.filter(p=>who().includes(p)).at(-1);if(!last)return null;
+ const others=Math.round(a.who.filter(p=>p!==last).reduce((s,p)=>s+(isFinite(+(a.amt||{})[p])?+(a.amt||{})[p]:0),0)*100)/100;
+ return {last,left:Math.round((T-others)*100)/100}}
+function statusHtml(T,a){if(!(T>0))return '<span class="muted">'+tr('Pon el total para ver los montos.','Enter the total to see the amounts.')+'</span>';
+ if(a.mode==='amt'){const s=amtSum(a),d=Math.round((T-s)*100)/100,line=`<div class="muted">${fmt(tr('Suma {0} de {1}','Sum {0} of {1}'),money(s),money(T))}</div>`;
+  if(Math.abs(d)<0.005)return `<b id="vbst" style="color:#15803d">${tr('✅ Cuadra','✅ Matches')}</b>`+line;
+  if(d>0)return `<b id="vbst" style="color:#b45309">${fmt(tr('Falta {0}','Short {0}'),money(d))}</b>`+line;
+  return `<b id="vbst" style="color:#dc2626">${fmt(tr('Sobra {0}','Over {0}'),money(-d))}</b>`+line}
+ const sp=BS.split(T,a),W=who();if(!sp)return '';
+ if(sp.err==='suma')return `<b id="vbst" style="color:#dc2626">${fmt(tr('Suma {0} de {1}','Sum {0} of {1}'),money(sp.sum),money(T))}</b>`;
+ if(sp.err==='pct'){const d=Math.round((100-(+sp.sum||0))*100)/100;
+  if(d>0.005)return `<b id="vbst" style="color:#b45309">${fmt(tr('Falta {0}','Short {0}'),d+'%')}</b><div class="muted">${tr('Suma','Sum')} ${sp.sum}% ${tr('de','of')} 100%</div>`;
+  if(d<-0.005)return `<b id="vbst" style="color:#dc2626">${fmt(tr('Sobra {0}','Over {0}'),(-d)+'%')}</b><div class="muted">${tr('Suma','Sum')} ${sp.sum}% ${tr('de','of')} 100%</div>`;
+  return `<b id="vbst" style="color:#15803d">${tr('✅ Cuadra','✅ Matches')}</b>`}
+ if(sp.err)return `<span class="err2">${tr('Elige quién participa','Choose who is included')}</span>`;
+ return `<b id="vbst" style="color:#15803d">${tr('✅ Cuadra','✅ Matches')}</b><div class="muted">${W.filter(p=>sp[p]).map(p=>p+' '+money(sp[p])).join(' · ')}</div>`}
 function edDraw(){const r=ST.rows[ED.i],a=ED.a,T=+r.total||0;let m=$('vbed');if(!m){m=document.createElement('div');m.id='vbed';document.body.append(m)}
  const W=who(),on=p=>a.who.includes(p),modes=[['eq',tr('Iguales','Equal')],['pct','%'],['amt',tr('Montos','Amounts')],['one',tr('Uno solo','One person')]];
- const sp=T?BS.split(T,a):null;
- m.innerHTML=`<div class="vbbg" onclick="vbEdClose()"></div><div class="card vbbox"><h2>${tr('Reparto','Split')} · ${esc(r.name)}</h2><div class="muted">${tr('Total','Total')} ${T?money(T):'—'}</div>
+ const rem=lastRemainder(a,T);
+ const fields=(a.mode==='pct'||a.mode==='amt')?a.who.filter(p=>W.includes(p)).map(p=>{
+  const isLast=a.mode==='amt'&&rem&&p===rem.last,val=((a.mode==='pct'?a.pct:a.amt)||{})[p];
+  const ph=isLast&&isFinite(rem.left)?String(rem.left):(a.mode==='pct'?'%':'$');
+  const hint=isLast&&isFinite(rem.left)?`<div class="muted" style="font-size:12px">${tr('para llegar al total','to reach the total')}</div>`:'';
+  return `<div class="g2" style="align-items:center;margin-top:6px"><div>${esc(p)}${hint}</div><input id="vbv-${esc(p)}" type="number" inputmode="decimal" step="0.01" value="${esc(val??'')}" placeholder="${esc(ph)}" oninput="vbVal('${p}',this.value)"></div>`}).join(''):'';
+ m.innerHTML=`<div class="vbbg" onclick="vbEdClose()"></div><div class="card vbbox" id="vbbox"><h2>${tr('Reparto','Split')} · ${esc(r.name)}</h2>
+ <div id="vbtotal" class="vbtotal">${tr('Total','Total')} <b>${T?money(T):'—'}</b></div>
  <div class="lbl">${tr('Quién participa','Who is included')}</div><div class="chips">${W.map(p=>`<button type="button" class="chip${on(p)?' on':''}" onclick="vbWho('${p}')">${p}</button>`).join('')}</div>
  <div class="lbl">${tr('Cómo se reparte','How it is split')}</div><div class="chips">${modes.map(([v,l])=>`<button type="button" class="chip${a.mode===v?' on':''}" onclick="vbMode('${v}')">${l}</button>`).join('')}</div>
- ${(a.mode==='pct'||a.mode==='amt')?a.who.filter(p=>W.includes(p)).map(p=>`<div class="g2" style="align-items:center;margin-top:6px"><div>${p}</div><input type="number" inputmode="decimal" step="0.01" value="${esc((a.mode==='pct'?a.pct:a.amt)[p]??'')}" placeholder="${a.mode==='pct'?'%':'$'}" oninput="vbVal('${p}',this.value)"></div>`).join(''):''}
- <div id="vbsum" style="margin-top:8px">${sp?(sp.err?`<span class="err2">${sp.err==='suma'?tr('Suma','Sum')+' '+money(sp.sum)+' '+tr('de','of')+' '+money(T):sp.err==='pct'?tr('Suma','Sum')+' '+sp.sum+'% '+tr('de','of')+' 100%':tr('Elige quién participa','Choose who is included')}</span>`:W.filter(p=>sp[p]).map(p=>p+' '+money(sp[p])).join(' · ')):'<span class="muted">'+tr('Pon el total para ver los montos.','Enter the total to see the amounts.')+'</span>'}</div>
- <div class="g2" style="margin-top:10px"><button type="button" class="chip" style="min-height:44px" onclick="vbEdClose()">${tr('Cancelar','Cancel')}</button><button type="button" class="dl" id="vbedok" onclick="vbEdOk()">${tr('Listo','Done')}</button></div></div>`}
+ ${fields}
+ <div id="vbsum" class="vbsum">${statusHtml(T,a)}</div>
+ <div class="g2 vbedact" style="margin-top:10px"><button type="button" class="chip" style="min-height:44px" onclick="vbEdClose()">${tr('Cancelar','Cancel')}</button><button type="button" class="dl" id="vbedok" onclick="vbEdOk()">${tr('Listo','Done')}</button></div></div>`}
 window.vbWho=p=>{const a=ED.a;if(a.mode==='one'){a.who=[p]}else{a.who=a.who.includes(p)?a.who.filter(x=>x!==p):[...a.who,p]}edDraw()};
 window.vbMode=v=>{const a=ED.a;a.mode=v;if(v==='one')a.who=a.who.slice(0,1);if(v==='pct'){a.pct=a.pct||{}}if(v==='amt'){a.amt=a.amt||{}}edDraw()};
-window.vbVal=(p,v)=>{const a=ED.a;(a.mode==='pct'?(a.pct=a.pct||{}):(a.amt=a.amt||{}))[p]=v===''?'':+v;const r=ST.rows[ED.i],T=+r.total||0,s=$('vbsum');if(s&&T){const sp=BS.split(T,a),W=who();s.innerHTML=sp.err?`<span class="err2">${sp.err==='suma'?tr('Suma','Sum')+' '+money(sp.sum)+' '+tr('de','of')+' '+money(T):sp.err==='pct'?tr('Suma','Sum')+' '+sp.sum+'% '+tr('de','of')+' 100%':tr('Elige quién participa','Choose who is included')}</span>`:W.filter(x=>sp[x]).map(x=>x+' '+money(sp[x])).join(' · ')}};
+window.vbVal=(p,v)=>{const a=ED.a;(a.mode==='pct'?(a.pct=a.pct||{}):(a.amt=a.amt||{}))[p]=v===''?'':+v;const r=ST.rows[ED.i],T=+r.total||0,s=$('vbsum');if(s)s.innerHTML=statusHtml(T,a);
+ if(a.mode==='amt'){const rem=lastRemainder(a,T);if(rem&&p!==rem.last){const i=$('vbv-'+rem.last);if(i&&(i.value===''||document.activeElement!==i))i.placeholder=String(rem.left)}}};
 window.vbEdClose=()=>{ED=null;const m=$('vbed');if(m)m.remove()};
 window.vbEdOk=()=>{const r=ST.rows[ED.i];if(!ED.a.who.length)return;if(has(r)){const sp=BS.split(+r.total,ED.a);if(sp.err)return}r.alloc=ED.a;keep();vbEdClose();draw()};
 function newKey(){const a='abcdefghijklmnopqrstuvwxyz0123456789';let k='c-';for(let i=0;i<8;i++)k+=a[Math.floor(Math.random()*a.length)];return ST.rows.some(r=>r.key===k)?newKey():k}
@@ -64,8 +90,17 @@ window.vbAdd=()=>{nmDlg('+ '+tr('Agregar cuenta','Add a bill'),'',n=>{if(nameTak
   ST.rows.push({key:newKey(),name:n,group:'otro',total:'',alloc:BS.def('nuevo'),custom:true});keep();draw()})};
 window.vbRen=i=>{const r=ST.rows[i];nmDlg(tr('Renombrar','Rename')+' · '+r.name,r.name,n=>{if(n===r.name)return;if(nameTaken(n,r)){const box=$('vbnmbox');if(box){let x=box.querySelector('.err2');if(!x){x=document.createElement('div');x.className='err2';box.append(x)}x.textContent=tr('Ya hay una cuenta con ese nombre.','A bill with that name already exists.')}return false}
   r.name=n;r.renamed=true;keep();draw()})};
-function payloadRow(r){const o={key:r.key,total:Math.round(+r.total*100)/100,alloc:r.alloc};const std=BS.isStd?BS.isStd(r.key):!String(r.key).startsWith('c-');
- const base=(BS.ROWS||[]).find(x=>x.key===r.key);if(!std||r.renamed||(base&&r.name&&r.name!==base.name)||r.custom)o.name=r.name;if(r.group&&(!std||r.custom))o.group=r.group;return o}
+function cleanAlloc(a){a=a||{};const P=BS.PEOPLE||['Joe','Tony','Carlos','Arianna'];
+ const W=(a.who||[]).filter(p=>P.includes(p)).slice(0,4);
+ const mode=['pct','eq','amt','one'].includes(a.mode)?a.mode:'pct';
+ const o={who:W.length?W:['Joe'],mode};
+ if(mode==='pct'){const pct={};o.who.forEach(p=>{const v=+(a.pct||{})[p];if(isFinite(v))pct[p]=v});o.pct=pct}
+ if(mode==='amt'){const amt={};o.who.forEach(p=>{const v=+(a.amt||{})[p];if(isFinite(v))amt[p]=v});o.amt=amt}
+ return o}
+function payloadRow(r){const o={key:r.key,total:Math.round(+r.total*100)/100,alloc:cleanAlloc(r.alloc)};const std=BS.isStd?BS.isStd(r.key):!String(r.key).startsWith('c-');
+ const base=(BS.ROWS||[]).find(x=>x.key===r.key);if(!std||r.renamed||(base&&r.name&&r.name!==base.name)||r.custom){const n=String(r.name||'').trim().replace(/\s+/g,' ').slice(0,60);if(n)o.name=n}
+ if(r.group&&(!std||r.custom)&&['casa','auto','otro'].includes(r.group))o.group=r.group;return o}
+window.payloadRow=payloadRow;
 window.vbSend=async()=>{const e=$('bserr');const L=ST.rows.filter(has);if(!L.length){e.textContent=tr('Pon al menos un total.','Enter at least one total.');return}
  const bad=L.filter(r=>BS.split(+r.total,r.alloc).err);if(bad.length){e.textContent=tr('El reparto no cuadra en: ','The split does not add up in: ')+bad.map(r=>r.name).join(', ');return}
  const b=$('bssend');b.disabled=true;b.textContent=tr('Enviando…','Sending…');
@@ -86,6 +121,12 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 #bsform .bsrev{background:#fef3c7;color:#92400e;font-size:11px;border-radius:8px;padding:1px 6px}
 #vbed,#vbnm{position:fixed;inset:0;z-index:30}#vbed .vbbg,#vbnm .vbbg{position:absolute;inset:0;background:#0f172a80}
 #vbed .vbbox,#vbnm .vbbox{position:absolute;left:10px;right:10px;bottom:10px;max-width:520px;margin:auto;max-height:85vh;overflow:auto}
+#vbed .vbbox{display:flex;flex-direction:column;max-height:85vh}
+#vbed .vbtotal{font-size:16px;margin:4px 0 8px;background:#f8fafc;border-radius:10px;padding:8px 10px}
+#vbed .vbtotal b{font-size:20px}
+#vbed .vbsum{margin-top:10px;padding:8px 10px;border-radius:10px;background:#f1f5f9;flex:none}
+#vbed .vbedact{flex:none;position:sticky;bottom:0;background:#fff;padding-top:8px}
+
 @media(min-width:800px){
   main{max-width:980px;padding:24px 28px}
   #bsform{padding:20px 24px}
