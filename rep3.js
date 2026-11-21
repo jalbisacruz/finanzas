@@ -44,22 +44,30 @@ function rep3PDF(R,extra){const t=L3[R.lang==='en'?'en':'es'],N=x=>(R.names||{})
    if(sub){d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(100,116,139);d.text(pt(sub),cx,y0+52)}});
   d.setTextColor(15,23,42);o.y=y0-14+bh+8;o.note(t.mnote);o.y+=16}
  // 1) Quién transfiere a quién (bloque verde, igual en los 3)
- const TR=R.transfers||[];let y=o.y;const bh=TR.length?40+TR.length*24:58;
+ const TR=R.transfers||[];let y=o.y;const pendH=R.sheetPending?18:0;const bh=(TR.length?40+TR.length*24:58)+pendH;
  d.setFillColor(240,253,244);d.setDrawColor(134,239,172);d.setLineWidth(1);d.roundedRect(X-6,y-14,W+12,bh,8,8,'FD');
  d.setFont('helvetica','bold');d.setFontSize(10);d.setTextColor(21,128,61);d.text(pt(t.xfer).toUpperCase(),X+6,y+2);y+=26;
- if(!TR.length){d.setFontSize(14);d.setTextColor(15,23,42);d.text(pt(t.ok),X+6,y)}
+ if(!TR.length){d.setFontSize(14);d.setTextColor(15,23,42);d.text(pt(t.ok),X+6,y);y+=18}
  TR.forEach(x=>{const me=x.from===R.who||x.to===R.who;d.setFont('helvetica',me?'bold':'normal');d.setFontSize(15);d.setTextColor(15,23,42);d.text(pt(fill(t.x1,N(x.from),N(x.to))),X+6,y);d.setFont('helvetica','bold');d.setFontSize(16);d.text(fm(x.amount),RR-6,y,{align:'right'});y+=24});
+ if(R.sheetPending){d.setFont('helvetica','italic');d.setFontSize(9);d.setTextColor(180,83,9);d.text(pt(t.sheetPend||'Falta aprobar la hoja de Tony'),X+6,y)}
  o.y=o.y-14+bh+22;
- // 2) tarjeta por persona: paga / recibe (cifras grandes) y su parte de las compras
- y=o.y;const cw=(W+12-2*10)/3,ch=92;
+ // 2) tarjeta por persona: paga / recibe, su parte de las compras y (v152) de las cuentas
+ y=o.y;const cw=(W+12-2*10)/3,hasB=P3.some(p=>Math.abs(+(((R.people||{})[p]||{}).bills||0))>0.004||R.sheetApproved),ch=hasB?110:92;
  P3.forEach((p,i)=>{const P=(R.people||{})[p]||{},cx=X-6+i*(cw+10),me=p===R.who;
   d.setFillColor(...(me?[239,246,255]:[248,250,252]));d.setDrawColor(...(me?[37,99,235]:[203,213,225]));d.setLineWidth(me?1.6:0.7);d.roundedRect(cx,y-14,cw,ch,8,8,'FD');
   d.setFont('helvetica','bold');d.setFontSize(13);d.setTextColor(15,23,42);d.text(pt(N(p)),cx+10,y+3);
   if(me){d.setFontSize(7.5);const tw=d.getTextWidth(t.you)+10,tx=cx+cw-10-tw;d.setFillColor(37,99,235);d.roundedRect(tx,y-6,tw,12,6,6,'F');d.setTextColor(255);d.text(t.you,tx+5,y+2.5)}
   let yy=y+26;const big=(lbl,v,col)=>{d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(100,116,139);d.text(pt(lbl),cx+10,yy);d.setFont('helvetica','bold');d.setFontSize(15);d.setTextColor(...col);d.text(fm(v),cx+cw-10,yy+1,{align:'right'});yy+=20};
   if(P.pays>0.004)big(t.pays,P.pays,[185,28,28]);if(P.gets>0.004)big(t.gets,P.gets,[21,128,61]);if(!(P.pays>0.004)&&!(P.gets>0.004))big(t.even,0,[100,116,139]);
-  d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(100,116,139);d.text(pt(t.part)+': '+fm(P.part),cx+10,y+ch-22)});
+  d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(100,116,139);d.text(pt(t.part)+': '+fm(P.part),cx+10,y+ch-(hasB?36:22));
+  if(hasB)d.text(pt(t.billsPart||'Su parte de las cuentas')+': '+fm(P.bills||0),cx+10,y+ch-22)});
  o.y=y-14+ch+28;
+ // 2b) v152: desglose de Carlos (resumen: cuentas, compras, a quién transferir)
+ if(R.breakDown&&R.breakDown.sections){const B=R.breakDown;o.h(B.title||t.fromWhere||'De dónde sale tu total');
+  B.sections.forEach(sec=>{if(!sec||(!sec.rows||!sec.rows.length)&&!sec.tot)return;
+   if(sec.h){o.need(36);d.setFont('helvetica','bold');d.setFontSize(11);d.setTextColor(30,64,175);d.text(pt(sec.h),X,o.y);o.y+=14}
+   const cols=sec.cols||['',t.amt||'Total'],ws=sec.ws||(cols.length===3?[316,100,100]:[416,100]);
+   o.table(cols,sec.rows||[],{ws,left:[0],tot:sec.tot});o.y+=6})}
  // 3) Cómo se calcula: una caja por pareja
  o.h(t.how);
  o.y+=4;(R.pairs||[]).forEach(pr=>{const LS=pr.lines.filter(x=>Math.abs(x.v)>0.004),sp=pr.paid!=null&&Math.abs(pr.paid)>0.004,nL=LS.length+1+(sp?2:0)+(pr.tc?1:0),bh=30+nL*14;o.need(bh+8);let y=o.y;
@@ -83,8 +91,13 @@ function rep3PDF(R,extra){const t=L3[R.lang==='en'?'en':'es'],N=x=>(R.names||{})
   if(R.hid&&R.hid.n){rows.push(['',fill(t.hid,R.hid.n),'',fm(R.hid.t),...P3.map(x=>R.hid.sh[x]>0.004?fm(R.hid.sh[x]):'-')]);sub.push([])}
   o.table([t.date,t.store,t.by,t.tot,...P3.map(N)],rows,{ws:[56,178,58,56,56,56,56],left:[1,2],hi:R.who&&hi>=4?hi:undefined,sub,tot:['',t.mtot,'',fm(R.totAll),...P3.map(x=>fm(R.tot[x]))]});
   o.note(t.pnote)}
- // 5) Cuentas de Tony
- if(R.showBills&&R.bills&&R.bills.length){o.h(t.bills);o.table([t.bill,t.amt,t.st],R.bills.map(b=>[b.n,fm(b.a),b.paid?t.paidB:t.pendB]),{ws:[316,100,100],tot:[t.billsT,fm(R.billsTotal),'']})}
+ // 5) Cuentas de Tony (v152: el PDF de Joe trae el total y la parte de cada uno)
+ if(R.showBills&&R.bills&&R.bills.length){
+  if(R.billsFull){const ar=!!R.hasArianna,heads=[t.bill,t.btot||'Total',...P3.map(N),...(ar?['Arianna']:[]),t.st];
+   const ws=ar?[126,50,48,48,48,50,62]:[146,58,58,58,58,70];
+   o.h(t.billsFullT||t.bills);const cells=b=>[b.n,fm(b.total||b.a),...P3.map(x=>b.sp&&Math.abs(+b.sp[x]||0)>0.004?fm(b.sp[x]):'—'),...(ar?[b.sp&&+b.sp.Arianna>0.004?fm(b.sp.Arianna):'—']:[]),b.paid?t.paidB:t.pendB];o.table(heads,R.bills.map(cells),{ws,tot:[t.billsT,fm(R.billsGrand||R.billsTotal),...Array(heads.length-2).fill('')]})}
+  else{o.h(t.bills);o.table([t.bill,t.amt,t.st],R.bills.map(b=>[b.n,fm(b.a),b.paid?t.paidB:t.pendB]),{ws:[316,100,100],tot:[t.billsT,fm(R.billsTotal),'']})}
+ }
  if(extra)extra(o);
  return o.out()}
 // v96: «Detalle de compras»: un solo PDF con cada compra del mes (más nueva primero), quién pagó, sus artículos con la parte de cada uno,
