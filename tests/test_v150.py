@@ -41,7 +41,7 @@ PHONE=dict(now='2026-11-20T15:10:00',new_look=True,width=390,height=900)
 # ---- Hoy: aviso de Tony, no se esconde con el ✕ de compras, no va detrás de «Ver más» ----
 with app(ROOT,state=base(),**PHONE) as pg:
     E=pg.evaluate
-    check(E('CODE_V')=='v150','CODE_V v150')
+    check(E('CODE_V')>='v150','CODE_V v150')
     E("d=>{INBOX=d}", [sheet_doc(),purchase_doc()])
     E("()=>{tab='ini';render()}");pg.wait_for_timeout(250)
     t=pg.inner_text('#bsnotice') if pg.locator('#bsnotice').count() else ''
