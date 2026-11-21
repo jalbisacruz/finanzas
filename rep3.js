@@ -48,7 +48,7 @@ function rep3PDF(R,extra){const t=L3[R.lang==='en'?'en':'es'],N=x=>(R.names||{})
  d.setFillColor(240,253,244);d.setDrawColor(134,239,172);d.setLineWidth(1);d.roundedRect(X-6,y-14,W+12,bh,8,8,'FD');
  d.setFont('helvetica','bold');d.setFontSize(10);d.setTextColor(21,128,61);d.text(pt(t.xfer).toUpperCase(),X+6,y+2);y+=26;
  if(!TR.length){d.setFontSize(14);d.setTextColor(15,23,42);d.text(pt(t.ok),X+6,y);y+=18}
- TR.forEach(x=>{const me=x.from===R.who||x.to===R.who;d.setFont('helvetica',me?'bold':'normal');d.setFontSize(15);d.setTextColor(15,23,42);d.text(pt(fill(t.x1,N(x.from),N(x.to))),X+6,y);d.setFont('helvetica','bold');d.setFontSize(16);d.text(fm(x.amount),RR-6,y,{align:'right'});y+=24});
+ TR.forEach(x=>{d.setFont('helvetica','bold');d.setFontSize(15);d.setTextColor(15,23,42);d.text(pt(fill(t.x1,N(x.from),N(x.to))),X+6,y);d.setFont('helvetica','bold');d.setFontSize(16);d.text(fm(x.amount),RR-6,y,{align:'right'});y+=24});
  if(R.sheetPending){d.setFont('helvetica','italic');d.setFontSize(9);d.setTextColor(180,83,9);d.text(pt(t.sheetPend||'Falta aprobar la hoja de Tony'),X+6,y)}
  o.y=o.y-14+bh+22;
  // 2) tarjeta por persona: paga / recibe, su parte de las compras y (v152) de las cuentas
