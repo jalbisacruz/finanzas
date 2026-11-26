@@ -15,9 +15,9 @@ SH=os.path.join(ROOT,'shots')
 with app(ROOT,now='2026-10-26T20:00:00',state=S) as pg:
     E=pg.evaluate;pg.wait_for_timeout(800)
     tt=E("msgShort('tony','2026-10')");print(tt)
-    check('TOTAL QUE CARLOS TE DEBE  $19.59' in tt,'tony total')  # 22.5+7.09-10
-    check('Total  $29.59' in tt and 'Parte de Carlos' in tt,'subtotal')
-    t=E("msgShort('carlos','2026-10')");check('TOTAL QUE LE DEBES A TONY  $19.59' in t,'carlos total')
+    check('TOTAL: CARLOS LE TRANSFIERE A TONY  ' in tt and '$19.59' in tt,'tony total')  # v164: total con nombres (cuentas + compras)  # 22.5+7.09-10
+    check('Total compras de Tony/Arianna  $29.59' in tt and 'Parte de Carlos' in tt,'subtotal')
+    t=E("msgShort('carlos','2026-10')");check('TOTAL: CARLOS LE TRANSFIERE A TONY  ' in t and '$19.59' in t,'carlos total')
     check(E("CODE_V")>='v119','ver')
     for w in ['tony','carlos']:
         E(f"shareMsg('{w}','2026-10','txt')");pg.wait_for_timeout(200)

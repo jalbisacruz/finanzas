@@ -26,8 +26,8 @@ for lang in ['es','en']:
     E("dlg().close()")
     # Tony: bills + transfer lines kept, purchases one line each
     E("()=>shareMsg('tony','2026-10','txt')");t=pg.input_value('#msgt')
-    check(('CUENTAS' if ES else 'BILLS') in t and ('A TRANSFERIRTE' if ES else 'TO TRANSFER YOU') in t and any(x.endswith('$32.10') and 'Aldi' in x for x in t.splitlines()),t)
-    E("()=>shareMsg('tony','2026-10','pdf')");t=pg.input_value('#msgt');check(('A TRANSFERIRTE' if ES else 'TO TRANSFER YOU') in t and ('PDF' in t.splitlines()[-1]) and E("f(calc(M()).tonyDue)") in t,t)
+    check(('CUENTAS' if ES else 'BILLS') in t and ('JOE LE TRANSFIERE A TONY' if ES else 'JOE TRANSFERS TO TONY') in t and any(x.endswith('$32.10') and 'Aldi' in x for x in t.splitlines()),t)
+    E("()=>shareMsg('tony','2026-10','pdf')");t=pg.input_value('#msgt');check(('JOE LE TRANSFIERE A TONY' if ES else 'JOE TRANSFERS TO TONY') in t and ('PDF' in t.splitlines()[-1]) and E("f(calc(M()).tonyDue)") in t,t)
     E("dlg().close()")
     # desktop: no file sharing -> download + copy + explanation
     E("()=>{navigator.canShare=()=>false;window._cp=null;navigator.clipboard.writeText=async x=>{window._cp=x}}")

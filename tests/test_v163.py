@@ -43,7 +43,7 @@ with app(ROOT,state=FIX,now='2026-10-20T10:00:00',new_look=True) as pg:
     check(L[-1]=='TOTAL: CARLOS LE TRANSFIERE A JOE  '+fd,'total al final: '+tx)
     check('− Parte de Joe en tus compras' in tx,'parte de Joe con nombre: '+tx)
     check('TU PARTE DE LAS CUENTAS (Carlos le transfiere a Tony)' in tx and 'Luz  '+F(50) in tx,'cuentas: '+tx)
-    check(('PENDIENTE  '+fd) in tx,'PENDIENTE igual que Por hacer: '+tx)
+    check(('PENDIENTE CON JOE  '+fd) in tx,'PENDIENTE igual que Por hacer: '+tx)
     check(not [w for w in FIRST if w in tx],'sin primera persona: '+str([w for w in FIRST if w in tx]))
     por=E("(k)=>{const c=calc(S.months[k]);return f(c.carlosDue)}",k)
     check(por==fd,'mismo total que «Carlos te debe»')
