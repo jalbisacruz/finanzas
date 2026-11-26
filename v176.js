@@ -70,7 +70,7 @@ function dayModel(d){const L=shifts(d),wake=wakeOf(d,L),bed=bedOf(d,L),sleep=144
 // el cheque real está registrado, se muestra estimado vs real.
 // Walmart (talón): quincenal sáb–vie, depósito el jueves 6 días después; extra >40 h/semana a 1.5×; impuestos ~10.86 %;
 // después de impuestos: ONE SAVINGS y W+ (ajustes). El total del cheque menos los OnePay ya cobrados = lo que llega al banco.
-const PAY=()=>{const P=Object.assign({wm:15,yw:16,lunch:60,lunchOver:6,ywOT:40,ywWith:14.37,wmOT:40,wmWith:10.86,wmSave:16.07,wmMbr:4.62},S.calPay||{});if(!(P.wmWith>=0))P.wmWith=10.86;return P};
+const PAY=()=>{const P=Object.assign({wm:15,yw:16,lunch:60,lunchOver:6,ywOT:40,ywWith:14.37,wmOT:40,wmWith:10.86,wmSavePct:0,wmMbr:4.62},S.calPay||{});if(!(P.wmWith>=0))P.wmWith=10.86;return P};
 const paidMin=x=>{const P=PAY(),m=x.e-x.s;return x.job==='wm'&&m>P.lunchOver*60?m-P.lunch:m};
 const daysIn=(a,b)=>{const o=[];for(let d=a;d<=b;d=add(d,1))o.push(d);return o};
 const covered=(a,b)=>(cache().ranges||[]).some(([x,y])=>x<=a&&y>=b);
@@ -91,7 +91,7 @@ function checksIn(a,b){const out=[],P=PAY(),now=tday();
  daysIn(a,b).filter(d=>pd(d).getDay()===4).forEach(d=>{const pa=add(d,-14),pb=add(d,-8),h=hrs(pa,pb,'yw'),c=(S.checks||[]).find(x=>(x.date===d||x.depositedOn===d)&&x.status==='deposited');
   if(!(h>0)&&!c)return;out.push({job:'yw',d,pa,pb,h,est:covered(pa,pb)?ywNet(ywGross(h)):null,net:true,real:c?r2(+c.amount):null,fut:d>now})});
  (typeof wmPaydays==='function'?wmPaydays(a,b):[]).forEach(d=>{const pa=add(d,-19),pb=add(d,-6),h=hrs(pa,pb,'wm'),g=r2(wmG(hrs(pa,add(pa,6),'wm'))+wmG(hrs(add(pa,7),pb,'wm'))),rv=((S.wm&&S.wm.paid)||{})[d];
-  if(!(h>0)&&!(+rv>0))return;const tx=wmTax(g),dd=r2((+P.wmSave||0)+(+P.wmMbr||0)),tot=r2(Math.max(0,g-tx-dd)),ep=epIn(add(d,-14),d),ok=covered(pa,pb),real=+rv>0?r2(+rv):null;
+  if(!(h>0)&&!(+rv>0))return;const tx=wmTax(g),dd=r2(g*(+P.wmSavePct||0)/100+(+P.wmMbr||0)),tot=r2(Math.max(0,g-tx-dd)),ep=epIn(add(d,-14),d),ok=covered(pa,pb),real=+rv>0?r2(+rv):null;
   out.push({job:'wm',d,pa,pb,h,gross:g,tax:tx,ded:dd,ep,est:ok?tot:null,bank:ok?r2(Math.max(0,tot-ep)):null,realBank:real!=null?r2(Math.max(0,real-ep)):null,net:true,real,fut:d>now})});
  return out.sort((x,y)=>x.d<y.d?-1:1)}
 // ---------- período ----------
@@ -174,7 +174,7 @@ window.calPDF=async()=>{await loadPDF();const p=period(),s=stats(p),d=new jspdf.
   if(i%2){d.setFillColor(248,250,252);d.rect(X,y-11,R-X,16,'F')}d.setFont('helvetica','normal');d.setFontSize(9.5);let x=X;
   [DOW[pd(m.d).getDay()]+' '+pd(m.d).getDate()+' '+MES[pd(m.d).getMonth()],t,dur(m.sleep),dur(m.free)].forEach((v,j)=>{const h=m.sleep/60;if(j===2)d.setTextColor(...(h<5?[185,28,28]:h<7?[180,83,9]:[21,128,61]));d.text(d.splitTextToSize(pt(v),cols[j][1]-6)[0]||'',x+3,y);d.setTextColor(15,23,42);x+=cols[j][1]});y+=16});
  y+=8;d.setFont('helvetica','italic');d.setFontSize(8.5);d.setTextColor(100,116,139);
- d.text(d.splitTextToSize(pt('Sueño y horas libres son estimados con tus reglas (despertar 1 h 10 antes del turno de mañana, ~20 min de camino, 1 h en casa después de YoWash). (!) = conflicto. Salario: Walmart $'+PAY().wm+'/h menos '+PAY().lunch+' min de almuerzo en turnos de más de '+PAY().lunchOver+' h; extra despues de '+PAY().wmOT+' h/semana a 1.5x, impuestos ~'+PAY().wmWith+'%, ahorro $'+PAY().wmSave+' y W+ $'+PAY().wmMbr+' por cheque, menos OnePay ya cobrado; YoWash $'+PAY().yw+'/h, extra despues de '+PAY().ywOT+' h a 1.5x, retencion ~'+PAY().ywWith+'%. Solo horas programadas.'),R-X),X,y);
+ d.text(d.splitTextToSize(pt('Sueño y horas libres son estimados con tus reglas (despertar 1 h 10 antes del turno de mañana, ~20 min de camino, 1 h en casa después de YoWash). (!) = conflicto. Salario: Walmart $'+PAY().wm+'/h menos '+PAY().lunch+' min de almuerzo en turnos de más de '+PAY().lunchOver+' h; extra despues de '+PAY().wmOT+' h/semana a 1.5x, impuestos ~'+PAY().wmWith+'%, '+(+PAY().wmSavePct>0?'ahorro '+PAY().wmSavePct+'% del bruto y ':'')+'W+ $'+PAY().wmMbr+' por cheque, menos OnePay ya cobrado; YoWash $'+PAY().yw+'/h, extra despues de '+PAY().ywOT+' h a 1.5x, retencion ~'+PAY().ywWith+'%. Solo horas programadas.'),R-X),X,y);
  const n=d.getNumberOfPages();for(let i=1;i<=n;i++){d.setPage(i);d.setFontSize(8);d.setTextColor(148,163,184);d.text(i+'/'+n,R,770,{align:'right'})}
  const file=new File([d.output('blob')],'Calendario-'+p.a+'-'+p.b+'.pdf',{type:'application/pdf'});if(typeof dl==='function')dl(file);return file};
 // ---------- Configuración: tarifas ----------
