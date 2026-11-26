@@ -4,8 +4,9 @@ const P=s=>s.join('/');
 export const initializeApp=c=>({c});
 export const getAuth=()=>({currentUser:{uid:'u1',email:'test@example.com'}});
 export const setPersistence=async()=>{};export const browserLocalPersistence={};
-export class GoogleAuthProvider{setCustomParameters(){}}
-export const signInWithPopup=async()=>{};export const signInWithRedirect=async()=>{};export const signOut=async()=>{};
+export class GoogleAuthProvider{setCustomParameters(p){W.__gpParams=p}addScope(s){(W.__gpScopes=W.__gpScopes||[]).push(s)}static credentialFromResult(r){return r&&r.__tok?{accessToken:r.__tok}:null}}
+export const reauthenticateWithPopup=async()=>{W.__calAuthCalls=(W.__calAuthCalls||0)+1;if(W.__calAuthErr)throw Object.assign(new Error(W.__calAuthErr),{code:W.__calAuthErr});return {__tok:W.__calTok||'fake-cal-token'}};
+export const signInWithPopup=async()=>({__tok:W.__calTok||'fake-cal-token'});export const signInWithRedirect=async()=>{};export const signOut=async()=>{};
 export const getRedirectResult=async()=>null;
 export const onAuthStateChanged=(a,cb)=>{setTimeout(()=>cb({uid:'u1',email:'test@example.com'}),50)};
 export const initializeFirestore=()=>({});export const persistentLocalCache=()=>({});export const persistentMultipleTabManager=()=>({});

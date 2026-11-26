@@ -43,6 +43,14 @@ if(cfg){
  window.fbSignIn=async()=>{const pr=new A.GoogleAuthProvider();pr.setCustomParameters({prompt:'select_account'});
   try{ await A.signInWithPopup(auth,pr)}
   catch(e){ if(/popup|cancelled|operation-not-supported/i.test(e.code||'')) return A.signInWithRedirect(auth,pr); alert(T('No se pudo iniciar sesión: {0}',e.code||e.message))}};
+ // v176: Calendario — permiso de solo lectura de Google Calendar (consentimiento incremental con la misma cuenta).
+ // Firebase Auth no renueva este token de Google: dura ~1 h; luego se pide otra vez con un toque.
+ window.fbCalAuth=async()=>{const pr=new A.GoogleAuthProvider();pr.addScope('https://www.googleapis.com/auth/calendar.readonly');
+  pr.setCustomParameters({include_granted_scopes:'true',...(user&&user.email?{login_hint:user.email}:{prompt:'select_account'})});
+  const r=user&&auth.currentUser&&A.reauthenticateWithPopup?await A.reauthenticateWithPopup(auth.currentUser,pr):await A.signInWithPopup(auth,pr);
+  const c=A.GoogleAuthProvider.credentialFromResult&&A.GoogleAuthProvider.credentialFromResult(r);
+  if(!c||!c.accessToken){const e=new Error('notoken');e.code='notoken';throw e}
+  return {token:c.accessToken,exp:Date.now()+50*60*1000}};
  window.fbSignOut=async()=>{if(!confirm(T('¿Cerrar sesión? Los datos se quedan en este dispositivo.')))return;await A.signOut(auth)};
  A.getRedirectResult(auth).catch(e=>{console.warn('redirect',e.code);if(e.code)alert(T('Error al iniciar sesión: {0}',e.code))});
  const tooNew=d=>{let v=+d.ver||0;try{v=Math.max(v,+JSON.parse(d.state).version||0)}catch(e){}return v>CLIENT_V};
