@@ -58,6 +58,8 @@ with app(ROOT,**PHONE) as pg:
     # BANCO
     check(E("!!document.getElementById('bancobox')"),'caja BANCO')
     check(E("document.getElementById('bancobox').contains(document.getElementById('bal-income')) && document.getElementById('bancobox').contains(document.getElementById('bal-cards'))"),'Débitos y Créditos dentro de BANCO')
+    E("()=>{if(typeof v170ExpandBanco==='function')v170ExpandBanco();else{['bal-income','bal-cards'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('col')});document.querySelectorAll('#bal-cards .v168cf').forEach(e=>e.classList.remove('v170col'))}}")
+    pg.wait_for_timeout(80)
     deb=pg.inner_text('#debflows') if pg.locator('#debflows').count() else ''
     check('ENTRADAS' in deb.upper() and 'SALIDAS' in deb.upper(),'entradas y salidas: '+deb[:200])
     check('Propinas' in deb and ('Taco' in deb or 'Uber' in deb or 'Aldi' in deb),'entradas/salidas con movimientos: '+deb[:400])
@@ -104,6 +106,8 @@ with app(ROOT,**PHONE) as pg:
 with app(ROOT,state=with_ref_and_held(),**PHONE) as pg:
     E=pg.evaluate;pg.wait_for_timeout(800)
     E("()=>{tab='mov';render()}");pg.wait_for_timeout(400)
+    E("()=>{if(typeof v170ExpandBanco==='function')v170ExpandBanco();else{['bal-income','bal-cards'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('col')});document.querySelectorAll('#bal-cards .v168cf').forEach(e=>e.classList.remove('v170col'))}}")
+    pg.wait_for_timeout(80)
     vis=pg.inner_text('#cardflows-c1') if pg.locator('#cardflows-c1').count() else ''
     check('Devolución' in vis and 'Shell' in vis and ('12.50' in vis.replace(',','') or '12,50' in vis or '$12' in vis),'devolución en la tarjeta: '+vis[:300])
     check(E("!!document.getElementById('heldcard')"),'tarjeta de terceros cuando hay pendiente')
@@ -143,6 +147,8 @@ with app(ROOT,lang='en',**PHONE) as pg:
     check(labs==['Purchases','Income','Transfer','Collect'] or 'Purchases' in labs or 'Income' in labs,'atajos EN: '+str(labs))
     inc=pg.inner_text('#opinc') if pg.locator('#opinc').count() else ''
     check('Add' in inc or 'Agregar' in inc,'botón add EN: '+inc[:200])
+    E("()=>{if(typeof v170ExpandBanco==='function')v170ExpandBanco();else{['bal-income','bal-cards'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('col')});document.querySelectorAll('#bal-cards .v168cf').forEach(e=>e.classList.remove('v170col'))}}")
+    pg.wait_for_timeout(80)
     deb=pg.inner_text('#debflows') if pg.locator('#debflows').count() else ''
     check('INFLOWS' in deb.upper() or 'ENTRADAS' in deb.upper(),'inflows EN: '+deb[:200])
 

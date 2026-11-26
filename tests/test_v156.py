@@ -82,6 +82,8 @@ with app(ROOT,state=FIX,**PHONE) as pg:
     check(p and p.get('store')=='Amazon','se guarda la tienda Amazon: '+str(p))
     E("()=>{tab='mov';filt='';movQ='';render()}")
     pg.wait_for_timeout(250)
+    E("()=>{if(typeof v170ExpandBanco==='function')v170ExpandBanco();else{['bal-income','bal-cards'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('col')});document.querySelectorAll('#bal-cards .v168cf').forEach(e=>e.classList.remove('v170col'))}}")
+    pg.wait_for_timeout(80)
     mv=pg.inner_text('#debflows') if pg.locator('#debflows').count() else (pg.inner_text('#bancobox') if pg.locator('#bancobox').count() else pg.inner_text('main'))
     check('Amazon' in mv,'Amazon aparece en Movimientos: '+mv[:400])
     check('Cables USB' in mv or '15.40' in mv.replace(',',''),'el movimiento guardado se ve: '+mv[:400])
@@ -117,6 +119,8 @@ with app(ROOT,state=FIX,**PHONE) as pg:
     # captura del movimiento guardado (Amazon/Publix + cables)
     E("()=>{tab='mov';filt='';movQ='';render()}")
     pg.wait_for_timeout(250)
+    E("()=>{if(typeof v170ExpandBanco==='function')v170ExpandBanco();else{['bal-income','bal-cards'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('col')});document.querySelectorAll('#bal-cards .v168cf').forEach(e=>e.classList.remove('v170col'))}}")
+    pg.wait_for_timeout(80)
     mark(pg,'debflows');pg.wait_for_timeout(80)
     loc=pg.locator('#debflows') if pg.locator('#debflows').count() else pg.locator('#bancobox')
     if loc.count():

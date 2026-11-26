@@ -233,6 +233,8 @@ with app(ROOT,state=base(),**PHONE) as pg:
 
     E("()=>{tab='mov';filt='📈 Kalshi';movQ='';render()}")
     pg.wait_for_timeout(300)
+    E("()=>{if(typeof v170ExpandBanco==='function')v170ExpandBanco();else{['bal-income','bal-cards'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('col')});document.querySelectorAll('#bal-cards .v168cf').forEach(e=>e.classList.remove('v170col'))}}")
+    pg.wait_for_timeout(80)
     host='#debflows' if pg.locator('#debflows').count() else ('#bancobox' if pg.locator('#bancobox').count() else '#bal-income')
     mv=pg.inner_text(host) if pg.locator(host).count() else pg.inner_text('main')
     check('Soccer Combo' in mv,'mov pérdida Soccer Combo: '+mv[:400])
