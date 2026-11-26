@@ -94,7 +94,7 @@ function placeTonySplit(o,R){
   const d=o.d,at=d.getNumberOfPages();
   o.page();
   const made=d.getNumberOfPages();
-  drawTonySplit(o,R);
+  ((window._v173&&_v173.drawTonySplit)||drawTonySplit)(o,R);
   if(typeof d.movePage==='function'&&made>at)d.movePage(made,at);
 }
 
@@ -104,7 +104,7 @@ if(typeof r3Data==='function'){
     const R=prev.apply(this,arguments);
     try{
       if(R&&(who==='Tony'||R.who==='Tony')){
-        const sp=buildTonySplit(k||R.k);
+        const sp=((window._v173&&_v173.buildTonySplit)||buildTonySplit)(k||R.k);
         if(sp)R.tonySplit=sp;
       }
     }catch(e){console.warn('v173 r3',e)}
@@ -116,7 +116,7 @@ if(typeof rep3PDF==='function'){
   rep3PDF=function(R,extra){
     try{
       if(R&&R.who==='Tony'){
-        if(!R.tonySplit)R.tonySplit=buildTonySplit(R.k);
+        if(!R.tonySplit&&typeof S!=='undefined')R.tonySplit=((window._v173&&_v173.buildTonySplit)||buildTonySplit)(R.k);
         if(R.tonySplit&&R.tonySplit.rows&&R.tonySplit.rows.length){
           const rest=extra;
           extra=function(o){placeTonySplit(o,R);if(rest)rest(o)};
