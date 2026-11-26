@@ -20,8 +20,10 @@ export const getDocs=async c=>({docs:Object.keys(W.__fs.docs).filter(k=>k.starts
 export const onSnapshot=(r,o,cb)=>{setTimeout(()=>cb(snap(r.path)),W.__snapDelay||30);return()=>{}};
 // App Check + AI Logic stand-ins (v63). window.__aiFail = list of errors to throw on successive calls.
 export const initializeAppCheck=()=>({});export class ReCaptchaEnterpriseProvider{constructor(k){W.__ackey=k}}
+export const getToken=async(ac,force)=>{W.__acLog=(W.__acLog||[]);W.__acLog.push('token');W.__acTokenCalls=(W.__acTokenCalls||0)+1;W.__acForce=!!force;if(W.__acTokenErr){const e=W.__acTokenErr;W.__acTokenErr=null;throw Object.assign(new Error(e.m),{code:e.c})}if(W.__acTokenDelay)await new Promise(r=>setTimeout(r,W.__acTokenDelay));return {token:W.__acToken||'tok'}}
+export const signInAnonymously=async(a)=>{W.__anonCalls=(W.__anonCalls||0)+1;if(W.__anonErr)throw Object.assign(new Error(W.__anonErr.m),{code:W.__anonErr.c});const u={uid:'anon',isAnonymous:true};if(a)a.currentUser=u;W.__user=u;return {user:u}}
 export const getAI=()=>({});export class GoogleAIBackend{}
-export const getGenerativeModel=(ai,o)=>({generateContent:async()=>{W.__aiCalls=(W.__aiCalls||0)+1;const f=(W.__aiFail||[]).shift();if(f)throw Object.assign(new Error(f.m),{code:f.c});return{response:{text:()=>W.__aiText||'{"isReceipt":true,"store":"Publix","date":"2026-10-12","total":5,"items":[]}'}}}});
+export const getGenerativeModel=(ai,o)=>({generateContent:async()=>{W.__acLog=(W.__acLog||[]);W.__acLog.push('ai');W.__aiCalls=(W.__aiCalls||0)+1;const f=(W.__aiFail||[]).shift();if(f)throw Object.assign(new Error(f.m),{code:f.c});return{response:{text:()=>W.__aiText||'{"isReceipt":true,"store":"Publix","date":"2026-10-12","total":5,"items":[]}'}}}});
 // v72 (public page: firestore-lite addDoc)
 export const getApps=()=>W.__apps||[];export const getApp=()=>(W.__apps||[{}])[0];
 export const getFirestore=()=>({});export const serverTimestamp=()=>'__now__';
