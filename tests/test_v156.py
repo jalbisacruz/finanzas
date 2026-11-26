@@ -82,7 +82,7 @@ with app(ROOT,state=FIX,**PHONE) as pg:
     check(p and p.get('store')=='Amazon','se guarda la tienda Amazon: '+str(p))
     E("()=>{tab='mov';filt='';movQ='';render()}")
     pg.wait_for_timeout(250)
-    mv=pg.inner_text('#movcard') if pg.locator('#movcard').count() else pg.inner_text('main')
+    mv=pg.inner_text('#debflows') if pg.locator('#debflows').count() else (pg.inner_text('#bancobox') if pg.locator('#bancobox').count() else pg.inner_text('main'))
     check('Amazon' in mv,'Amazon aparece en Movimientos: '+mv[:400])
     check('Cables USB' in mv or '15.40' in mv.replace(',',''),'el movimiento guardado se ve: '+mv[:400])
 
@@ -117,14 +117,14 @@ with app(ROOT,state=FIX,**PHONE) as pg:
     # captura del movimiento guardado (Amazon/Publix + cables)
     E("()=>{tab='mov';filt='';movQ='';render()}")
     pg.wait_for_timeout(250)
-    mark(pg,'movcard');pg.wait_for_timeout(80)
-    loc=pg.locator('#movcard')
+    mark(pg,'debflows');pg.wait_for_timeout(80)
+    loc=pg.locator('#debflows') if pg.locator('#debflows').count() else pg.locator('#bancobox')
     if loc.count():
         loc.scroll_into_view_if_needed()
         loc.screenshot(path=os.path.join(SH,'v156-movimiento-phone.png'))
     else:
         pg.screenshot(path=os.path.join(SH,'v156-movimiento-phone.png'))
-    t=pg.inner_text('#movcard') if pg.locator('#movcard').count() else ''
+    t=(pg.inner_text('#debflows') if pg.locator('#debflows').count() else (pg.inner_text('#bancobox') if pg.locator('#bancobox').count() else ''))
     check('Publix' in t or 'Amazon' in t or 'Kangaroo' in t,'el listado muestra la tienda: '+t[:300])
 
 print('test_v156 OK',ok)

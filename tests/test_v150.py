@@ -80,7 +80,7 @@ with app(ROOT,state=base(),**PHONE) as pg:
 with app(ROOT,state=base(),**PHONE) as pg:
     E=pg.evaluate
     E("d=>{INBOX=d}", [sheet_doc()])
-    E("()=>{tab='mov';render()}");pg.wait_for_timeout(250)
+    E("()=>{tab='rep';render()}");pg.wait_for_timeout(250)
     E("()=>{if(typeof goSec==='function')goSec('billsm')}");pg.wait_for_timeout(150)
     check(pg.locator('#bsnotice').count()==1,'aviso en Cuentas')
     check(pg.locator('#bscopy').count()==1 and 'copia del mes anterior' in pg.inner_text('#bscopy')
@@ -92,7 +92,7 @@ with app(ROOT,state=base(),**PHONE) as pg:
     r=E("bsApprove('x1')")
     check(r.get('ok'),'aprobó '+str(r))
     check(E("M().bills.find(b=>b.name==='Rent House').amount")==250,'renta pasa a la parte de Joe')
-    E("()=>{tab='mov';render();if(typeof goSec==='function')goSec('billsm')}");pg.wait_for_timeout(200)
+    E("()=>{tab='rep';render();if(typeof goSec==='function')goSec('billsm')}");pg.wait_for_timeout(200)
     check(pg.locator('#bsnotice').count()==0,'aviso desaparece al aprobar')
     check(pg.locator('#bscopy').count()==0,'etiqueta desaparece al aprobar')
     mark(pg);pg.locator('#billsm').scroll_into_view_if_needed();pg.wait_for_timeout(80)
@@ -104,8 +104,8 @@ with app(ROOT,state=base(),**PHONE) as pg:
     E("()=>{window.__inboxErr=true;tab='ini';render()}");pg.wait_for_timeout(200)
     check(pg.locator('#inberr').count()==1,'error en Hoy')
     check('No se pudo cargar el buzón' in pg.inner_text('#inberr'),'texto de error')
-    E("()=>{window.__inboxErr=true;tab='mov';render();if(typeof goSec==='function')goSec('billsm')}");pg.wait_for_timeout(200)
-    check(pg.locator('#inberr').count()==1,'error también en Cuentas/Operaciones')
+    E("()=>{window.__inboxErr=true;tab='rep';render();if(typeof goSec==='function')goSec('billsm')}");pg.wait_for_timeout(200)
+    check(pg.locator('#inberr').count()==1,'error también en Cuentas/Reportes')
     # un fallo real de fbInbox enciende la bandera
     E("""()=>{window.__inboxErr=false;window.__syncReady=true;window.fbUser=()=>true;
       S.links=S.links||{};S.links.Tony={on:true,t:'TT'};
@@ -123,7 +123,7 @@ with app(ROOT,lang='en',state=base(),**PHONE) as pg:
     E("()=>{tab='ini';render()}");pg.wait_for_timeout(200)
     t=pg.inner_text('#bsnotice') if pg.locator('#bsnotice').count() else ''
     check('Review and approve' in t or 'Revisar y aprobar' in t,'botón EN/ES: '+t)
-    E("()=>{tab='mov';render();if(typeof goSec==='function')goSec('billsm')}");pg.wait_for_timeout(200)
+    E("()=>{tab='rep';render();if(typeof goSec==='function')goSec('billsm')}");pg.wait_for_timeout(200)
     lab=pg.inner_text('#bscopy') if pg.locator('#bscopy').count() else ''
     check('waiting for Tony' in lab or 'falta la hoja' in lab,'etiqueta EN/ES: '+lab)
 

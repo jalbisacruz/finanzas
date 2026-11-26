@@ -233,13 +233,14 @@ with app(ROOT,state=base(),**PHONE) as pg:
 
     E("()=>{tab='mov';filt='📈 Kalshi';movQ='';render()}")
     pg.wait_for_timeout(300)
-    mv=pg.inner_text('#movcard') if pg.locator('#movcard').count() else pg.inner_text('main')
+    host='#debflows' if pg.locator('#debflows').count() else ('#bancobox' if pg.locator('#bancobox').count() else '#bal-income')
+    mv=pg.inner_text(host) if pg.locator(host).count() else pg.inner_text('main')
     check('Soccer Combo' in mv,'mov pérdida Soccer Combo: '+mv[:400])
     check('Big Combo soccer' in mv,'mov ganancia Big Combo: '+mv[:400])
     check(('-' in mv or '−' in mv) and ('10.00' in mv.replace(',','') or '$10' in mv),'mov muestra -$10')
     check('+' in mv and ('12.00' in mv.replace(',','') or '$12' in mv),'mov muestra +$12')
-    mark(pg,'movcard');pg.wait_for_timeout(80)
-    loc=pg.locator('#movcard')
+    mark(pg,'debflows');pg.wait_for_timeout(80)
+    loc=pg.locator('#debflows') if pg.locator('#debflows').count() else pg.locator('#bancobox')
     if loc.count(): loc.scroll_into_view_if_needed(); loc.screenshot(path=os.path.join(SH,'v155-kalshi-movimientos-phone.png'))
     else: pg.screenshot(path=os.path.join(SH,'v155-kalshi-movimientos-phone.png'))
 
