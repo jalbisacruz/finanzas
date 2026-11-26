@@ -42,7 +42,7 @@ for lang in ['es','en']:
     check(col('bal-income') and col('bal-cards') and col('billsm'),'Débitos, Créditos, Cuentas de Tony closed by default')
     hd=pg.inner_text('#v');check(T('Banco').upper() in hd.upper() and T('Débitos') in hd and T('Créditos') in hd,'Banco › Débitos / Créditos')
     td=pg.inner_text('#todocard')
-    check(T('Cierre {0}',E("lbl(S.cur)")) in td and ('📤 Tony' in td and '📤 Carlos' in td),'cierre + 📤 inside Por hacer '+td)
+    check(T('Cierre {0}',E("lbl(S.cur)")) in td and ((('✉️ Mensaje Tony' in td and '✉️ Mensaje Carlos' in td) if ES else ('✉️ Message Tony' in td and '✉️ Message Carlos' in td))),'cierre + ✉️ Mensaje inside Por hacer '+td)  # v165: antes «📤 Tony/Carlos»
     check(E("todoN()")==n and pg.locator('#todocard .pay').count()>=n,'every to-do action has its button')
     check(E("prevPend().length")==0 or T('Pendientes de meses anteriores') in td,'previous months pending inside Por hacer')
     c=E("(()=>{const c=calc(M());return {tonyDue:c.tonyDue,carlosDue:c.carlosDue,xfer:c.xfer}})()")

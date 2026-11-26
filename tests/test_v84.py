@@ -51,7 +51,7 @@ for case in ['legacy','scan']:
     d.value.save_as('/tmp/v84a.pdf');bl=chk_pdf(pdftxt('/tmp/v84a.pdf'),case+' Reportes › PDF de Carlos')
     check(bl[0][0]==('17 oct 2025' if case=='legacy' else '17 oct'),'%s date label %s'%(case,bl[0][0]))
     check(bl[3][0]=='13 oct','Sam\'s Club is 13 oct')
-    E("()=>{tab='mov';render()}");pg.wait_for_timeout(150);btn=pg.locator('button:has-text("📤 Carlos")');btn.first.click() if btn.count() else E("shareMsg('carlos','2026-10','pdf')");pg.wait_for_timeout(200)
+    E("()=>{tab='mov';render()}");pg.wait_for_timeout(150);btn=pg.locator('button:has-text("✉️ Mensaje Carlos")');btn.first.click() if btn.count() else E("shareMsg('carlos','2026-10','pdf')");pg.wait_for_timeout(200)
     with pg.expect_download() as d:pg.click('#msgdl')
     d.value.save_as('/tmp/v84b.pdf');chk_pdf(pdftxt('/tmp/v84b.pdf'),case+' Por hacer › Carlos › Descargar PDF')
     E("()=>{navigator.canShare=()=>true;navigator.share=async o=>{const f=o.files&&o.files[0];window.__sh=f?btoa(String.fromCharCode(...new Uint8Array(await f.arrayBuffer()))):''}}")

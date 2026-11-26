@@ -44,7 +44,7 @@ for lang in ['es','en']:
     check('ingreso' not in c.lower() and 'income' not in c.lower(),'no income word carlos')
     # dialog from existing 📤 button
     E("tab='res';render()");pg.wait_for_timeout(50)
-    btn=pg.locator('button:has-text("📤 Carlos")').first;check(btn.count()==1,'📤 Carlos exists');btn.click();pg.wait_for_timeout(50)
+    btn=pg.locator('button:has-text("%s")'%('✉️ Mensaje Carlos' if lang=='es' else '✉️ Message Carlos')).first;check(btn.count()==1,'✉️ Mensaje Carlos exists');btn.click();pg.wait_for_timeout(50)  # v165: antes «📤 Carlos»
     check(E("dlg().open")and pg.locator('#mmpdf').count()==1 and pg.locator('#mmtxt').count()==1,'share dialog (v70 two options)')
     if '--shots' in sys.argv and lang=='es':pg.locator('#dlg').screenshot(path=os.path.join(ROOT,'shots','123-compartir.png'))
     if '--shots' in sys.argv and lang=='en':pg.locator('#dlg').screenshot(path=os.path.join(ROOT,'shots','123-compartir-en.png'))
