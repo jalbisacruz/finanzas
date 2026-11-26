@@ -70,7 +70,7 @@ function dayModel(d){const L=shifts(d),wake=wakeOf(d,L),bed=bedOf(d,L),sleep=144
 // el cheque real está registrado, se muestra estimado vs real.
 // Walmart (talón): quincenal sáb–vie, depósito el jueves 6 días después; extra >40 h/semana a 1.5×; impuestos ~10.86 %;
 // después de impuestos: ONE SAVINGS y W+ (ajustes). El total del cheque menos los OnePay ya cobrados = lo que llega al banco.
-const PAY=()=>{const P=Object.assign({wm:15,yw:16,lunch:30,lunchOver:6,ywOT:40,ywWith:14.37,wmOT:40,wmWith:10.86,wmSave:16.07,wmMbr:4.62},S.calPay||{});if(!(P.wmWith>=0))P.wmWith=10.86;return P};
+const PAY=()=>{const P=Object.assign({wm:15,yw:16,lunch:60,lunchOver:6,ywOT:40,ywWith:14.37,wmOT:40,wmWith:10.86,wmSave:16.07,wmMbr:4.62},S.calPay||{});if(!(P.wmWith>=0))P.wmWith=10.86;return P};
 const paidMin=x=>{const P=PAY(),m=x.e-x.s;return x.job==='wm'&&m>P.lunchOver*60?m-P.lunch:m};
 const daysIn=(a,b)=>{const o=[];for(let d=a;d<=b;d=add(d,1))o.push(d);return o};
 const covered=(a,b)=>(cache().ranges||[]).some(([x,y])=>x<=a&&y>=b);
