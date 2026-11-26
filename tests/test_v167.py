@@ -64,9 +64,10 @@ with app(ROOT,now='2026-11-26T13:00:00',new_look=True) as pg:
     pg.wait_for_timeout(250)
     mark(pg,'v');pg.screenshot(path=os.path.join(SH,'v167-operaciones-por-hacer-phone.png'),full_page=False)
     E("()=>{tab='rep';render();scrollTo(0,0)}");pg.wait_for_timeout(300)
-    sc=E("(()=>{const e=document.getElementById('scrow');return e?e.innerText:''})()");check(bool(sc) and 'Cuadrar banco' in sc,'Reportes conserva Cuadrar banco: '+sc)
+    rc=E("(document.getElementById('rccard')||{}).innerText||''")
+    check('Cuadrar' in rc,'Reportes conserva Cuadrar banco (tarjeta): '+rc[:200])
     E("()=>{tab='cfg';render();scrollTo(0,0)}");pg.wait_for_timeout(300)
-    check(E("!!document.getElementById('scrow')"),'Configuración conserva atajos')
+    check(E("!!document.getElementById('bkcfg')") and E("!!document.getElementById('budcfg')"),'Configuración sigue con Respaldo y Categorías')
     check(not [e for e in pg.errors if e.startswith('PE:')],pg.errors)
 
 # ---------- Nov: caja azul + Deudas Joe→Tony ----------
