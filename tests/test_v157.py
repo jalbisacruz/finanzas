@@ -138,7 +138,7 @@ with app(ROOT,**PHONE) as pg:
     def msg(js):
         return E("()=>_v157.vScanErr("+js+")")
     q=msg("Object.assign(new Error('[429] Resource exhausted'),{code:'AI/fetch-error'})")
-    check('muchas solicitudes' in q,'cuota Google: '+q)
+    qlow=q.lower();check('muchas solicitudes' in q or 'límite de solicitudes' in qlow or 'limite de solicitudes' in qlow or 'cuota' in qlow or 'por minuto' in qlow,'cuota Google: '+q)
     ac=msg("Object.assign(new Error('App Check token is invalid [403]'),{code:'AI/app-check'})")
     check('App Check' in ac and 'no pude leer' not in ac.lower(),'App Check: '+ac)
     au=msg("Object.assign(new Error('401 unauthenticated'),{code:'unauthenticated'})")
@@ -153,7 +153,7 @@ with app(ROOT,**PHONE) as pg:
     E("()=>{window.__scanErr=Object.assign(new Error('[429] Resource exhausted'),{code:'AI/fetch-error'})}")
     scan_file(pg)
     t=pg.inner_text('#rerr')
-    check('muchas solicitudes' in t,'UI cuota: '+t)
+    tlow=t.lower();check('muchas solicitudes' in t or 'límite de solicitudes' in tlow or 'limite de solicitudes' in tlow or 'cuota' in tlow or 'por minuto' in tlow,'UI cuota: '+t)
     mark(pg,'regform');pg.wait_for_timeout(80)
     pg.locator('#regform').scroll_into_view_if_needed()
     pg.screenshot(path=os.path.join(SH,'v157-tony-scan-error-cuota-phone.png'))

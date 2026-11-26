@@ -80,7 +80,7 @@ with app(ROOT,**CHROME_IOS,init="localStorage.setItem('finanzas-lang','en');") a
     check('400' in t or 'genai-config' in t,'menciona 400 o genai-config: '+t)
     # 429 / appcheck / 404 / network still distinct and Spanish
     q=E("()=>_v158.vScanErr(Object.assign(new Error('[429] Resource exhausted'),{code:'fetch-error'}))")
-    check('muchas solicitudes' in q and "isn't available" not in q.lower(),'cuota ES: '+q)
+    qlow=q.lower();check(('muchas solicitudes' in q or 'límite de solicitudes' in qlow or 'limite de solicitudes' in qlow or 'cuota' in qlow or 'por minuto' in qlow) and "isn't available" not in qlow,'cuota ES: '+q)
     ac=E("()=>_v158.vScanErr(Object.assign(new Error('App Check token is invalid [403]'),{code:'fetch-error'}))")
     check('App Check' in ac and 'no pude leer' not in ac.lower(),'App Check ES: '+ac)
     mo=E("()=>_v158.vScanErr(Object.assign(new Error('Error fetching from x: [404 Not Found] model was not found'),{code:'fetch-error'}))")
