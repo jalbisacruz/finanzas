@@ -60,12 +60,12 @@ with app(ROOT,routes=R,init=init) as pg:
     c1=E("calc(M())");check(abs(c1['tony']-c0['tony'])<1e-9 and abs(c1['carlos']-c0['carlos'])<1e-9,'por cobrar unchanged')
     check(abs(c1['toTony']-c0['toTony']-16.05)<1e-9,'A transferirte +16.05 %s %s'%(c0['toTony'],c1['toTony']))
     check(('shares/%s/inbox/%s'%(TT,ia['id'])) in E("window.__fs.docs") and not E("id=>INBOX.some(x=>x.id===id)",ia['id']),'v110: inbox doc kept in the cloud, hidden while the purchase exists')
-    E("()=>{tab='ini';render()}");pg.wait_for_timeout(100);ow=pg.inner_text('#owecard');check('Carlos le debe a Tony' in ow and '$58.85' in ow,ow)
+    E("()=>{tab='ini';render()}");pg.wait_for_timeout(100);ow=E("owesBy(M())");check(E("!document.getElementById('owecard')") and any(x['a']=='Carlos' and x['b']=='Tony' and abs(x['v']-58.85)<0.005 for x in ow),ow)
     # Carlos buys
     E("()=>inboxOpen('c1')");pg.wait_for_timeout(50);E("saveP()");pg.wait_for_timeout(100)
     c2=E("calc(M())");check(abs(c2['carlos']-c1['carlos'])<1e-9 and abs(c2['carlosOwes']-c1['carlosOwes']+20)<1e-9 and E("debE(M()).amount")==deb0,'carlos buy: v73 netting -20, debit untouched')
-    E("()=>{tab='ini';render()}");pg.wait_for_timeout(100);ow=pg.inner_text('#owecard');check('Carlos le debe a Tony' in ow and '$18.85' in ow,ow)  # v73: net between them
-    if '--shots' in sys.argv:pg.locator('#owecard').screenshot(path=os.path.join(ROOT,'shots','136-deudas.png'))
+    E("()=>{tab='ini';render()}");pg.wait_for_timeout(100);ow=E("owesBy(M())");check(E("!document.getElementById('owecard')") and any(x['a']=='Carlos' and x['b']=='Tony' and abs(x['v']-18.85)<0.005 for x in ow),ow)  # v73: net between them
+    # v179: sin tarjeta «Deudas de compras» en Hoy (no hay captura)
     # reject
     E("()=>{window.confirm=()=>true;inboxOpen('r1')}");pg.wait_for_timeout(50);pg.click('#inbrej');pg.wait_for_timeout(100)
     check('shares/%s/inbox/r1'%TT not in E("window.__fs.docs") and not E("M().purchases.some(p=>p.store==='Spam')"),'rejected')
