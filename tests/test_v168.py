@@ -1,6 +1,6 @@
 """v168 (DATOS DE EJEMPLO): Operaciones — atajos Compras/Ingresos/Transferencia/Cobro;
 búsqueda 🔍 junto al mes; historial de ingresos; caja BANCO con entradas/salidas y
-cargos/pagos/devoluciones; sin Movimientos; Dinero de terceros en Débitos si hay
+cargos/pagos/devoluciones; Movimientos (restaurado en v182); Dinero de terceros en Débitos si hay
 pendiente; Cuentas de Tony en Reportes (solo lectura, o montos si falta la hoja).
 python3 tests/test_v168.py
 """
@@ -66,8 +66,8 @@ with app(ROOT,**PHONE) as pg:
     vis=pg.inner_text('#cardflows-c1') if pg.locator('#cardflows-c1').count() else ''
     check('Shell' in vis and 'Publix' in vis and 'Cargo' in vis,'cargos de Visa: '+vis[:300])
     check('Pago' in vis and ('100' in vis.replace(',','') or '$100' in vis),'pago de Visa: '+vis[:300])
-    # sin Movimientos ni Cuentas de Tony aquí
-    check(not E("!!document.getElementById('movcard')"),'sin sección Movimientos')
+    # v182: se vuelve a mostrar Movimientos (para editar/borrar gastos con tarjeta)
+    check(E("!!document.getElementById('movcard')"),'sección Movimientos')
     check(E("(()=>{const e=document.getElementById('billsm');return !e||e.hidden||getComputedStyle(e).display==='none'})()"),'Cuentas de Tony no se ve en Operaciones')
     check(E("!!document.getElementById('todocard')"),'se queda Por hacer')
     # Dinero de terceros a $0: no hay tarjeta, solo atajo discreto
