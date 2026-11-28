@@ -25,7 +25,7 @@ function rfCharges(card){
     if(x.method!==meth)return;
     const used=rfUsed('gasto',x.id),tot=r2(+x.amount||0),left=r2(tot-used);
     if(left<0.005)return;
-    out.push({src:'gasto',srcId:x.id,srcMonth:k,date:x.date,store:x.desc||x.cat||T('Gasto'),cat:x.cat||'📦 Otros',tot,left,shared:false,items:[]});
+    out.push({src:'gasto',srcId:x.id,srcMonth:k,date:x.date,store:(typeof v181GLabel==='function'?v181GLabel(x,T('Gasto')):(x.desc||x.cat||T('Gasto'))),cat:x.cat||'📦 Otros',tot,left,shared:false,items:[]});
   });
   (m.purchases||[]).forEach(p=>{
     if(p.method!==meth)return;

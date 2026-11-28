@@ -41,7 +41,7 @@ Object.assign(EN,{
   keys().forEach(k=>{const m=S.months[k];
    (m.personal||[]).forEach((x,i)=>{if(x.method!==meth)return;
     out.push({key:'g:'+x.id,obj:x,date:x.date||k+'-01',seq:(m.personal.length-i),amt:r2(+x.amount||0),
-     label:esc(String(x.desc||DN(x.cat)||T('Gasto'))),tag:''})});
+     label:esc(typeof v181GLabel==='function'?v181GLabel(x,T('Gasto')):String(x.desc||DN(x.cat)||T('Gasto'))),tag:''})});
    (m.purchases||[]).forEach((p,i)=>{if(p.method!==meth)return;
     out.push({key:'p:'+p.id,obj:p,date:p.date||k+'-01',seq:(m.purchases.length-i),amt:r2(+p.total||0),
      label:esc(DN(p.store)||T('Compra')),tag:(+(p.shares||{}).Tony||+(p.shares||{}).Carlos)?T('Compartida'):''})});

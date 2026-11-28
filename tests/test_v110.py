@@ -38,12 +38,13 @@ with run({SD:cdoc(old),IB:ITEM}) as pg:
         E("k=>{S.cur=k;tab='ini';render()}",p['date'][:7]);pg.wait_for_timeout(200);pg.screenshot(path=os.path.join(ROOT,'shots','v110-guardada.png'))
     E("([k,id])=>{S.cur=k;editP(id);delP()}",[p['date'][:7],p['id']]);pg.wait_for_timeout(300)
     check(not has(E) and not E("!!__fs.docs['%s']"%IB),'deleting the purchase removes it from the inbox')
-# 3) offline save, then other device changes cloud -> conflict -> default cloud keeps Arianna's purchase
+# 3) offline save, then other device changes cloud -> conflict -> choosing the cloud keeps Arianna's purchase (v181: Escape no longer auto-picks the cloud when this device is newer)
 with run({SD:cdoc(old),IB:ITEM}) as pg:
     E=pg.evaluate;pg.wait_for_timeout(1500);E("window.__offline=true");accept(pg,E);E("window.__offline=false")
     o2=copy.deepcopy(old);o2['updatedAt']+=5000;o2['marker']='OTRO';E("d=>{__fs.docs['%s']=d}"%SD,cdoc(o2))
     E("dispatchEvent(new Event('focus'))");pg.wait_for_timeout(1000)
-    if pg.locator('#syncconf').count():pg.keyboard.press('Escape');pg.wait_for_timeout(2500)
+    if pg.locator('#syncconf').count():
+        pg.locator('#sc-cloud').click();pg.wait_for_timeout(2500)
     E("()=>{inboxAt=0;return inboxLoad(true)}");pg.wait_for_timeout(400)
     check(E("S.marker")=='OTRO','cloud used');check(has(E) or E("INBOX.some(x=>x.id==='ar1')"),'BUG: conflict dropped purchase and inbox')
 print('test_v110 OK',ok)

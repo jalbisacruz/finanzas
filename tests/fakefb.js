@@ -15,10 +15,17 @@ export const collection=(fs,...s)=>({path:P(s)});
 export const query=c=>c;export const orderBy=()=>0;export const limit=()=>0;
 const snap=(path)=>{const d=W.__fs.docs[path];return{id:path.split('/').pop(),exists:()=>!!d,data:()=>d&&JSON.parse(JSON.stringify(d)),metadata:{hasPendingWrites:false,fromCache:false}}};
 export const getDoc=async r=>{if(W.__getDelay)await new Promise(z=>setTimeout(z,W.__getDelay));if(W.__offline)throw Object.assign(new Error('unavailable'),{code:'unavailable'});return snap(r.path)};
-export const setDoc=async(r,d)=>{W.__fs.docs[r.path]=JSON.parse(JSON.stringify(d));W.__fs.log.push(r.path)};
+// v181 (solo pruebas, todo detrás de banderas): __setFail=n (falla antes de escribir), __setLoseAck=n (la escritura llega a la nube pero la confirmación se pierde),
+// __setDelay=ms (la escritura tarda), __liveSnap (los oyentes de onSnapshot reciben cada escritura como «confirmada por el servidor»).
+W.__listeners=W.__listeners||[];W.__emit=()=>W.__listeners.forEach(l=>l.path===(W.__lastPath||l.path)&&l.cb(snap(l.path)));
+export const setDoc=async(r,d)=>{if(W.__setFail>0){W.__setFail--;throw Object.assign(new Error('unavailable'),{code:'unavailable'})}
+ if(W.__setDelay)await new Promise(z=>setTimeout(z,W.__setDelay));
+ W.__fs.docs[r.path]=JSON.parse(JSON.stringify(d));W.__fs.log.push(r.path);
+ if(W.__liveSnap)W.__listeners.filter(l=>l.path===r.path).forEach(l=>l.cb(snap(r.path)));
+ if(W.__setLoseAck>0){W.__setLoseAck--;throw Object.assign(new Error('unavailable'),{code:'unavailable'})}};
 export const deleteDoc=async r=>{delete W.__fs.docs[r.path];W.__fs.log.push('DEL '+r.path)};
 export const getDocs=async c=>({docs:Object.keys(W.__fs.docs).filter(k=>k.startsWith(c.path+'/')&&!k.slice(c.path.length+1).includes('/')).map(snap)});
-export const onSnapshot=(r,o,cb)=>{setTimeout(()=>cb(snap(r.path)),W.__snapDelay||30);return()=>{}};
+export const onSnapshot=(r,o,cb)=>{W.__listeners.push({path:r.path,cb});setTimeout(()=>cb(snap(r.path)),W.__snapDelay||30);return()=>{}};
 // App Check + AI Logic stand-ins (v63). window.__aiFail = list of errors to throw on successive calls.
 export const initializeAppCheck=()=>({});export class ReCaptchaEnterpriseProvider{constructor(k){W.__ackey=k}}
 export const getToken=async(ac,force)=>{W.__acLog=(W.__acLog||[]);W.__acLog.push('token');W.__acTokenCalls=(W.__acTokenCalls||0)+1;W.__acForce=!!force;if(W.__acTokenErr){const e=W.__acTokenErr;W.__acTokenErr=null;throw Object.assign(new Error(e.m),{code:e.c})}if(W.__acTokenDelay)await new Promise(r=>setTimeout(r,W.__acTokenDelay));return {token:W.__acToken||'tok'}}

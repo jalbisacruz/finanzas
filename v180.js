@@ -163,7 +163,7 @@ if(typeof opsCred==='function'){
   const prev=opsCred;
   const lines=(name,id)=>{
     const meth='card:'+name,m=typeof M==='function'?M():null,out=[];if(!m)return [];
-    (m.personal||[]).forEach(x=>{if(x.method===meth)out.push({kind:'cargo',date:x.date,label:x.desc||DN(x.cat)||T('Cargo'),amt:-r2(+x.amount||0),id:x.id,at:x.at})});
+    (m.personal||[]).forEach(x=>{if(x.method===meth)out.push({kind:'cargo',date:x.date,label:typeof v181GLabel==='function'?v181GLabel(x,T('Cargo')):(x.desc||DN(x.cat)||T('Cargo')),amt:-r2(+x.amount||0),id:x.id,at:x.at})});
     (m.purchases||[]).forEach(p=>{if(p.method===meth)out.push({kind:'cargo',date:p.date,label:DN(p.store)||T('Compra'),amt:-r2(+p.total||0),id:p.id,at:p.at})});
     (m.events||[]).forEach(e=>{
       if(e.type==='cardpay'&&(e.cardId===id||e.card===name||(e.desc||'')==='Pago '+name||String(e.desc||'').indexOf(name)>=0))
